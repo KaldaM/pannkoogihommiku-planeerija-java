@@ -17,6 +17,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SplitPane;
@@ -47,6 +48,7 @@ public class PancakePlannerApp extends Application {
     private Label selectedTypeLabel;
     private TextField nameField;
     private TextField groupField;
+    private ColorPicker tentColorPicker;
     private TextArea notesArea;
     private PlannerObject selectedObject;
     private Stage stage;
@@ -107,6 +109,7 @@ public class PancakePlannerApp extends Application {
         selectedTypeLabel = new Label("Vali kaardilt objekt");
         nameField = new TextField();
         groupField = new TextField();
+        tentColorPicker = new ColorPicker();
         notesArea = new TextArea();
         notesArea.setPrefRowCount(3);
 
@@ -116,7 +119,8 @@ public class PancakePlannerApp extends Application {
         form.addRow(0, new Label("Tüüp"), selectedTypeLabel);
         form.addRow(1, new Label("Nimi"), nameField);
         form.addRow(2, new Label("Grupp"), groupField);
-        form.addRow(3, new Label("Märkmed"), notesArea);
+        form.addRow(3, new Label("Telgi värv"), tentColorPicker);
+        form.addRow(4, new Label("Märkmed"), notesArea);
 
         Button applyButton = new Button("Rakenda muudatused");
         applyButton.setOnAction(event -> applyDetails());
@@ -225,12 +229,14 @@ public class PancakePlannerApp extends Application {
         nameField.setDisable(!hasSelection);
         groupField.setDisable(!hasSelection);
         notesArea.setDisable(!hasSelection);
+        tentColorPicker.setDisable(!(selectedObject instanceof Tent));
 
         if (!hasSelection) {
             selectedTypeLabel.setText("Vali kaardilt objekt");
             nameField.clear();
             groupField.clear();
             notesArea.clear();
+            tentColorPicker.setValue(Color.web("#e74c3c"));
             return;
         }
 
@@ -238,6 +244,11 @@ public class PancakePlannerApp extends Application {
         nameField.setText(selectedObject.name());
         groupField.setText(selectedObject.groupName());
         notesArea.setText(selectedObject.notes());
+        if (selectedObject instanceof Tent tent) {
+            tentColorPicker.setValue(Color.web(tent.colorHex()));
+        } else {
+            tentColorPicker.setValue(Color.web("#2563eb"));
+        }
     }
 
     private String objectTypeName(PlannerObject object) {
@@ -258,8 +269,18 @@ public class PancakePlannerApp extends Application {
         selectedObject.rename(nameField.getText());
         selectedObject.setGroupName(groupField.getText());
         selectedObject.setNotes(notesArea.getText());
+        if (selectedObject instanceof Tent tent) {
+            tent.setColorHex(toHex(tentColorPicker.getValue()));
+        }
         redrawMap();
         refreshSummary();
+    }
+
+    private String toHex(Color color) {
+        int red = (int) Math.round(color.getRed() * 255);
+        int green = (int) Math.round(color.getGreen() * 255);
+        int blue = (int) Math.round(color.getBlue() * 255);
+        return "#%02x%02x%02x".formatted(red, green, blue);
     }
 
     private void refreshSummary() {
