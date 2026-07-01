@@ -65,6 +65,7 @@ public class PancakePlannerApp extends Application {
     private TextField equipmentWattsField;
     private Button addEquipmentButton;
     private Button removeEquipmentButton;
+    private Button deleteObjectButton;
     private PlannerObject selectedObject;
     private Stage stage;
 
@@ -170,6 +171,8 @@ public class PancakePlannerApp extends Application {
 
         Button applyButton = new Button("Rakenda muudatused");
         applyButton.setOnAction(event -> applyDetails());
+        deleteObjectButton = new Button("Kustuta objekt");
+        deleteObjectButton.setOnAction(event -> deleteSelectedObject());
 
         Label summaryTitle = new Label("Voolu kokkuvõte");
 
@@ -182,7 +185,7 @@ public class PancakePlannerApp extends Application {
                 addEquipmentButton,
                 removeEquipmentButton
         );
-        VBox detailPanel = new VBox(10, form, applyButton, equipmentPanel, summaryTitle);
+        VBox detailPanel = new VBox(10, form, applyButton, deleteObjectButton, equipmentPanel, summaryTitle);
         detailPanel.setPadding(new Insets(0, 0, 12, 0));
         return detailPanel;
     }
@@ -317,6 +320,7 @@ public class PancakePlannerApp extends Application {
         nameField.setDisable(!hasSelection);
         groupField.setDisable(!hasSelection);
         notesArea.setDisable(!hasSelection);
+        deleteObjectButton.setDisable(!hasSelection);
         tentColorPicker.setDisable(!tentSelected);
         powerSourceComboBox.setDisable(!tentSelected);
         equipmentList.setDisable(!tentSelected);
@@ -373,6 +377,18 @@ public class PancakePlannerApp extends Application {
         }
         redrawMap();
         refreshSummary();
+    }
+
+    private void deleteSelectedObject() {
+        if (selectedObject == null) {
+            return;
+        }
+
+        plan.removeObject(selectedObject.id());
+        selectedObject = null;
+        redrawMap();
+        refreshSummary();
+        refreshDetails();
     }
 
     private void refreshPowerSourceChoices() {

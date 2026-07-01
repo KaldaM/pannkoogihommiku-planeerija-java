@@ -36,6 +36,12 @@ public class EventPlan {
         objects.add(object);
     }
 
+    public void removeObject(String objectId) {
+        objects.removeIf(object -> object.id().equals(objectId));
+        powerConnections.removeIf(connection ->
+                connection.sourceId().equals(objectId) || connection.consumerId().equals(objectId));
+    }
+
     public List<PlannerObject> objects() {
         return Collections.unmodifiableList(objects);
     }
