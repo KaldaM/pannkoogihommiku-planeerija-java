@@ -12,6 +12,7 @@ import java.util.UUID;
 public class PlanFactory {
     public EventPlan createDemoPlan() {
         EventPlan plan = new EventPlan("Pannkoogihommik");
+        plan.setMapImagePath("classpath:/maps/tavakaart.png");
 
         PowerSource pvk1 = new PowerSource(newId(), "PVK 1", new Position(180, 320));
         pvk1.addOutlet(new PowerOutlet(newId(), ConnectorType.SCHUKO_230V, 11000));

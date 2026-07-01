@@ -30,6 +30,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
@@ -38,6 +40,7 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 
 public class PancakePlannerApp extends Application {
     private final PlanFactory planFactory = new PlanFactory();
@@ -46,6 +49,7 @@ public class PancakePlannerApp extends Application {
 
     private EventPlan plan;
     private Pane mapPane;
+    private ImageView mapImageView;
     private ListView<String> summaryList;
     private Label selectedTypeLabel;
     private TextField nameField;
@@ -93,13 +97,18 @@ public class PancakePlannerApp extends Application {
         Button openButton = new Button("Ava");
         openButton.setOnAction(event -> openPlan());
 
-        return new ToolBar(addTentButton, addPowerSourceButton, saveButton, openButton);
+        Button loadMapButton = new Button("Laadi kaart");
+        loadMapButton.setOnAction(event -> loadMapImage());
+
+        return new ToolBar(addTentButton, addPowerSourceButton, saveButton, openButton, loadMapButton);
     }
 
     private SplitPane createContent() {
         mapPane = new Pane();
         mapPane.setMinSize(760, 560);
         mapPane.setStyle("-fx-background-color: #eef1ec;");
+        mapImageView = new ImageView();
+        mapImageView.setPreserveRatio(true);
 
         BorderPane sidebar = new BorderPane();
         sidebar.setPadding(new Insets(12));
@@ -179,12 +188,44 @@ public class PancakePlannerApp extends Application {
 
     private void redrawMap() {
         mapPane.getChildren().clear();
+        addMapImage();
         for (PlannerObject object : plan.objects()) {
             if (object instanceof Tent tent) {
                 drawTent(tent);
             } else if (object instanceof PowerSource source) {
                 drawPowerSource(source);
             }
+        }
+    }
+
+    private void addMapImage() {
+        Image image = loadImage(plan.mapImagePath());
+        if (image == null) {
+            return;
+        }
+
+        mapImageView.setImage(image);
+        mapImageView.setFitWidth(image.getWidth());
+        mapPane.getChildren().add(mapImageView);
+    }
+
+    private Image loadImage(String imagePath) {
+        if (imagePath == null || imagePath.isBlank()) {
+            return null;
+        }
+
+        try {
+            if (imagePath.startsWith("classpath:")) {
+                String resourcePath = imagePath.substring("classpath:".length());
+                try (InputStream inputStream = getClass().getResourceAsStream(resourcePath)) {
+                    return inputStream == null ? null : new Image(inputStream);
+                }
+            }
+
+            File imageFile = new File(imagePath);
+            return imageFile.exists() ? new Image(imageFile.toURI().toString()) : null;
+        } catch (RuntimeException | IOException exception) {
+            return null;
         }
     }
 
@@ -451,6 +492,19 @@ public class PancakePlannerApp extends Application {
         } catch (IOException exception) {
             showError("Salvestamine ebaõnnestus", exception.getMessage());
         }
+    }
+
+    private void loadMapImage() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Vali kaardipilt");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Pildifail", "*.png", "*.jpg", "*.jpeg"));
+        File file = fileChooser.showOpenDialog(stage);
+        if (file == null) {
+            return;
+        }
+
+        plan.setMapImagePath(file.getAbsolutePath());
+        redrawMap();
     }
 
     private void openPlan() {
