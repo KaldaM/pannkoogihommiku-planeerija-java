@@ -1,24 +1,32 @@
 package ee.matteus.pannukas.gui;
 
+import ee.matteus.pannukas.core.model.ConnectorType;
 import ee.matteus.pannukas.core.model.EventPlan;
 import ee.matteus.pannukas.core.model.PlannerObject;
+import ee.matteus.pannukas.core.model.Position;
+import ee.matteus.pannukas.core.model.PowerOutlet;
 import ee.matteus.pannukas.core.model.PowerSource;
 import ee.matteus.pannukas.core.model.Tent;
-import ee.matteus.pannukas.core.service.PlanFileService;
 import ee.matteus.pannukas.core.service.PlanFactory;
+import ee.matteus.pannukas.core.service.PlanFileService;
 import ee.matteus.pannukas.core.service.PowerSummary;
 import ee.matteus.pannukas.core.service.PowerSummaryService;
 import javafx.application.Application;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
@@ -32,9 +40,15 @@ public class PancakePlannerApp extends Application {
     private final PlanFactory planFactory = new PlanFactory();
     private final PowerSummaryService powerSummaryService = new PowerSummaryService();
     private final PlanFileService planFileService = new PlanFileService();
+
     private EventPlan plan;
     private Pane mapPane;
     private ListView<String> summaryList;
+    private Label selectedTypeLabel;
+    private TextField nameField;
+    private TextField groupField;
+    private TextArea notesArea;
+    private PlannerObject selectedObject;
     private Stage stage;
 
     @Override
@@ -48,6 +62,7 @@ public class PancakePlannerApp extends Application {
 
         redrawMap();
         refreshSummary();
+        refreshDetails();
 
         Scene scene = new Scene(root, 1200, 760);
         stage.setTitle("Pannkoogihommiku planeerija");
@@ -78,8 +93,9 @@ public class PancakePlannerApp extends Application {
 
         BorderPane sidebar = new BorderPane();
         sidebar.setPadding(new Insets(12));
+        sidebar.setTop(createDetailPanel());
+
         summaryList = new ListView<>();
-        sidebar.setTop(new Label("Voolu kokkuvõte"));
         sidebar.setCenter(summaryList);
 
         SplitPane splitPane = new SplitPane(mapPane, sidebar);
@@ -87,19 +103,44 @@ public class PancakePlannerApp extends Application {
         return splitPane;
     }
 
+    private VBox createDetailPanel() {
+        selectedTypeLabel = new Label("Vali kaardilt objekt");
+        nameField = new TextField();
+        groupField = new TextField();
+        notesArea = new TextArea();
+        notesArea.setPrefRowCount(3);
+
+        GridPane form = new GridPane();
+        form.setHgap(8);
+        form.setVgap(8);
+        form.addRow(0, new Label("Tüüp"), selectedTypeLabel);
+        form.addRow(1, new Label("Nimi"), nameField);
+        form.addRow(2, new Label("Grupp"), groupField);
+        form.addRow(3, new Label("Märkmed"), notesArea);
+
+        Button applyButton = new Button("Rakenda muudatused");
+        applyButton.setOnAction(event -> applyDetails());
+
+        Label summaryTitle = new Label("Voolu kokkuvõte");
+
+        VBox detailPanel = new VBox(10, form, applyButton, summaryTitle);
+        detailPanel.setPadding(new Insets(0, 0, 12, 0));
+        return detailPanel;
+    }
+
     private void addTent() {
-        Tent tent = new Tent(planFactory.newId(), "Uus telk", new ee.matteus.pannukas.core.model.Position(120, 120));
+        Tent tent = new Tent(planFactory.newId(), "Uus telk", new Position(120, 120));
         tent.setGroupName("Määramata");
         plan.addObject(tent);
-        redrawMap();
+        selectObject(tent);
         refreshSummary();
     }
 
     private void addPowerSource() {
-        PowerSource source = new PowerSource(planFactory.newId(), "Uus kapp", new ee.matteus.pannukas.core.model.Position(160, 160));
-        source.addOutlet(new ee.matteus.pannukas.core.model.PowerOutlet(planFactory.newId(), ee.matteus.pannukas.core.model.ConnectorType.SCHUKO_230V, 11000));
+        PowerSource source = new PowerSource(planFactory.newId(), "Uus kapp", new Position(160, 160));
+        source.addOutlet(new PowerOutlet(planFactory.newId(), ConnectorType.SCHUKO_230V, 11000));
         plan.addObject(source);
-        redrawMap();
+        selectObject(source);
         refreshSummary();
     }
 
@@ -120,11 +161,14 @@ public class PancakePlannerApp extends Application {
         rectangle.setArcHeight(4);
         rectangle.setFill(Color.web(tent.colorHex()));
         rectangle.setStroke(Color.web("#222222"));
+        rectangle.setStrokeWidth(isSelected(tent) ? 4 : 1);
+        makeSelectable(rectangle, tent);
         makeDraggable(rectangle, tent);
 
         Label label = new Label(tent.name());
         label.setLayoutX(tent.position().x());
         label.setLayoutY(tent.position().y() - 24);
+        makeSelectable(label, tent);
 
         mapPane.getChildren().addAll(rectangle, label);
     }
@@ -133,18 +177,29 @@ public class PancakePlannerApp extends Application {
         Circle circle = new Circle(source.position().x(), source.position().y(), 12);
         circle.setFill(Color.web("#2563eb"));
         circle.setStroke(Color.web("#111827"));
+        circle.setStrokeWidth(isSelected(source) ? 4 : 1);
+        makeSelectable(circle, source);
         makeDraggable(circle, source);
 
         Label label = new Label(source.name());
         label.setLayoutX(source.position().x() + 16);
         label.setLayoutY(source.position().y() - 12);
+        makeSelectable(label, source);
 
         mapPane.getChildren().addAll(circle, label);
     }
 
-    private void makeDraggable(javafx.scene.Node node, PlannerObject object) {
+    private void makeSelectable(Node node, PlannerObject object) {
+        node.setOnMouseClicked(event -> {
+            selectObject(object);
+            event.consume();
+        });
+    }
+
+    private void makeDraggable(Node node, PlannerObject object) {
         final Delta dragDelta = new Delta();
         node.setOnMousePressed(event -> {
+            selectObject(object);
             dragDelta.x = event.getSceneX() - object.position().x();
             dragDelta.y = event.getSceneY() - object.position().y();
         });
@@ -153,6 +208,58 @@ public class PancakePlannerApp extends Application {
             redrawMap();
             refreshSummary();
         });
+    }
+
+    private void selectObject(PlannerObject object) {
+        selectedObject = object;
+        refreshDetails();
+        redrawMap();
+    }
+
+    private boolean isSelected(PlannerObject object) {
+        return selectedObject != null && selectedObject.id().equals(object.id());
+    }
+
+    private void refreshDetails() {
+        boolean hasSelection = selectedObject != null;
+        nameField.setDisable(!hasSelection);
+        groupField.setDisable(!hasSelection);
+        notesArea.setDisable(!hasSelection);
+
+        if (!hasSelection) {
+            selectedTypeLabel.setText("Vali kaardilt objekt");
+            nameField.clear();
+            groupField.clear();
+            notesArea.clear();
+            return;
+        }
+
+        selectedTypeLabel.setText(objectTypeName(selectedObject));
+        nameField.setText(selectedObject.name());
+        groupField.setText(selectedObject.groupName());
+        notesArea.setText(selectedObject.notes());
+    }
+
+    private String objectTypeName(PlannerObject object) {
+        if (object instanceof Tent) {
+            return "Telk";
+        }
+        if (object instanceof PowerSource) {
+            return "Elektrikapp";
+        }
+        return "Objekt";
+    }
+
+    private void applyDetails() {
+        if (selectedObject == null) {
+            return;
+        }
+
+        selectedObject.rename(nameField.getText());
+        selectedObject.setGroupName(groupField.getText());
+        selectedObject.setNotes(notesArea.getText());
+        redrawMap();
+        refreshSummary();
     }
 
     private void refreshSummary() {
@@ -189,8 +296,10 @@ public class PancakePlannerApp extends Application {
 
         try {
             plan = planFileService.load(file.toPath());
+            selectedObject = null;
             redrawMap();
             refreshSummary();
+            refreshDetails();
         } catch (IOException | RuntimeException exception) {
             showError("Faili avamine ebaõnnestus", exception.getMessage());
         }
