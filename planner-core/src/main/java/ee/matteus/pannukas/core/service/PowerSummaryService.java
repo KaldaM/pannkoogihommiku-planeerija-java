@@ -9,7 +9,7 @@ import java.util.List;
 public class PowerSummaryService {
     public List<PowerSummary> summaries(EventPlan plan) {
         return plan.powerSources().stream()
-                .map(source -> new PowerSummary(source.name(), source.totalCapacityWatts(), usedWatts(plan, source)))
+                .map(source -> new PowerSummary(source.id(), source.name(), source.totalCapacityWatts(), usedWatts(plan, source)))
                 .toList();
     }
 

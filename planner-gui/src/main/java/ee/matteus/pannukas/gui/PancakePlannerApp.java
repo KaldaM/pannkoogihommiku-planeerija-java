@@ -419,7 +419,24 @@ public class PancakePlannerApp extends Application {
                     summary.usedWatts(),
                     summary.remainingWatts()
             ));
+            addConnectedConsumers(summary.sourceId());
         }
+    }
+
+    private void addConnectedConsumers(String sourceId) {
+        plan.powerSources().stream()
+                .filter(source -> source.id().equals(sourceId))
+                .findFirst()
+                .ifPresent(source -> plan.powerConnections().stream()
+                        .filter(connection -> connection.sourceId().equals(source.id()))
+                        .map(connection -> plan.findObject(connection.consumerId()))
+                        .flatMap(optional -> optional.stream())
+                        .filter(Tent.class::isInstance)
+                        .map(Tent.class::cast)
+                        .forEach(tent -> summaryList.getItems().add("  - %s: %d W".formatted(
+                                tent.name(),
+                                tent.requiredWatts()
+                        ))));
     }
 
     private void savePlan() {
