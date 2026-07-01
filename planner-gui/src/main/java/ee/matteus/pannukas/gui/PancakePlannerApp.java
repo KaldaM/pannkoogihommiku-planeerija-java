@@ -1,6 +1,7 @@
 package ee.matteus.pannukas.gui;
 
 import ee.matteus.pannukas.core.model.ConnectorType;
+import ee.matteus.pannukas.core.model.Equipment;
 import ee.matteus.pannukas.core.model.EventPlan;
 import ee.matteus.pannukas.core.model.PlannerObject;
 import ee.matteus.pannukas.core.model.Position;
@@ -50,6 +51,11 @@ public class PancakePlannerApp extends Application {
     private TextField groupField;
     private ColorPicker tentColorPicker;
     private TextArea notesArea;
+    private ListView<String> equipmentList;
+    private TextField equipmentNameField;
+    private TextField equipmentWattsField;
+    private Button addEquipmentButton;
+    private Button removeEquipmentButton;
     private PlannerObject selectedObject;
     private Stage stage;
 
@@ -112,6 +118,16 @@ public class PancakePlannerApp extends Application {
         tentColorPicker = new ColorPicker();
         notesArea = new TextArea();
         notesArea.setPrefRowCount(3);
+        equipmentList = new ListView<>();
+        equipmentList.setPrefHeight(120);
+        equipmentNameField = new TextField();
+        equipmentNameField.setPromptText("Seadme nimi");
+        equipmentWattsField = new TextField();
+        equipmentWattsField.setPromptText("W");
+        addEquipmentButton = new Button("Lisa seade");
+        addEquipmentButton.setOnAction(event -> addEquipmentToSelectedTent());
+        removeEquipmentButton = new Button("Eemalda valitud");
+        removeEquipmentButton.setOnAction(event -> removeSelectedEquipment());
 
         GridPane form = new GridPane();
         form.setHgap(8);
@@ -127,7 +143,16 @@ public class PancakePlannerApp extends Application {
 
         Label summaryTitle = new Label("Voolu kokkuvõte");
 
-        VBox detailPanel = new VBox(10, form, applyButton, summaryTitle);
+        VBox equipmentPanel = new VBox(
+                8,
+                new Label("Telgi seadmed"),
+                equipmentList,
+                equipmentNameField,
+                equipmentWattsField,
+                addEquipmentButton,
+                removeEquipmentButton
+        );
+        VBox detailPanel = new VBox(10, form, applyButton, equipmentPanel, summaryTitle);
         detailPanel.setPadding(new Insets(0, 0, 12, 0));
         return detailPanel;
     }
@@ -226,10 +251,16 @@ public class PancakePlannerApp extends Application {
 
     private void refreshDetails() {
         boolean hasSelection = selectedObject != null;
+        boolean tentSelected = selectedObject instanceof Tent;
         nameField.setDisable(!hasSelection);
         groupField.setDisable(!hasSelection);
         notesArea.setDisable(!hasSelection);
-        tentColorPicker.setDisable(!(selectedObject instanceof Tent));
+        tentColorPicker.setDisable(!tentSelected);
+        equipmentList.setDisable(!tentSelected);
+        equipmentNameField.setDisable(!tentSelected);
+        equipmentWattsField.setDisable(!tentSelected);
+        addEquipmentButton.setDisable(!tentSelected);
+        removeEquipmentButton.setDisable(!tentSelected);
 
         if (!hasSelection) {
             selectedTypeLabel.setText("Vali kaardilt objekt");
@@ -237,6 +268,7 @@ public class PancakePlannerApp extends Application {
             groupField.clear();
             notesArea.clear();
             tentColorPicker.setValue(Color.web("#e74c3c"));
+            refreshEquipmentList();
             return;
         }
 
@@ -249,6 +281,7 @@ public class PancakePlannerApp extends Application {
         } else {
             tentColorPicker.setValue(Color.web("#2563eb"));
         }
+        refreshEquipmentList();
     }
 
     private String objectTypeName(PlannerObject object) {
@@ -274,6 +307,64 @@ public class PancakePlannerApp extends Application {
         }
         redrawMap();
         refreshSummary();
+    }
+
+    private void addEquipmentToSelectedTent() {
+        if (!(selectedObject instanceof Tent tent)) {
+            return;
+        }
+
+        String name = equipmentNameField.getText().trim();
+        if (name.isBlank()) {
+            showError("Seadet ei lisatud", "Sisesta seadme nimi.");
+            return;
+        }
+
+        int watts;
+        try {
+            watts = Integer.parseInt(equipmentWattsField.getText().trim());
+        } catch (NumberFormatException exception) {
+            showError("Seadet ei lisatud", "Sisesta võimsus täisarvuna vattides.");
+            return;
+        }
+
+        try {
+            tent.addEquipment(new Equipment(name, watts));
+        } catch (IllegalArgumentException exception) {
+            showError("Seadet ei lisatud", exception.getMessage());
+            return;
+        }
+
+        equipmentNameField.clear();
+        equipmentWattsField.clear();
+        refreshEquipmentList();
+        refreshSummary();
+    }
+
+    private void removeSelectedEquipment() {
+        if (!(selectedObject instanceof Tent tent)) {
+            return;
+        }
+
+        int selectedIndex = equipmentList.getSelectionModel().getSelectedIndex();
+        if (selectedIndex < 0) {
+            return;
+        }
+
+        tent.removeEquipment(selectedIndex);
+        refreshEquipmentList();
+        refreshSummary();
+    }
+
+    private void refreshEquipmentList() {
+        equipmentList.getItems().clear();
+        if (!(selectedObject instanceof Tent tent)) {
+            return;
+        }
+
+        for (Equipment item : tent.equipment()) {
+            equipmentList.getItems().add("%s - %d W".formatted(item.name(), item.requiredWatts()));
+        }
     }
 
     private String toHex(Color color) {

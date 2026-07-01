@@ -58,6 +58,10 @@ public class Tent extends PlannerObject implements PowerConsumer {
         equipment.add(item);
     }
 
+    public void removeEquipment(int index) {
+        equipment.remove(index);
+    }
+
     @Override
     public int requiredWatts() {
         return equipment.stream().mapToInt(Equipment::requiredWatts).sum();

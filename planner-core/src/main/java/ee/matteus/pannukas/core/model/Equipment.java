@@ -6,7 +6,7 @@ public class Equipment {
 
     public Equipment(String name, int requiredWatts) {
         this.name = name;
-        this.requiredWatts = requiredWatts;
+        setRequiredWatts(requiredWatts);
     }
 
     public String name() {
