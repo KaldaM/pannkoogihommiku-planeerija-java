@@ -43,6 +43,9 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public class PancakePlannerApp extends Application {
+    private static final String DEFAULT_MAP_PATH = "classpath:/maps/tavakaart.png";
+    private static final String ORTHOPHOTO_MAP_PATH = "classpath:/maps/ortofoto.png";
+
     private final PlanFactory planFactory = new PlanFactory();
     private final PowerSummaryService powerSummaryService = new PowerSummaryService();
     private final PlanFileService planFileService = new PlanFileService();
@@ -100,7 +103,21 @@ public class PancakePlannerApp extends Application {
         Button loadMapButton = new Button("Laadi kaart");
         loadMapButton.setOnAction(event -> loadMapImage());
 
-        return new ToolBar(addTentButton, addPowerSourceButton, saveButton, openButton, loadMapButton);
+        Button defaultMapButton = new Button("Tavakaart");
+        defaultMapButton.setOnAction(event -> setMapImage(DEFAULT_MAP_PATH));
+
+        Button orthophotoButton = new Button("Ortofoto");
+        orthophotoButton.setOnAction(event -> setMapImage(ORTHOPHOTO_MAP_PATH));
+
+        return new ToolBar(
+                addTentButton,
+                addPowerSourceButton,
+                saveButton,
+                openButton,
+                loadMapButton,
+                defaultMapButton,
+                orthophotoButton
+        );
     }
 
     private SplitPane createContent() {
@@ -503,7 +520,11 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        plan.setMapImagePath(file.getAbsolutePath());
+        setMapImage(file.getAbsolutePath());
+    }
+
+    private void setMapImage(String imagePath) {
+        plan.setMapImagePath(imagePath);
         redrawMap();
     }
 
