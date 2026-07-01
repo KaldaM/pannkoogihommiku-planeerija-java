@@ -63,6 +63,16 @@ public class EventPlan {
         powerConnections.add(new PowerConnection(sourceId, consumerId, connectorType));
     }
 
+    public void disconnectPower(String consumerId) {
+        powerConnections.removeIf(connection -> connection.consumerId().equals(consumerId));
+    }
+
+    public Optional<PowerConnection> findPowerConnectionForConsumer(String consumerId) {
+        return powerConnections.stream()
+                .filter(connection -> connection.consumerId().equals(consumerId))
+                .findFirst();
+    }
+
     public List<PowerConnection> powerConnections() {
         return Collections.unmodifiableList(powerConnections);
     }

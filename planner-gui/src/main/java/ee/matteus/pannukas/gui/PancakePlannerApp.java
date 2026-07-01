@@ -19,6 +19,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SplitPane;
@@ -50,6 +51,7 @@ public class PancakePlannerApp extends Application {
     private TextField nameField;
     private TextField groupField;
     private ColorPicker tentColorPicker;
+    private ComboBox<PowerSourceChoice> powerSourceComboBox;
     private TextArea notesArea;
     private ListView<String> equipmentList;
     private TextField equipmentNameField;
@@ -116,6 +118,7 @@ public class PancakePlannerApp extends Application {
         nameField = new TextField();
         groupField = new TextField();
         tentColorPicker = new ColorPicker();
+        powerSourceComboBox = new ComboBox<>();
         notesArea = new TextArea();
         notesArea.setPrefRowCount(3);
         equipmentList = new ListView<>();
@@ -136,7 +139,8 @@ public class PancakePlannerApp extends Application {
         form.addRow(1, new Label("Nimi"), nameField);
         form.addRow(2, new Label("Grupp"), groupField);
         form.addRow(3, new Label("Telgi värv"), tentColorPicker);
-        form.addRow(4, new Label("Märkmed"), notesArea);
+        form.addRow(4, new Label("Vooluallikas"), powerSourceComboBox);
+        form.addRow(5, new Label("Märkmed"), notesArea);
 
         Button applyButton = new Button("Rakenda muudatused");
         applyButton.setOnAction(event -> applyDetails());
@@ -256,6 +260,7 @@ public class PancakePlannerApp extends Application {
         groupField.setDisable(!hasSelection);
         notesArea.setDisable(!hasSelection);
         tentColorPicker.setDisable(!tentSelected);
+        powerSourceComboBox.setDisable(!tentSelected);
         equipmentList.setDisable(!tentSelected);
         equipmentNameField.setDisable(!tentSelected);
         equipmentWattsField.setDisable(!tentSelected);
@@ -268,6 +273,7 @@ public class PancakePlannerApp extends Application {
             groupField.clear();
             notesArea.clear();
             tentColorPicker.setValue(Color.web("#e74c3c"));
+            refreshPowerSourceChoices();
             refreshEquipmentList();
             return;
         }
@@ -281,6 +287,7 @@ public class PancakePlannerApp extends Application {
         } else {
             tentColorPicker.setValue(Color.web("#2563eb"));
         }
+        refreshPowerSourceChoices();
         refreshEquipmentList();
     }
 
@@ -304,9 +311,39 @@ public class PancakePlannerApp extends Application {
         selectedObject.setNotes(notesArea.getText());
         if (selectedObject instanceof Tent tent) {
             tent.setColorHex(toHex(tentColorPicker.getValue()));
+            applySelectedPowerSource(tent);
         }
         redrawMap();
         refreshSummary();
+    }
+
+    private void refreshPowerSourceChoices() {
+        powerSourceComboBox.getItems().clear();
+        powerSourceComboBox.getItems().add(PowerSourceChoice.none());
+        for (PowerSource source : plan.powerSources()) {
+            powerSourceComboBox.getItems().add(new PowerSourceChoice(source.id(), source.name()));
+        }
+
+        powerSourceComboBox.getSelectionModel().selectFirst();
+        if (!(selectedObject instanceof Tent tent)) {
+            return;
+        }
+
+        plan.findPowerConnectionForConsumer(tent.id())
+                .flatMap(connection -> powerSourceComboBox.getItems().stream()
+                        .filter(choice -> choice.sourceId().equals(connection.sourceId()))
+                        .findFirst())
+                .ifPresent(choice -> powerSourceComboBox.getSelectionModel().select(choice));
+    }
+
+    private void applySelectedPowerSource(Tent tent) {
+        PowerSourceChoice selectedSource = powerSourceComboBox.getSelectionModel().getSelectedItem();
+        if (selectedSource == null || selectedSource.isNone()) {
+            plan.disconnectPower(tent.id());
+            return;
+        }
+
+        plan.connectToPower(selectedSource.sourceId(), tent.id(), ConnectorType.SCHUKO_230V);
     }
 
     private void addEquipmentToSelectedTent() {
@@ -434,6 +471,21 @@ public class PancakePlannerApp extends Application {
 
     public static void main(String[] args) {
         launch(args);
+    }
+
+    private record PowerSourceChoice(String sourceId, String name) {
+        private static PowerSourceChoice none() {
+            return new PowerSourceChoice("", "Määramata");
+        }
+
+        private boolean isNone() {
+            return sourceId.isBlank();
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
     }
 
     private static class Delta {
