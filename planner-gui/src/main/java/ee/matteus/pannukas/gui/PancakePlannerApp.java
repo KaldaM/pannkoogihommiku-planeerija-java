@@ -103,8 +103,10 @@ public class PancakePlannerApp extends Application {
     private Button deleteObjectButton;
     private Button choosePowerSourceButton;
     private ToggleButton measureButton;
+    private Button addTentButton;
     private PlannerObject selectedObject;
     private Tent pendingPowerSourceTent;
+    private boolean pendingTentPlacement;
     private Stage stage;
 
     @Override
@@ -132,7 +134,7 @@ public class PancakePlannerApp extends Application {
         Button newPlanButton = new Button("Uus plaan");
         newPlanButton.setOnAction(event -> newPlan());
 
-        Button addTentButton = new Button("Lisa telk");
+        addTentButton = new Button("Lisa telk");
         addTentButton.setOnAction(event -> addTent());
 
         Button addPowerSourceButton = new Button("Lisa kapp");
@@ -201,6 +203,10 @@ public class PancakePlannerApp extends Application {
         mapPane.setOnMousePressed(event -> mapDraggedSincePress = false);
         mapPane.setOnMouseDragged(event -> mapDraggedSincePress = true);
         mapPane.setOnMouseClicked(event -> {
+            if (pendingTentPlacement && !mapDraggedSincePress) {
+                placeTent(new Position(event.getX(), event.getY()));
+                return;
+            }
             if (measuringActive && !mapDraggedSincePress) {
                 handleMeasureClick(new Position(event.getX(), event.getY()));
             }
@@ -330,9 +336,17 @@ public class PancakePlannerApp extends Application {
     }
 
     private void addTent() {
-        Tent tent = new Tent(planFactory.newId(), "Uus telk", new Position(120, 120));
+        pendingTentPlacement = !pendingTentPlacement;
+        pendingPowerSourceTent = null;
+        refreshPlacementButtons();
+    }
+
+    private void placeTent(Position position) {
+        Tent tent = new Tent(planFactory.newId(), "Uus telk", position);
         tent.setGroupName("Määramata");
         plan.addObject(tent);
+        pendingTentPlacement = false;
+        refreshPlacementButtons();
         refreshGroupFilters();
         selectObject(tent);
         refreshSummary();
@@ -375,6 +389,7 @@ public class PancakePlannerApp extends Application {
     private void resetPlanViewState() {
         selectedObject = null;
         pendingPowerSourceTent = null;
+        pendingTentPlacement = false;
         measuringActive = false;
         if (measureButton != null) {
             measureButton.setSelected(false);
@@ -384,6 +399,7 @@ public class PancakePlannerApp extends Application {
         visibleGroups.clear();
         knownGroups.clear();
         planNameField.setText(plan.name());
+        refreshPlacementButtons();
         refreshGroupFilters();
         redrawMap();
         refreshSummary();
@@ -535,6 +551,12 @@ public class PancakePlannerApp extends Application {
 
     private void makeSelectable(Node node, PlannerObject object) {
         node.setOnMouseClicked(event -> {
+            if (pendingTentPlacement) {
+                Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                placeTent(new Position(mapPoint.getX(), mapPoint.getY()));
+                event.consume();
+                return;
+            }
             if (measuringActive) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
                 handleMeasureClick(new Position(mapPoint.getX(), mapPoint.getY()));
@@ -730,6 +752,8 @@ public class PancakePlannerApp extends Application {
         if (!(selectedObject instanceof Tent tent)) {
             return;
         }
+        pendingTentPlacement = false;
+        refreshPlacementButtons();
         if (pendingPowerSourceTent != null && pendingPowerSourceTent.id().equals(tent.id())) {
             pendingPowerSourceTent = null;
             refreshDetails();
@@ -810,7 +834,17 @@ public class PancakePlannerApp extends Application {
 
     private void setMeasuringActive(boolean measuringActive) {
         this.measuringActive = measuringActive;
+        if (measuringActive) {
+            pendingTentPlacement = false;
+            refreshPlacementButtons();
+        }
         measurementStart = null;
+    }
+
+    private void refreshPlacementButtons() {
+        if (addTentButton != null) {
+            addTentButton.setText(pendingTentPlacement ? "Tühista telk" : "Lisa telk");
+        }
     }
 
     private void handleMeasureClick(Position point) {
