@@ -5,6 +5,7 @@ import ee.matteus.pannukas.core.model.Equipment;
 import ee.matteus.pannukas.core.model.EventPlan;
 import ee.matteus.pannukas.core.model.PlannerObject;
 import ee.matteus.pannukas.core.model.Position;
+import ee.matteus.pannukas.core.model.PowerConnection;
 import ee.matteus.pannukas.core.model.PowerOutlet;
 import ee.matteus.pannukas.core.model.PowerSource;
 import ee.matteus.pannukas.core.model.Tent;
@@ -44,6 +45,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
 
 import java.io.File;
 import java.io.IOException;
@@ -94,6 +96,7 @@ public class PancakePlannerApp extends Application {
     private TextField tentRotationField;
     private ColorPicker tentColorPicker;
     private ComboBox<PowerSourceChoice> powerSourceComboBox;
+    private ComboBox<ConnectorType> connectionTypeComboBox;
     private TextArea notesArea;
     private ListView<String> equipmentList;
     private TextField equipmentNameField;
@@ -296,6 +299,10 @@ public class PancakePlannerApp extends Application {
         tentRotationField = new TextField();
         tentColorPicker = new ColorPicker();
         powerSourceComboBox = new ComboBox<>();
+        connectionTypeComboBox = new ComboBox<>();
+        connectionTypeComboBox.getItems().addAll(ConnectorType.values());
+        connectionTypeComboBox.setConverter(connectorTypeConverter());
+        connectionTypeComboBox.getSelectionModel().select(ConnectorType.SCHUKO_230V);
         notesArea = new TextArea();
         notesArea.setPrefRowCount(3);
         equipmentList = new ListView<>();
@@ -312,9 +319,12 @@ public class PancakePlannerApp extends Application {
         outletList.setPrefHeight(100);
         outletTypeComboBox = new ComboBox<>();
         outletTypeComboBox.getItems().addAll(ConnectorType.values());
+        outletTypeComboBox.setConverter(connectorTypeConverter());
         outletTypeComboBox.getSelectionModel().select(ConnectorType.SCHUKO_230V);
+        outletTypeComboBox.setOnAction(event -> updateDefaultOutletCapacity());
         outletCapacityWattsField = new TextField();
         outletCapacityWattsField.setPromptText("W");
+        updateDefaultOutletCapacity();
         addOutletButton = new Button("Lisa väljund");
         addOutletButton.setOnAction(event -> addOutletToSelectedPowerSource());
         removeOutletButton = new Button("Eemalda valitud");
@@ -332,7 +342,8 @@ public class PancakePlannerApp extends Application {
         form.addRow(6, new Label("Pööre °"), tentRotationField);
         form.addRow(7, new Label("Telgi värv"), tentColorPicker);
         form.addRow(8, new Label("Vooluallikas"), powerSourceComboBox);
-        form.addRow(9, new Label("Märkmed"), notesArea);
+        form.addRow(9, new Label("Yhenduse tyyp"), connectionTypeComboBox);
+        form.addRow(10, new Label("Märkmed"), notesArea);
 
         Button applyButton = new Button("Rakenda muudatused");
         applyButton.setOnAction(event -> applyDetails());
@@ -393,7 +404,11 @@ public class PancakePlannerApp extends Application {
 
     private void placePowerSource(Position position) {
         PowerSource source = new PowerSource(planFactory.newId(), "Uus kapp", position);
-        source.addOutlet(new PowerOutlet(planFactory.newId(), ConnectorType.SCHUKO_230V, 11000));
+        source.addOutlet(new PowerOutlet(
+                planFactory.newId(),
+                ConnectorType.SCHUKO_230V,
+                ConnectorType.SCHUKO_230V.defaultCapacityWatts()
+        ));
         plan.addObject(source);
         pendingPowerSourcePlacement = false;
         refreshPlacementButtons();
@@ -749,6 +764,7 @@ public class PancakePlannerApp extends Application {
         tentRotationField.setDisable(!tentSelected);
         tentColorPicker.setDisable(!tentSelected);
         powerSourceComboBox.setDisable(!tentSelected);
+        connectionTypeComboBox.setDisable(!tentSelected);
         equipmentList.setDisable(!tentSelected);
         equipmentNameField.setDisable(!tentSelected);
         equipmentWattsField.setDisable(!tentSelected);
@@ -825,7 +841,7 @@ public class PancakePlannerApp extends Application {
         if (tent == null) {
             return;
         }
-        plan.connectToPower(source.id(), tent.id(), ConnectorType.SCHUKO_230V);
+        plan.connectToPower(source.id(), tent.id(), selectedConnectionType());
         pendingPowerSourceTent = null;
         selectedObject = tent;
         refreshDetails();
@@ -1011,15 +1027,18 @@ public class PancakePlannerApp extends Application {
         }
 
         powerSourceComboBox.getSelectionModel().selectFirst();
+        connectionTypeComboBox.getSelectionModel().select(ConnectorType.SCHUKO_230V);
         if (!(selectedObject instanceof Tent tent)) {
             return;
         }
 
-        plan.findPowerConnectionForConsumer(tent.id())
-                .flatMap(connection -> powerSourceComboBox.getItems().stream()
-                        .filter(choice -> choice.sourceId().equals(connection.sourceId()))
-                        .findFirst())
-                .ifPresent(choice -> powerSourceComboBox.getSelectionModel().select(choice));
+        plan.findPowerConnectionForConsumer(tent.id()).ifPresent(connection -> {
+            connectionTypeComboBox.getSelectionModel().select(connection.connectorType());
+            powerSourceComboBox.getItems().stream()
+                    .filter(choice -> choice.sourceId().equals(connection.sourceId()))
+                    .findFirst()
+                    .ifPresent(choice -> powerSourceComboBox.getSelectionModel().select(choice));
+        });
     }
 
     private void applySelectedPowerSource(Tent tent) {
@@ -1029,7 +1048,12 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        plan.connectToPower(selectedSource.sourceId(), tent.id(), ConnectorType.SCHUKO_230V);
+        plan.connectToPower(selectedSource.sourceId(), tent.id(), selectedConnectionType());
+    }
+
+    private ConnectorType selectedConnectionType() {
+        ConnectorType selectedType = connectionTypeComboBox.getSelectionModel().getSelectedItem();
+        return selectedType == null ? ConnectorType.SCHUKO_230V : selectedType;
     }
 
     private void addEquipmentToSelectedTent() {
@@ -1104,7 +1128,7 @@ public class PancakePlannerApp extends Application {
         }
 
         source.addOutlet(new PowerOutlet(planFactory.newId(), selectedType, capacityWatts));
-        outletCapacityWattsField.clear();
+        updateDefaultOutletCapacity();
         refreshOutletList();
         refreshSummary();
     }
@@ -1122,6 +1146,35 @@ public class PancakePlannerApp extends Application {
         source.removeOutlet(selectedIndex);
         refreshOutletList();
         refreshSummary();
+    }
+
+    private void updateDefaultOutletCapacity() {
+        if (outletCapacityWattsField == null || outletTypeComboBox == null) {
+            return;
+        }
+        ConnectorType selectedType = outletTypeComboBox.getSelectionModel().getSelectedItem();
+        if (selectedType != null) {
+            outletCapacityWattsField.setText(Integer.toString(selectedType.defaultCapacityWatts()));
+        }
+    }
+
+    private StringConverter<ConnectorType> connectorTypeConverter() {
+        return new StringConverter<>() {
+            @Override
+            public String toString(ConnectorType type) {
+                return type == null ? "" : type.displayName();
+            }
+
+            @Override
+            public ConnectorType fromString(String text) {
+                for (ConnectorType type : ConnectorType.values()) {
+                    if (type.displayName().equals(text) || type.name().equals(text)) {
+                        return type;
+                    }
+                }
+                return ConnectorType.SCHUKO_230V;
+            }
+        };
     }
 
     private void refreshEquipmentList() {
@@ -1168,19 +1221,19 @@ public class PancakePlannerApp extends Application {
     }
 
     private void addConnectedConsumers(String sourceId) {
-        plan.powerSources().stream()
-                .filter(source -> source.id().equals(sourceId))
-                .findFirst()
-                .ifPresent(source -> plan.powerConnections().stream()
-                        .filter(connection -> connection.sourceId().equals(source.id()))
-                        .map(connection -> plan.findObject(connection.consumerId()))
-                        .flatMap(optional -> optional.stream())
-                        .filter(Tent.class::isInstance)
-                        .map(Tent.class::cast)
-                        .forEach(tent -> summaryList.getItems().add("  - %s: %d W".formatted(
-                                tent.name(),
-                                tent.requiredWatts()
-                        ))));
+        for (PowerConnection connection : plan.powerConnections()) {
+            if (!connection.sourceId().equals(sourceId)) {
+                continue;
+            }
+            plan.findObject(connection.consumerId())
+                    .filter(Tent.class::isInstance)
+                    .map(Tent.class::cast)
+                    .ifPresent(tent -> summaryList.getItems().add("  - %s: %d W (%s)".formatted(
+                            tent.name(),
+                            tent.requiredWatts(),
+                            connection.connectorType().displayName()
+                    )));
+        }
     }
 
     private void addCableSummary() {
@@ -1192,8 +1245,12 @@ public class PancakePlannerApp extends Application {
         double totalLengthMeters = 0.0;
 
         for (Tent tent : plan.tents()) {
-            PowerSource source = plan.findPowerConnectionForConsumer(tent.id())
-                    .flatMap(connection -> plan.findObject(connection.sourceId()))
+            PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
+            if (connection == null) {
+                continue;
+            }
+
+            PowerSource source = plan.findObject(connection.sourceId())
                     .filter(PowerSource.class::isInstance)
                     .map(PowerSource.class::cast)
                     .orElse(null);
@@ -1203,9 +1260,10 @@ public class PancakePlannerApp extends Application {
 
             double lengthMeters = distanceMeters(objectCenter(tent), objectCenter(source));
             totalLengthMeters += lengthMeters;
-            cableRows.add("  - %s -> %s: %.1f m".formatted(
+            cableRows.add("  - %s -> %s (%s): %.1f m".formatted(
                     tent.name(),
                     source.name(),
+                    connection.connectorType().displayName(),
                     lengthMeters
             ));
         }
