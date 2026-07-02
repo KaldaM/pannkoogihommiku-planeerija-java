@@ -83,6 +83,7 @@ public class PancakePlannerApp extends Application {
     private Set<String> knownGroups = new HashSet<>();
     private ListView<String> summaryList;
     private VBox groupFilterPanel;
+    private TextField planNameField;
     private Label selectedTypeLabel;
     private TextField nameField;
     private TextField groupField;
@@ -252,6 +253,16 @@ public class PancakePlannerApp extends Application {
     }
 
     private VBox createDetailPanel() {
+        planNameField = new TextField(plan.name());
+        Button applyPlanNameButton = new Button("Rakenda nimi");
+        applyPlanNameButton.setOnAction(event -> applyPlanName());
+
+        GridPane planForm = new GridPane();
+        planForm.setHgap(8);
+        planForm.setVgap(8);
+        planForm.addRow(0, new Label("Plaani nimi"), planNameField);
+        planForm.addRow(1, new Label(""), applyPlanNameButton);
+
         selectedTypeLabel = new Label("Vali kaardilt objekt");
         nameField = new TextField();
         groupField = new TextField();
@@ -307,7 +318,7 @@ public class PancakePlannerApp extends Application {
                 addEquipmentButton,
                 removeEquipmentButton
         );
-        VBox detailPanel = new VBox(10, form, applyButton, choosePowerSourceButton, deleteObjectButton, equipmentPanel, summaryTitle);
+        VBox detailPanel = new VBox(10, planForm, form, applyButton, choosePowerSourceButton, deleteObjectButton, equipmentPanel, summaryTitle);
         detailPanel.setPadding(new Insets(0, 0, 12, 0));
         return detailPanel;
     }
@@ -327,6 +338,18 @@ public class PancakePlannerApp extends Application {
         plan.addObject(source);
         refreshGroupFilters();
         selectObject(source);
+        refreshSummary();
+    }
+
+    private void applyPlanName() {
+        String planName = planNameField.getText().trim();
+        if (planName.isBlank()) {
+            showError("Plaani nime ei muudetud", "Sisesta plaani nimi.");
+            planNameField.setText(plan.name());
+            return;
+        }
+
+        plan.rename(planName);
         refreshSummary();
     }
 
@@ -1101,6 +1124,7 @@ public class PancakePlannerApp extends Application {
             plan = planFileService.load(file.toPath());
             selectedObject = null;
             pendingPowerSourceTent = null;
+            planNameField.setText(plan.name());
             visibleGroups.clear();
             knownGroups.clear();
             refreshGroupFilters();
