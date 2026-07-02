@@ -14,6 +14,7 @@ import ee.matteus.pannukas.core.service.PowerSummary;
 import ee.matteus.pannukas.core.service.PowerSummaryService;
 import javafx.application.Application;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -35,6 +36,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -42,6 +44,8 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PancakePlannerApp extends Application {
     private static final String DEFAULT_MAP_PATH = "classpath:/maps/tavakaart.png";
@@ -55,6 +59,9 @@ public class PancakePlannerApp extends Application {
     private EventPlan plan;
     private Pane mapPane;
     private ImageView mapImageView;
+    private boolean measuringActive;
+    private Position measurementStart;
+    private final List<Node> measurementNodes = new ArrayList<>();
     private ListView<String> summaryList;
     private Label selectedTypeLabel;
     private TextField nameField;
@@ -116,6 +123,12 @@ public class PancakePlannerApp extends Application {
         Button orthophotoButton = new Button("Ortofoto");
         orthophotoButton.setOnAction(event -> setMapImage(ORTHOPHOTO_MAP_PATH));
 
+        Button measureButton = new Button("Mõõdulint");
+        measureButton.setOnAction(event -> toggleMeasuring());
+
+        Button clearMeasurementsButton = new Button("Tühjenda mõõdud");
+        clearMeasurementsButton.setOnAction(event -> clearMeasurements());
+
         return new ToolBar(
                 addTentButton,
                 addPowerSourceButton,
@@ -123,7 +136,9 @@ public class PancakePlannerApp extends Application {
                 openButton,
                 loadMapButton,
                 defaultMapButton,
-                orthophotoButton
+                orthophotoButton,
+                measureButton,
+                clearMeasurementsButton
         );
     }
 
@@ -133,6 +148,11 @@ public class PancakePlannerApp extends Application {
         mapPane.setStyle("-fx-background-color: #eef1ec;");
         mapImageView = new ImageView();
         mapImageView.setPreserveRatio(true);
+        mapPane.setOnMouseClicked(event -> {
+            if (measuringActive) {
+                handleMeasureClick(new Position(event.getX(), event.getY()));
+            }
+        });
 
         BorderPane sidebar = new BorderPane();
         sidebar.setPadding(new Insets(12));
@@ -230,6 +250,7 @@ public class PancakePlannerApp extends Application {
                 drawPowerSource(source);
             }
         }
+        mapPane.getChildren().addAll(measurementNodes);
     }
 
     private void addMapImage() {
@@ -310,6 +331,12 @@ public class PancakePlannerApp extends Application {
 
     private void makeSelectable(Node node, PlannerObject object) {
         node.setOnMouseClicked(event -> {
+            if (measuringActive) {
+                Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                handleMeasureClick(new Position(mapPoint.getX(), mapPoint.getY()));
+                event.consume();
+                return;
+            }
             selectObject(object);
             event.consume();
         });
@@ -318,11 +345,17 @@ public class PancakePlannerApp extends Application {
     private void makeDraggable(Node node, PlannerObject object) {
         final Delta dragDelta = new Delta();
         node.setOnMousePressed(event -> {
+            if (measuringActive) {
+                return;
+            }
             selectObject(object);
             dragDelta.x = event.getSceneX() - object.position().x();
             dragDelta.y = event.getSceneY() - object.position().y();
         });
         node.setOnMouseDragged(event -> {
+            if (measuringActive) {
+                return;
+            }
             if (object.locked()) {
                 return;
             }
@@ -439,6 +472,57 @@ public class PancakePlannerApp extends Application {
         redrawMap();
         refreshSummary();
         refreshDetails();
+    }
+
+    private void toggleMeasuring() {
+        measuringActive = !measuringActive;
+        measurementStart = null;
+    }
+
+    private void handleMeasureClick(Position point) {
+        if (measurementStart == null) {
+            measurementStart = point;
+            Circle marker = createMeasurementMarker(point);
+            measurementNodes.add(marker);
+            mapPane.getChildren().add(marker);
+            return;
+        }
+
+        Position end = point;
+        Line line = new Line(measurementStart.x(), measurementStart.y(), end.x(), end.y());
+        line.setStroke(Color.web("#111827"));
+        line.setStrokeWidth(2);
+
+        Circle endMarker = createMeasurementMarker(end);
+        Label distanceLabel = new Label("%.2f m".formatted(distanceMeters(measurementStart, end)));
+        distanceLabel.setStyle("-fx-background-color: white; -fx-padding: 2 4 2 4;");
+        distanceLabel.setLayoutX((measurementStart.x() + end.x()) / 2 + 6);
+        distanceLabel.setLayoutY((measurementStart.y() + end.y()) / 2 + 6);
+
+        measurementNodes.add(line);
+        measurementNodes.add(endMarker);
+        measurementNodes.add(distanceLabel);
+        mapPane.getChildren().addAll(line, endMarker, distanceLabel);
+        measurementStart = null;
+    }
+
+    private Circle createMeasurementMarker(Position point) {
+        Circle marker = new Circle(point.x(), point.y(), 4);
+        marker.setFill(Color.web("#111827"));
+        marker.setStroke(Color.WHITE);
+        return marker;
+    }
+
+    private double distanceMeters(Position start, Position end) {
+        double deltaX = end.x() - start.x();
+        double deltaY = end.y() - start.y();
+        return Math.sqrt(deltaX * deltaX + deltaY * deltaY) / PIXELS_PER_METER;
+    }
+
+    private void clearMeasurements() {
+        measurementNodes.clear();
+        measurementStart = null;
+        redrawMap();
     }
 
     private boolean applyTentSize(Tent tent) {
