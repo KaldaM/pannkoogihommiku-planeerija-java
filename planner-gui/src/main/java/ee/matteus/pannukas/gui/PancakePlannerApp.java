@@ -111,6 +111,7 @@ public class PancakePlannerApp extends Application {
     private ComboBox<ConnectorType> outletTypeComboBox;
     private TextField outletCapacityWattsField;
     private Button addOutletButton;
+    private Button updateOutletButton;
     private Button removeOutletButton;
     private Button deleteObjectButton;
     private Button choosePowerSourceButton;
@@ -332,6 +333,8 @@ public class PancakePlannerApp extends Application {
         removeEquipmentButton.setOnAction(event -> removeSelectedEquipment());
         outletList = new ListView<>();
         outletList.setPrefHeight(100);
+        outletList.getSelectionModel().selectedIndexProperty()
+                .addListener((observable, oldValue, newValue) -> loadSelectedOutletDetails());
         outletNameField = new TextField();
         outletNameField.setPromptText("Valjundi nimi");
         outletTypeComboBox = new ComboBox<>();
@@ -344,6 +347,8 @@ public class PancakePlannerApp extends Application {
         updateDefaultOutletCapacity();
         addOutletButton = new Button("Lisa väljund");
         addOutletButton.setOnAction(event -> addOutletToSelectedPowerSource());
+        updateOutletButton = new Button("Muuda valitud väljundit");
+        updateOutletButton.setOnAction(event -> updateSelectedOutlet());
         removeOutletButton = new Button("Eemalda valitud");
         removeOutletButton.setOnAction(event -> removeSelectedOutlet());
 
@@ -389,6 +394,7 @@ public class PancakePlannerApp extends Application {
                 outletTypeComboBox,
                 outletCapacityWattsField,
                 addOutletButton,
+                updateOutletButton,
                 removeOutletButton
         );
         VBox detailPanel = new VBox(10, planForm, form, applyButton, choosePowerSourceButton, deleteObjectButton, equipmentPanel, outletPanel, summaryTitle);
@@ -795,7 +801,9 @@ public class PancakePlannerApp extends Application {
         outletTypeComboBox.setDisable(!powerSourceSelected);
         outletCapacityWattsField.setDisable(!powerSourceSelected);
         addOutletButton.setDisable(!powerSourceSelected);
-        removeOutletButton.setDisable(!powerSourceSelected);
+        boolean outletSelected = powerSourceSelected && outletList.getSelectionModel().getSelectedIndex() >= 0;
+        updateOutletButton.setDisable(!outletSelected);
+        removeOutletButton.setDisable(!outletSelected);
         choosePowerSourceButton.setDisable(!tentSelected);
         boolean selectingPowerSourceForThisTent = tentSelected
                 && pendingPowerSourceTent != null
@@ -1284,6 +1292,40 @@ public class PancakePlannerApp extends Application {
         refreshSummary();
     }
 
+    private void updateSelectedOutlet() {
+        PowerOutlet outlet = selectedOutlet();
+        if (outlet == null) {
+            return;
+        }
+
+        ConnectorType selectedType = outletTypeComboBox.getSelectionModel().getSelectedItem();
+        if (selectedType == null) {
+            showError("Väljundit ei muudetud", "Vali väljundi tüüp.");
+            return;
+        }
+
+        int capacityWatts;
+        try {
+            capacityWatts = Integer.parseInt(outletCapacityWattsField.getText().trim());
+        } catch (NumberFormatException exception) {
+            showError("Väljundit ei muudetud", "Sisesta võimsus täisarvuna vattides.");
+            return;
+        }
+
+        if (capacityWatts <= 0) {
+            showError("Väljundit ei muudetud", "Võimsus peab olema positiivne.");
+            return;
+        }
+
+        outlet.rename(outletNameField.getText());
+        outlet.setType(selectedType);
+        outlet.setCapacityWatts(capacityWatts);
+        plan.updateConnectorTypeForOutlet(outlet.id(), selectedType);
+        refreshOutletList();
+        refreshPowerSourceChoices();
+        refreshSummary();
+    }
+
     private void removeSelectedOutlet() {
         if (!(selectedObject instanceof PowerSource source)) {
             return;
@@ -1297,6 +1339,34 @@ public class PancakePlannerApp extends Application {
         source.removeOutlet(selectedIndex);
         refreshOutletList();
         refreshSummary();
+    }
+
+    private void loadSelectedOutletDetails() {
+        PowerOutlet outlet = selectedOutlet();
+        if (outlet == null) {
+            return;
+        }
+        outletNameField.setText(outlet.name());
+        outletTypeComboBox.getSelectionModel().select(outlet.type());
+        outletCapacityWattsField.setText(Integer.toString(outlet.capacityWatts()));
+        refreshOutletActionButtons();
+    }
+
+    private PowerOutlet selectedOutlet() {
+        if (!(selectedObject instanceof PowerSource source)) {
+            return null;
+        }
+        int selectedIndex = outletList.getSelectionModel().getSelectedIndex();
+        if (selectedIndex < 0 || selectedIndex >= source.outlets().size()) {
+            return null;
+        }
+        return source.outlets().get(selectedIndex);
+    }
+
+    private void refreshOutletActionButtons() {
+        boolean outletSelected = selectedOutlet() != null;
+        updateOutletButton.setDisable(!outletSelected);
+        removeOutletButton.setDisable(!outletSelected);
     }
 
     private void updateDefaultOutletCapacity() {
@@ -1343,6 +1413,7 @@ public class PancakePlannerApp extends Application {
         outletList.getItems().clear();
         if (!(selectedObject instanceof PowerSource source)) {
             outletNameField.clear();
+            refreshOutletActionButtons();
             return;
         }
 
@@ -1350,6 +1421,7 @@ public class PancakePlannerApp extends Application {
             PowerOutlet outlet = source.outlets().get(index);
             outletList.getItems().add("%s - %d W".formatted(outletLabel(outlet, outletTypeIndex(source, outlet, index)), outlet.capacityWatts()));
         }
+        refreshOutletActionButtons();
     }
 
     private String toHex(Color color) {

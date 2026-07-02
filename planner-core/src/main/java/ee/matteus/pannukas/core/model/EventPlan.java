@@ -138,6 +138,21 @@ public class EventPlan {
         powerConnections.removeIf(connection -> connection.consumerId().equals(consumerId));
     }
 
+    public void updateConnectorTypeForOutlet(String outletId, ConnectorType connectorType) {
+        ConnectorType selectedType = connectorType == null ? ConnectorType.SCHUKO_230V : connectorType;
+        for (int index = 0; index < powerConnections.size(); index++) {
+            PowerConnection connection = powerConnections.get(index);
+            if (connection.outletId().equals(outletId)) {
+                powerConnections.set(index, new PowerConnection(
+                        connection.sourceId(),
+                        connection.consumerId(),
+                        selectedType,
+                        connection.outletId()
+                ));
+            }
+        }
+    }
+
     public Optional<PowerConnection> findPowerConnectionForConsumer(String consumerId) {
         return powerConnections.stream()
                 .filter(connection -> connection.consumerId().equals(consumerId))

@@ -2,9 +2,9 @@ package ee.matteus.pannukas.core.model;
 
 public class PowerOutlet {
     private final String id;
-    private final String name;
-    private final ConnectorType type;
-    private final int capacityWatts;
+    private String name;
+    private ConnectorType type;
+    private int capacityWatts;
 
     public PowerOutlet(String id, ConnectorType type, int capacityWatts) {
         this(id, "", type, capacityWatts);
@@ -25,11 +25,26 @@ public class PowerOutlet {
         return name;
     }
 
+    public void rename(String name) {
+        this.name = name == null ? "" : name.trim();
+    }
+
     public ConnectorType type() {
         return type;
     }
 
+    public void setType(ConnectorType type) {
+        this.type = type == null ? ConnectorType.SCHUKO_230V : type;
+    }
+
     public int capacityWatts() {
         return capacityWatts;
+    }
+
+    public void setCapacityWatts(int capacityWatts) {
+        if (capacityWatts <= 0) {
+            throw new IllegalArgumentException("Väljundi võimsus peab olema positiivne.");
+        }
+        this.capacityWatts = capacityWatts;
     }
 }
