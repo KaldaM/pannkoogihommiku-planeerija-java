@@ -6,6 +6,7 @@ import ee.matteus.pannukas.core.model.EventPlan;
 import ee.matteus.pannukas.core.model.PlannerObject;
 import ee.matteus.pannukas.core.model.Position;
 import ee.matteus.pannukas.core.model.PowerConnection;
+import ee.matteus.pannukas.core.model.PowerConsumer;
 import ee.matteus.pannukas.core.model.PowerOutlet;
 import ee.matteus.pannukas.core.model.PowerSource;
 import ee.matteus.pannukas.core.model.Tent;
@@ -299,10 +300,9 @@ public class PancakePlannerApp extends Application {
         tentRotationField = new TextField();
         tentColorPicker = new ColorPicker();
         powerSourceComboBox = new ComboBox<>();
+        powerSourceComboBox.setOnAction(event -> refreshConnectionTypeChoices(null));
         connectionTypeComboBox = new ComboBox<>();
-        connectionTypeComboBox.getItems().addAll(ConnectorType.values());
         connectionTypeComboBox.setConverter(connectorTypeConverter());
-        connectionTypeComboBox.getSelectionModel().select(ConnectorType.SCHUKO_230V);
         notesArea = new TextArea();
         notesArea.setPrefRowCount(3);
         equipmentList = new ListView<>();
@@ -841,7 +841,10 @@ public class PancakePlannerApp extends Application {
         if (tent == null) {
             return;
         }
-        plan.connectToPower(source.id(), tent.id(), selectedConnectionType());
+        if (plan.connectToPower(source.id(), tent.id(), selectedConnectionType()).isEmpty()) {
+            showError("Vooluallikat ei valitud", "Valitud kapis ei ole selle ühenduse jaoks sobivat väljundit.");
+            return;
+        }
         pendingPowerSourceTent = null;
         selectedObject = tent;
         refreshDetails();
@@ -884,7 +887,9 @@ public class PancakePlannerApp extends Application {
                 return;
             }
             tent.setColorHex(toHex(tentColorPicker.getValue()));
-            applySelectedPowerSource(tent);
+            if (!applySelectedPowerSource(tent)) {
+                return;
+            }
         }
         refreshGroupFilters();
         redrawMap();
@@ -1027,28 +1032,70 @@ public class PancakePlannerApp extends Application {
         }
 
         powerSourceComboBox.getSelectionModel().selectFirst();
-        connectionTypeComboBox.getSelectionModel().select(ConnectorType.SCHUKO_230V);
+        refreshConnectionTypeChoices(ConnectorType.SCHUKO_230V);
         if (!(selectedObject instanceof Tent tent)) {
             return;
         }
 
         plan.findPowerConnectionForConsumer(tent.id()).ifPresent(connection -> {
-            connectionTypeComboBox.getSelectionModel().select(connection.connectorType());
             powerSourceComboBox.getItems().stream()
                     .filter(choice -> choice.sourceId().equals(connection.sourceId()))
                     .findFirst()
                     .ifPresent(choice -> powerSourceComboBox.getSelectionModel().select(choice));
+            refreshConnectionTypeChoices(connection.connectorType());
         });
     }
 
-    private void applySelectedPowerSource(Tent tent) {
+    private void refreshConnectionTypeChoices(ConnectorType preferredType) {
+        ConnectorType currentType = preferredType != null
+                ? preferredType
+                : connectionTypeComboBox.getSelectionModel().getSelectedItem();
+        connectionTypeComboBox.getItems().clear();
+
+        PowerSource selectedSource = selectedPowerSource();
+        if (selectedSource == null) {
+            connectionTypeComboBox.getItems().addAll(ConnectorType.values());
+        } else {
+            for (PowerOutlet outlet : selectedSource.outlets()) {
+                if (!connectionTypeComboBox.getItems().contains(outlet.type())) {
+                    connectionTypeComboBox.getItems().add(outlet.type());
+                }
+            }
+        }
+
+        if (connectionTypeComboBox.getItems().isEmpty()) {
+            return;
+        }
+        if (currentType != null && connectionTypeComboBox.getItems().contains(currentType)) {
+            connectionTypeComboBox.getSelectionModel().select(currentType);
+        } else {
+            connectionTypeComboBox.getSelectionModel().selectFirst();
+        }
+    }
+
+    private PowerSource selectedPowerSource() {
+        PowerSourceChoice selectedSource = powerSourceComboBox.getSelectionModel().getSelectedItem();
+        if (selectedSource == null || selectedSource.isNone()) {
+            return null;
+        }
+        return plan.findObject(selectedSource.sourceId())
+                .filter(PowerSource.class::isInstance)
+                .map(PowerSource.class::cast)
+                .orElse(null);
+    }
+
+    private boolean applySelectedPowerSource(Tent tent) {
         PowerSourceChoice selectedSource = powerSourceComboBox.getSelectionModel().getSelectedItem();
         if (selectedSource == null || selectedSource.isNone()) {
             plan.disconnectPower(tent.id());
-            return;
+            return true;
         }
 
-        plan.connectToPower(selectedSource.sourceId(), tent.id(), selectedConnectionType());
+        if (plan.connectToPower(selectedSource.sourceId(), tent.id(), selectedConnectionType()).isEmpty()) {
+            showError("Vooluallikat ei rakendatud", "Valitud kapis ei ole selle ühenduse jaoks sobivat väljundit.");
+            return false;
+        }
+        return true;
     }
 
     private ConnectorType selectedConnectionType() {
@@ -1221,19 +1268,55 @@ public class PancakePlannerApp extends Application {
     }
 
     private void addConnectedConsumers(String sourceId) {
+        PowerSource source = plan.findObject(sourceId)
+                .filter(PowerSource.class::isInstance)
+                .map(PowerSource.class::cast)
+                .orElse(null);
+        if (source == null) {
+            return;
+        }
+
+        for (PowerOutlet outlet : source.outlets()) {
+            int usedWatts = usedWatts(outlet.id());
+            summaryList.getItems().add("  %s: %d W kasutusel, %d W alles".formatted(
+                    outlet.type().displayName(),
+                    usedWatts,
+                    outlet.capacityWatts() - usedWatts
+            ));
+            addConnectedConsumers(sourceId, outlet.id(), "    ");
+        }
+        addConnectedConsumers(sourceId, "", "  ");
+    }
+
+    private void addConnectedConsumers(String sourceId, String outletId, String rowPrefix) {
         for (PowerConnection connection : plan.powerConnections()) {
             if (!connection.sourceId().equals(sourceId)) {
+                continue;
+            }
+            if (!connection.outletId().equals(outletId)) {
                 continue;
             }
             plan.findObject(connection.consumerId())
                     .filter(Tent.class::isInstance)
                     .map(Tent.class::cast)
-                    .ifPresent(tent -> summaryList.getItems().add("  - %s: %d W (%s)".formatted(
+                    .ifPresent(tent -> summaryList.getItems().add("%s- %s: %d W (%s)".formatted(
+                            rowPrefix,
                             tent.name(),
                             tent.requiredWatts(),
                             connection.connectorType().displayName()
                     )));
         }
+    }
+
+    private int usedWatts(String outletId) {
+        return plan.powerConnections().stream()
+                .filter(connection -> connection.outletId().equals(outletId))
+                .map(connection -> plan.findObject(connection.consumerId()))
+                .flatMap(optional -> optional.stream())
+                .filter(PowerConsumer.class::isInstance)
+                .map(PowerConsumer.class::cast)
+                .mapToInt(PowerConsumer::requiredWatts)
+                .sum();
     }
 
     private void addCableSummary() {

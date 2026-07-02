@@ -46,6 +46,7 @@ public class PlanFileService {
             properties.setProperty(prefix + "sourceId", connection.sourceId());
             properties.setProperty(prefix + "consumerId", connection.consumerId());
             properties.setProperty(prefix + "connectorType", connection.connectorType().name());
+            properties.setProperty(prefix + "outletId", connection.outletId());
         }
 
         try (OutputStream output = Files.newOutputStream(file)) {
@@ -73,7 +74,8 @@ public class PlanFileService {
             plan.connectToPower(
                     properties.getProperty(prefix + "sourceId", ""),
                     properties.getProperty(prefix + "consumerId", ""),
-                    ConnectorType.valueOf(properties.getProperty(prefix + "connectorType", ConnectorType.SCHUKO_230V.name()))
+                    ConnectorType.valueOf(properties.getProperty(prefix + "connectorType", ConnectorType.SCHUKO_230V.name())),
+                    properties.getProperty(prefix + "outletId", "")
             );
         }
 

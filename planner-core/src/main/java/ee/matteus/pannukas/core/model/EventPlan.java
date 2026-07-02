@@ -67,9 +67,71 @@ public class EventPlan {
         return objects.stream().filter(object -> object.id().equals(id)).findFirst();
     }
 
-    public void connectToPower(String sourceId, String consumerId, ConnectorType connectorType) {
+    public Optional<PowerConnection> connectToPower(String sourceId, String consumerId, ConnectorType connectorType) {
+        return connectToPower(sourceId, consumerId, connectorType, "");
+    }
+
+    public Optional<PowerConnection> connectToPower(String sourceId, String consumerId, ConnectorType connectorType, String outletId) {
+        PowerSource source = findObject(sourceId)
+                .filter(PowerSource.class::isInstance)
+                .map(PowerSource.class::cast)
+                .orElse(null);
+        if (source == null) {
+            return Optional.empty();
+        }
+
+        ConnectorType selectedType = connectorType == null ? ConnectorType.SCHUKO_230V : connectorType;
+        Optional<PowerOutlet> selectedOutlet = selectOutlet(source, consumerId, selectedType, outletId);
+        if (selectedOutlet.isEmpty()) {
+            return Optional.empty();
+        }
+
         powerConnections.removeIf(connection -> connection.consumerId().equals(consumerId));
-        powerConnections.add(new PowerConnection(sourceId, consumerId, connectorType));
+        PowerConnection connection = new PowerConnection(sourceId, consumerId, selectedType, selectedOutlet.get().id());
+        powerConnections.add(connection);
+        return Optional.of(connection);
+    }
+
+    private Optional<PowerOutlet> selectOutlet(PowerSource source, String consumerId, ConnectorType connectorType, String outletId) {
+        if (outletId != null && !outletId.isBlank()) {
+            Optional<PowerOutlet> requestedOutlet = source.outlets().stream()
+                    .filter(outlet -> outlet.id().equals(outletId))
+                    .filter(outlet -> outlet.type() == connectorType)
+                    .findFirst();
+            if (requestedOutlet.isPresent()) {
+                return requestedOutlet;
+            }
+        }
+
+        List<PowerOutlet> matchingOutlets = source.outlets().stream()
+                .filter(outlet -> outlet.type() == connectorType)
+                .toList();
+        if (matchingOutlets.isEmpty()) {
+            return Optional.empty();
+        }
+
+        int requiredWatts = findObject(consumerId)
+                .filter(PowerConsumer.class::isInstance)
+                .map(PowerConsumer.class::cast)
+                .map(PowerConsumer::requiredWatts)
+                .orElse(0);
+        return matchingOutlets.stream()
+                .filter(outlet -> outlet.capacityWatts() - usedWatts(source.id(), outlet.id(), consumerId) >= requiredWatts)
+                .findFirst()
+                .or(() -> matchingOutlets.stream().findFirst());
+    }
+
+    private int usedWatts(String sourceId, String outletId, String ignoredConsumerId) {
+        return powerConnections.stream()
+                .filter(connection -> connection.sourceId().equals(sourceId))
+                .filter(connection -> connection.outletId().equals(outletId))
+                .filter(connection -> !connection.consumerId().equals(ignoredConsumerId))
+                .map(connection -> findObject(connection.consumerId()))
+                .flatMap(Optional::stream)
+                .filter(PowerConsumer.class::isInstance)
+                .map(PowerConsumer.class::cast)
+                .mapToInt(PowerConsumer::requiredWatts)
+                .sum();
     }
 
     public void disconnectPower(String consumerId) {
