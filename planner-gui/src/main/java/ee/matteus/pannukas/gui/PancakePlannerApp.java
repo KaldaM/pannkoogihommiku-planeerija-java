@@ -19,6 +19,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
@@ -101,6 +102,7 @@ public class PancakePlannerApp extends Application {
     private Button removeEquipmentButton;
     private Button deleteObjectButton;
     private Button choosePowerSourceButton;
+    private ToggleButton measureButton;
     private PlannerObject selectedObject;
     private Tent pendingPowerSourceTent;
     private Stage stage;
@@ -108,7 +110,7 @@ public class PancakePlannerApp extends Application {
     @Override
     public void start(Stage stage) {
         this.stage = stage;
-        plan = planFactory.createDemoPlan();
+        plan = planFactory.createEmptyPlan();
 
         BorderPane root = new BorderPane();
         root.setTop(createToolbar());
@@ -127,6 +129,9 @@ public class PancakePlannerApp extends Application {
     }
 
     private ToolBar createToolbar() {
+        Button newPlanButton = new Button("Uus plaan");
+        newPlanButton.setOnAction(event -> newPlan());
+
         Button addTentButton = new Button("Lisa telk");
         addTentButton.setOnAction(event -> addTent());
 
@@ -160,13 +165,14 @@ public class PancakePlannerApp extends Application {
         Button resetZoomButton = new Button("100%");
         resetZoomButton.setOnAction(event -> setZoom(1.0));
 
-        ToggleButton measureButton = new ToggleButton("Mõõdulint");
+        measureButton = new ToggleButton("Mõõdulint");
         measureButton.setOnAction(event -> setMeasuringActive(measureButton.isSelected()));
 
         Button clearMeasurementsButton = new Button("Tühjenda mõõdud");
         clearMeasurementsButton.setOnAction(event -> clearMeasurements());
 
         return new ToolBar(
+                newPlanButton,
                 addTentButton,
                 addPowerSourceButton,
                 saveButton,
@@ -351,6 +357,37 @@ public class PancakePlannerApp extends Application {
 
         plan.rename(planName);
         refreshSummary();
+    }
+
+    private void newPlan() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Uus plaan");
+        alert.setHeaderText("Kas alustada uut plaani?");
+        alert.setContentText("Praegune salvestamata töö asendatakse uue plaaniga.");
+        if (alert.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+            return;
+        }
+
+        plan = planFactory.createEmptyPlan();
+        resetPlanViewState();
+    }
+
+    private void resetPlanViewState() {
+        selectedObject = null;
+        pendingPowerSourceTent = null;
+        measuringActive = false;
+        if (measureButton != null) {
+            measureButton.setSelected(false);
+        }
+        measurementStart = null;
+        measurementNodes.clear();
+        visibleGroups.clear();
+        knownGroups.clear();
+        planNameField.setText(plan.name());
+        refreshGroupFilters();
+        redrawMap();
+        refreshSummary();
+        refreshDetails();
     }
 
     private void redrawMap() {
@@ -1122,15 +1159,7 @@ public class PancakePlannerApp extends Application {
 
         try {
             plan = planFileService.load(file.toPath());
-            selectedObject = null;
-            pendingPowerSourceTent = null;
-            planNameField.setText(plan.name());
-            visibleGroups.clear();
-            knownGroups.clear();
-            refreshGroupFilters();
-            redrawMap();
-            refreshSummary();
-            refreshDetails();
+            resetPlanViewState();
         } catch (IOException | RuntimeException exception) {
             showError("Faili avamine ebaõnnestus", exception.getMessage());
         }

@@ -10,6 +10,12 @@ import ee.matteus.pannukas.core.model.Tent;
 import java.util.UUID;
 
 public class PlanFactory {
+    public EventPlan createEmptyPlan() {
+        EventPlan plan = new EventPlan("Pannkoogihommik");
+        plan.setMapImagePath("classpath:/maps/tavakaart.png");
+        return plan;
+    }
+
     public EventPlan createDemoPlan() {
         EventPlan plan = new EventPlan("Pannkoogihommik");
         plan.setMapImagePath("classpath:/maps/tavakaart.png");
