@@ -1252,7 +1252,7 @@ public class PancakePlannerApp extends Application {
         }
 
         int selectedIndex = equipmentList.getSelectionModel().getSelectedIndex();
-        if (selectedIndex < 0) {
+        if (selectedIndex < 0 || selectedIndex >= tent.equipment().size()) {
             return;
         }
 
@@ -1332,13 +1332,47 @@ public class PancakePlannerApp extends Application {
         }
 
         int selectedIndex = outletList.getSelectionModel().getSelectedIndex();
-        if (selectedIndex < 0) {
+        if (selectedIndex < 0 || selectedIndex >= source.outlets().size()) {
             return;
         }
 
+        PowerOutlet outlet = source.outlets().get(selectedIndex);
+        List<Tent> connectedTents = connectedTents(outlet.id());
+        if (!connectedTents.isEmpty() && !confirmRemoveConnectedOutlet(outlet, connectedTents)) {
+            return;
+        }
+
+        plan.disconnectPowerFromOutlet(outlet.id());
         source.removeOutlet(selectedIndex);
+        outletNameField.clear();
         refreshOutletList();
+        refreshPowerSourceChoices();
+        redrawMap();
         refreshSummary();
+    }
+
+    private List<Tent> connectedTents(String outletId) {
+        return plan.powerConnections().stream()
+                .filter(connection -> connection.outletId().equals(outletId))
+                .map(connection -> plan.findObject(connection.consumerId()))
+                .flatMap(optional -> optional.stream())
+                .filter(Tent.class::isInstance)
+                .map(Tent.class::cast)
+                .toList();
+    }
+
+    private boolean confirmRemoveConnectedOutlet(PowerOutlet outlet, List<Tent> connectedTents) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Eemalda valjund");
+        alert.setHeaderText("See valjund on kasutusel");
+        String tentRows = connectedTents.stream()
+                .map(tent -> "- " + tent.name())
+                .reduce("", (rows, row) -> rows + row + System.lineSeparator());
+        alert.setContentText("%s kustutamisel eemaldatakse nende telkide vooluyhendused:%n%n%s".formatted(
+                outlet.name().isBlank() ? outlet.type().displayName() : outlet.name(),
+                tentRows
+        ));
+        return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
 
     private void loadSelectedOutletDetails() {
