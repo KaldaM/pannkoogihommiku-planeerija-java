@@ -122,6 +122,7 @@ public class PancakePlannerApp extends Application {
     private Tent pendingPowerSourceTent;
     private boolean pendingTentPlacement;
     private boolean pendingPowerSourcePlacement;
+    private boolean unsavedChanges;
     private Stage stage;
 
     @Override
@@ -139,9 +140,14 @@ public class PancakePlannerApp extends Application {
         refreshDetails();
 
         Scene scene = new Scene(root, 1200, 760);
-        stage.setTitle("Pannkoogihommiku planeerija");
         stage.setScene(scene);
         stage.setMaximized(true);
+        stage.setOnCloseRequest(event -> {
+            if (!confirmDiscardUnsavedChanges()) {
+                event.consume();
+            }
+        });
+        markClean();
         stage.show();
     }
 
@@ -418,6 +424,7 @@ public class PancakePlannerApp extends Application {
         refreshGroupFilters();
         selectObject(tent);
         refreshSummary();
+        markDirty();
     }
 
     private void addPowerSource() {
@@ -440,6 +447,7 @@ public class PancakePlannerApp extends Application {
         refreshGroupFilters();
         selectObject(source);
         refreshSummary();
+        markDirty();
     }
 
     private void applyPlanName() {
@@ -452,14 +460,11 @@ public class PancakePlannerApp extends Application {
 
         plan.rename(planName);
         refreshSummary();
+        markDirty();
     }
 
     private void newPlan() {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Uus plaan");
-        alert.setHeaderText("Kas alustada uut plaani?");
-        alert.setContentText("Praegune salvestamata töö asendatakse uue plaaniga.");
-        if (alert.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+        if (!confirmDiscardUnsavedChanges()) {
             return;
         }
 
@@ -486,6 +491,35 @@ public class PancakePlannerApp extends Application {
         redrawMap();
         refreshSummary();
         refreshDetails();
+        markClean();
+    }
+
+    private void markDirty() {
+        unsavedChanges = true;
+        updateWindowTitle();
+    }
+
+    private void markClean() {
+        unsavedChanges = false;
+        updateWindowTitle();
+    }
+
+    private void updateWindowTitle() {
+        if (stage == null) {
+            return;
+        }
+        stage.setTitle("%sPannkoogihommiku planeerija".formatted(unsavedChanges ? "* " : ""));
+    }
+
+    private boolean confirmDiscardUnsavedChanges() {
+        if (!unsavedChanges) {
+            return true;
+        }
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Salvestamata muudatused");
+        alert.setHeaderText("Plaanis on salvestamata muudatusi");
+        alert.setContentText("Kui jatkad, lahevad viimased salvestamata muudatused kaotsi.");
+        return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
 
     private void redrawMap() {
@@ -689,6 +723,7 @@ public class PancakePlannerApp extends Application {
             object.moveTo(object.position().moveTo(mapPoint.getX() - dragDelta.x, mapPoint.getY() - dragDelta.y));
             redrawMap();
             refreshSummary();
+            markDirty();
             event.consume();
         });
     }
@@ -763,6 +798,7 @@ public class PancakePlannerApp extends Application {
                     plan.setGroupHidden(groupName, true);
                 }
                 redrawMap();
+                markDirty();
             });
             groupFilterPanel.getChildren().add(groupCheckBox);
         }
@@ -879,6 +915,7 @@ public class PancakePlannerApp extends Application {
         refreshDetails();
         redrawMap();
         refreshSummary();
+        markDirty();
     }
 
     private void updateSelectedLock() {
@@ -887,6 +924,7 @@ public class PancakePlannerApp extends Application {
         }
         selectedObject.setLocked(lockedCheckBox.isSelected());
         redrawMap();
+        markDirty();
     }
 
     private String objectTypeName(PlannerObject object) {
@@ -923,6 +961,7 @@ public class PancakePlannerApp extends Application {
         refreshGroupFilters();
         redrawMap();
         refreshSummary();
+        markDirty();
     }
 
     private void deleteSelectedObject() {
@@ -937,6 +976,7 @@ public class PancakePlannerApp extends Application {
         redrawMap();
         refreshSummary();
         refreshDetails();
+        markDirty();
     }
 
     private void setMeasuringActive(boolean measuringActive) {
@@ -1244,6 +1284,7 @@ public class PancakePlannerApp extends Application {
         equipmentWattsField.clear();
         refreshEquipmentList();
         refreshSummary();
+        markDirty();
     }
 
     private void removeSelectedEquipment() {
@@ -1259,6 +1300,7 @@ public class PancakePlannerApp extends Application {
         tent.removeEquipment(selectedIndex);
         refreshEquipmentList();
         refreshSummary();
+        markDirty();
     }
 
     private void addOutletToSelectedPowerSource() {
@@ -1290,6 +1332,7 @@ public class PancakePlannerApp extends Application {
         updateDefaultOutletCapacity();
         refreshOutletList();
         refreshSummary();
+        markDirty();
     }
 
     private void updateSelectedOutlet() {
@@ -1329,6 +1372,7 @@ public class PancakePlannerApp extends Application {
         outlet.setCapacityWatts(capacityWatts);
         plan.updateConnectorTypeForOutlet(outlet.id(), selectedType);
         refreshAfterOutletChange(outlet.id());
+        markDirty();
     }
 
     private void removeSelectedOutlet() {
@@ -1351,6 +1395,7 @@ public class PancakePlannerApp extends Application {
         source.removeOutlet(selectedIndex);
         outletNameField.clear();
         refreshAfterOutletChange("");
+        markDirty();
     }
 
     private void refreshAfterOutletChange(String preferredOutletId) {
@@ -1644,6 +1689,7 @@ public class PancakePlannerApp extends Application {
 
         try {
             planFileService.save(plan, file.toPath());
+            markClean();
         } catch (IOException exception) {
             showError("Salvestamine ebaõnnestus", exception.getMessage());
         }
@@ -1830,9 +1876,14 @@ public class PancakePlannerApp extends Application {
     private void setMapImage(String imagePath) {
         plan.setMapImagePath(imagePath);
         redrawMap();
+        markDirty();
     }
 
     private void openPlan() {
+        if (!confirmDiscardUnsavedChanges()) {
+            return;
+        }
+
         FileChooser fileChooser = createPlanFileChooser();
         File file = fileChooser.showOpenDialog(stage);
         if (file == null) {
