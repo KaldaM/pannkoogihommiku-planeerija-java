@@ -18,6 +18,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -57,6 +58,7 @@ public class PancakePlannerApp extends Application {
     private Label selectedTypeLabel;
     private TextField nameField;
     private TextField groupField;
+    private CheckBox lockedCheckBox;
     private ColorPicker tentColorPicker;
     private ComboBox<PowerSourceChoice> powerSourceComboBox;
     private TextArea notesArea;
@@ -144,6 +146,7 @@ public class PancakePlannerApp extends Application {
         selectedTypeLabel = new Label("Vali kaardilt objekt");
         nameField = new TextField();
         groupField = new TextField();
+        lockedCheckBox = new CheckBox("Lukus");
         tentColorPicker = new ColorPicker();
         powerSourceComboBox = new ComboBox<>();
         notesArea = new TextArea();
@@ -165,9 +168,10 @@ public class PancakePlannerApp extends Application {
         form.addRow(0, new Label("Tüüp"), selectedTypeLabel);
         form.addRow(1, new Label("Nimi"), nameField);
         form.addRow(2, new Label("Grupp"), groupField);
-        form.addRow(3, new Label("Telgi värv"), tentColorPicker);
-        form.addRow(4, new Label("Vooluallikas"), powerSourceComboBox);
-        form.addRow(5, new Label("Märkmed"), notesArea);
+        form.addRow(3, new Label("Lukustus"), lockedCheckBox);
+        form.addRow(4, new Label("Telgi värv"), tentColorPicker);
+        form.addRow(5, new Label("Vooluallikas"), powerSourceComboBox);
+        form.addRow(6, new Label("Märkmed"), notesArea);
 
         Button applyButton = new Button("Rakenda muudatused");
         applyButton.setOnAction(event -> applyDetails());
@@ -298,6 +302,9 @@ public class PancakePlannerApp extends Application {
             dragDelta.y = event.getSceneY() - object.position().y();
         });
         node.setOnMouseDragged(event -> {
+            if (object.locked()) {
+                return;
+            }
             object.moveTo(object.position().moveTo(event.getSceneX() - dragDelta.x, event.getSceneY() - dragDelta.y));
             redrawMap();
             refreshSummary();
@@ -320,6 +327,7 @@ public class PancakePlannerApp extends Application {
         nameField.setDisable(!hasSelection);
         groupField.setDisable(!hasSelection);
         notesArea.setDisable(!hasSelection);
+        lockedCheckBox.setDisable(!hasSelection);
         deleteObjectButton.setDisable(!hasSelection);
         tentColorPicker.setDisable(!tentSelected);
         powerSourceComboBox.setDisable(!tentSelected);
@@ -334,6 +342,7 @@ public class PancakePlannerApp extends Application {
             nameField.clear();
             groupField.clear();
             notesArea.clear();
+            lockedCheckBox.setSelected(false);
             tentColorPicker.setValue(Color.web("#e74c3c"));
             refreshPowerSourceChoices();
             refreshEquipmentList();
@@ -344,6 +353,7 @@ public class PancakePlannerApp extends Application {
         nameField.setText(selectedObject.name());
         groupField.setText(selectedObject.groupName());
         notesArea.setText(selectedObject.notes());
+        lockedCheckBox.setSelected(selectedObject.locked());
         if (selectedObject instanceof Tent tent) {
             tentColorPicker.setValue(Color.web(tent.colorHex()));
         } else {
@@ -371,6 +381,7 @@ public class PancakePlannerApp extends Application {
         selectedObject.rename(nameField.getText());
         selectedObject.setGroupName(groupField.getText());
         selectedObject.setNotes(notesArea.getText());
+        selectedObject.setLocked(lockedCheckBox.isSelected());
         if (selectedObject instanceof Tent tent) {
             tent.setColorHex(toHex(tentColorPicker.getValue()));
             applySelectedPowerSource(tent);
