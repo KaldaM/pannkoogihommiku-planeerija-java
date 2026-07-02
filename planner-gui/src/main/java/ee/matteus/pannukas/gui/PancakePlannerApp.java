@@ -1671,11 +1671,148 @@ public class PancakePlannerApp extends Application {
     private String summaryText() {
         String lineSeparator = System.lineSeparator();
         StringBuilder builder = new StringBuilder();
-        builder.append(plan.name()).append(lineSeparator).append(lineSeparator);
-        for (String row : summaryList.getItems()) {
+        builder.append(plan.name()).append(lineSeparator);
+        builder.append("Voolu kokkuvote pesade kaupa").append(lineSeparator);
+        builder.append(lineSeparator);
+
+        for (PowerSource source : plan.powerSources()) {
+            int sourceUsedWatts = powerSummaryService.summaries(plan).stream()
+                    .filter(summary -> summary.sourceId().equals(source.id()))
+                    .findFirst()
+                    .map(PowerSummary::usedWatts)
+                    .orElse(0);
+            builder.append(source.name())
+                    .append(": ")
+                    .append(sourceUsedWatts)
+                    .append(" W kasutusel, ")
+                    .append(remainingWattsText(source.totalCapacityWatts() - sourceUsedWatts))
+                    .append(lineSeparator);
+
+            if (source.outlets().isEmpty()) {
+                builder.append("  Valjundeid pole").append(lineSeparator);
+            }
+
+            for (int index = 0; index < source.outlets().size(); index++) {
+                PowerOutlet outlet = source.outlets().get(index);
+                appendOutletReport(builder, source, outlet, index, lineSeparator);
+            }
+            builder.append(lineSeparator);
+        }
+
+        appendUnconnectedTentsReport(builder, lineSeparator);
+        appendCableReport(builder, lineSeparator);
+        return builder.toString();
+    }
+
+    private void appendOutletReport(StringBuilder builder, PowerSource source, PowerOutlet outlet, int index, String lineSeparator) {
+        int usedWatts = usedWatts(outlet.id());
+        builder.append("  ")
+                .append(outletDisplayName(outlet, outletTypeIndex(source, outlet, index)))
+                .append(": ")
+                .append(outlet.capacityWatts())
+                .append(" W mahutavus, ")
+                .append(usedWatts)
+                .append(" W kasutusel, ")
+                .append(remainingWattsText(outlet.capacityWatts() - usedWatts))
+                .append(lineSeparator);
+
+        List<Tent> tents = connectedTents(source.id(), outlet.id());
+        if (tents.isEmpty()) {
+            builder.append("    Tarbijaid pole").append(lineSeparator);
+            return;
+        }
+
+        for (Tent tent : tents) {
+            builder.append("    - ")
+                    .append(tent.name())
+                    .append(": ")
+                    .append(tent.requiredWatts())
+                    .append(" W");
+            if (!tent.groupName().isBlank()) {
+                builder.append(" (").append(tent.groupName()).append(")");
+            }
+            builder.append(lineSeparator);
+            for (Equipment equipment : tent.equipment()) {
+                builder.append("      * ")
+                        .append(equipment.name())
+                        .append(": ")
+                        .append(equipment.requiredWatts())
+                        .append(" W")
+                        .append(lineSeparator);
+            }
+        }
+    }
+
+    private List<Tent> connectedTents(String sourceId, String outletId) {
+        return plan.powerConnections().stream()
+                .filter(connection -> connection.sourceId().equals(sourceId))
+                .filter(connection -> connection.outletId().equals(outletId))
+                .map(connection -> plan.findObject(connection.consumerId()))
+                .flatMap(optional -> optional.stream())
+                .filter(Tent.class::isInstance)
+                .map(Tent.class::cast)
+                .toList();
+    }
+
+    private void appendUnconnectedTentsReport(StringBuilder builder, String lineSeparator) {
+        List<Tent> unconnectedTents = plan.tents().stream()
+                .filter(tent -> plan.findPowerConnectionForConsumer(tent.id()).isEmpty())
+                .toList();
+        if (unconnectedTents.isEmpty()) {
+            return;
+        }
+
+        builder.append("Yhendamata telgid").append(lineSeparator);
+        for (Tent tent : unconnectedTents) {
+            builder.append("  - ")
+                    .append(tent.name())
+                    .append(": ")
+                    .append(tent.requiredWatts())
+                    .append(" W")
+                    .append(lineSeparator);
+        }
+        builder.append(lineSeparator);
+    }
+
+    private void appendCableReport(StringBuilder builder, String lineSeparator) {
+        if (plan.powerConnections().isEmpty()) {
+            return;
+        }
+
+        double totalLengthMeters = 0.0;
+        List<String> cableRows = new ArrayList<>();
+        for (Tent tent : plan.tents()) {
+            PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
+            if (connection == null) {
+                continue;
+            }
+            PowerSource source = plan.findObject(connection.sourceId())
+                    .filter(PowerSource.class::isInstance)
+                    .map(PowerSource.class::cast)
+                    .orElse(null);
+            if (source == null) {
+                continue;
+            }
+
+            double lengthMeters = distanceMeters(objectCenter(tent), objectCenter(source));
+            totalLengthMeters += lengthMeters;
+            cableRows.add("  - %s -> %s (%s): %.1f m".formatted(
+                    tent.name(),
+                    source.name(),
+                    connection.connectorType().displayName(),
+                    lengthMeters
+            ));
+        }
+
+        if (cableRows.isEmpty()) {
+            return;
+        }
+
+        builder.append("Kaablid").append(lineSeparator);
+        for (String row : cableRows) {
             builder.append(row).append(lineSeparator);
         }
-        return builder.toString();
+        builder.append("Kokku: %.1f m".formatted(totalLengthMeters)).append(lineSeparator);
     }
 
     private void loadMapImage() {
