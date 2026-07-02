@@ -788,6 +788,7 @@ public class PancakePlannerApp extends Application {
             ));
             addConnectedConsumers(summary.sourceId());
         }
+        addCableSummary();
     }
 
     private void addConnectedConsumers(String sourceId) {
@@ -804,6 +805,43 @@ public class PancakePlannerApp extends Application {
                                 tent.name(),
                                 tent.requiredWatts()
                         ))));
+    }
+
+    private void addCableSummary() {
+        if (plan.powerConnections().isEmpty()) {
+            return;
+        }
+
+        List<String> cableRows = new ArrayList<>();
+        double totalLengthMeters = 0.0;
+
+        for (Tent tent : plan.tents()) {
+            PowerSource source = plan.findPowerConnectionForConsumer(tent.id())
+                    .flatMap(connection -> plan.findObject(connection.sourceId()))
+                    .filter(PowerSource.class::isInstance)
+                    .map(PowerSource.class::cast)
+                    .orElse(null);
+            if (source == null) {
+                continue;
+            }
+
+            double lengthMeters = distanceMeters(objectCenter(tent), objectCenter(source));
+            totalLengthMeters += lengthMeters;
+            cableRows.add("  - %s -> %s: %.1f m".formatted(
+                    tent.name(),
+                    source.name(),
+                    lengthMeters
+            ));
+        }
+
+        if (cableRows.isEmpty()) {
+            return;
+        }
+
+        summaryList.getItems().add("");
+        summaryList.getItems().add("Kaablid");
+        summaryList.getItems().addAll(cableRows);
+        summaryList.getItems().add("Kokku: %.1f m".formatted(totalLengthMeters));
     }
 
     private void savePlan() {
