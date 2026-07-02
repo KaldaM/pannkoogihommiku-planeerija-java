@@ -78,6 +78,7 @@ public class PancakePlannerApp extends Application {
     private Scale mapScale;
     private ImageView mapImageView;
     private File currentPlanFile;
+    private File lastUsedDirectory;
     private double zoomLevel = 1.0;
     private double mapWidth = MIN_MAP_WIDTH;
     private double mapHeight = MIN_MAP_HEIGHT;
@@ -1705,6 +1706,7 @@ public class PancakePlannerApp extends Application {
 
     private boolean savePlanAs() {
         FileChooser fileChooser = createPlanFileChooser();
+        applyInitialDirectory(fileChooser);
         if (currentPlanFile != null) {
             fileChooser.setInitialFileName(currentPlanFile.getName());
         }
@@ -1720,6 +1722,7 @@ public class PancakePlannerApp extends Application {
         try {
             planFileService.save(plan, file.toPath());
             currentPlanFile = file;
+            rememberDirectory(file);
             markClean();
             return true;
         } catch (IOException exception) {
@@ -1733,7 +1736,8 @@ public class PancakePlannerApp extends Application {
 
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Ekspordi kokkuvõte");
-        fileChooser.setInitialFileName("pannkoogihommiku-kokkuvote.txt");
+        applyInitialDirectory(fileChooser);
+        fileChooser.setInitialFileName(exportSummaryFileName());
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Tekstifail", "*.txt"));
         File file = fileChooser.showSaveDialog(stage);
         if (file == null) {
@@ -1742,6 +1746,7 @@ public class PancakePlannerApp extends Application {
 
         try {
             Files.writeString(file.toPath(), summaryText(), StandardCharsets.UTF_8);
+            rememberDirectory(file);
         } catch (IOException exception) {
             showError("Eksportimine ebaõnnestus", exception.getMessage());
         }
@@ -1897,12 +1902,14 @@ public class PancakePlannerApp extends Application {
     private void loadMapImage() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Vali kaardipilt");
+        applyInitialDirectory(fileChooser);
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Pildifail", "*.png", "*.jpg", "*.jpeg"));
         File file = fileChooser.showOpenDialog(stage);
         if (file == null) {
             return;
         }
 
+        rememberDirectory(file);
         setMapImage(file.getAbsolutePath());
     }
 
@@ -1918,6 +1925,7 @@ public class PancakePlannerApp extends Application {
         }
 
         FileChooser fileChooser = createPlanFileChooser();
+        applyInitialDirectory(fileChooser);
         File file = fileChooser.showOpenDialog(stage);
         if (file == null) {
             return;
@@ -1926,6 +1934,7 @@ public class PancakePlannerApp extends Application {
         try {
             plan = planFileService.load(file.toPath());
             currentPlanFile = file;
+            rememberDirectory(file);
             resetPlanViewState();
         } catch (IOException | RuntimeException exception) {
             showError("Faili avamine ebaõnnestus", exception.getMessage());
@@ -1937,6 +1946,36 @@ public class PancakePlannerApp extends Application {
         fileChooser.setTitle("Pannkoogihommiku plaan");
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Plaanifail", "*.pplan"));
         return fileChooser;
+    }
+
+    private void applyInitialDirectory(FileChooser fileChooser) {
+        File directory = lastUsedDirectory;
+        if (directory == null && currentPlanFile != null) {
+            directory = currentPlanFile.getParentFile();
+        }
+        if (directory != null && directory.isDirectory()) {
+            fileChooser.setInitialDirectory(directory);
+        }
+    }
+
+    private void rememberDirectory(File file) {
+        if (file != null && file.getParentFile() != null && file.getParentFile().isDirectory()) {
+            lastUsedDirectory = file.getParentFile();
+        }
+    }
+
+    private String exportSummaryFileName() {
+        String baseName = currentPlanFile == null
+                ? plan.name()
+                : currentPlanFile.getName().replaceFirst("\\.pplan$", "");
+        String safeName = baseName.trim()
+                .replaceAll("[\\\\/:*?\"<>|]+", "-")
+                .replaceAll("\\s+", "-")
+                .toLowerCase();
+        if (safeName.isBlank()) {
+            safeName = "pannkoogihommiku-kokkuvote";
+        }
+        return safeName + "-kokkuvote.txt";
     }
 
     private void showError(String title, String message) {
