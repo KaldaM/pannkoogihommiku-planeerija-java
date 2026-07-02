@@ -98,6 +98,7 @@ public class PancakePlannerApp extends Application {
     private ColorPicker tentColorPicker;
     private ComboBox<PowerSourceChoice> powerSourceComboBox;
     private ComboBox<ConnectorType> connectionTypeComboBox;
+    private ComboBox<OutletChoice> connectionOutletComboBox;
     private TextArea notesArea;
     private ListView<String> equipmentList;
     private TextField equipmentNameField;
@@ -303,6 +304,8 @@ public class PancakePlannerApp extends Application {
         powerSourceComboBox.setOnAction(event -> refreshConnectionTypeChoices(null));
         connectionTypeComboBox = new ComboBox<>();
         connectionTypeComboBox.setConverter(connectorTypeConverter());
+        connectionTypeComboBox.setOnAction(event -> refreshConnectionOutletChoices(null));
+        connectionOutletComboBox = new ComboBox<>();
         notesArea = new TextArea();
         notesArea.setPrefRowCount(3);
         equipmentList = new ListView<>();
@@ -343,6 +346,7 @@ public class PancakePlannerApp extends Application {
         form.addRow(7, new Label("Telgi värv"), tentColorPicker);
         form.addRow(8, new Label("Vooluallikas"), powerSourceComboBox);
         form.addRow(9, new Label("Yhenduse tyyp"), connectionTypeComboBox);
+        form.addRow(11, new Label("Valjund"), connectionOutletComboBox);
         form.addRow(10, new Label("Märkmed"), notesArea);
 
         Button applyButton = new Button("Rakenda muudatused");
@@ -765,6 +769,7 @@ public class PancakePlannerApp extends Application {
         tentColorPicker.setDisable(!tentSelected);
         powerSourceComboBox.setDisable(!tentSelected);
         connectionTypeComboBox.setDisable(!tentSelected);
+        connectionOutletComboBox.setDisable(!tentSelected);
         equipmentList.setDisable(!tentSelected);
         equipmentNameField.setDisable(!tentSelected);
         equipmentWattsField.setDisable(!tentSelected);
@@ -1043,6 +1048,7 @@ public class PancakePlannerApp extends Application {
                     .findFirst()
                     .ifPresent(choice -> powerSourceComboBox.getSelectionModel().select(choice));
             refreshConnectionTypeChoices(connection.connectorType());
+            refreshConnectionOutletChoices(connection.outletId());
         });
     }
 
@@ -1071,6 +1077,64 @@ public class PancakePlannerApp extends Application {
         } else {
             connectionTypeComboBox.getSelectionModel().selectFirst();
         }
+        refreshConnectionOutletChoices(null);
+    }
+
+    private void refreshConnectionOutletChoices(String preferredOutletId) {
+        String currentOutletId = preferredOutletId != null
+                ? preferredOutletId
+                : selectedConnectionOutletId();
+        connectionOutletComboBox.getItems().clear();
+
+        PowerSource selectedSource = selectedPowerSource();
+        ConnectorType selectedType = selectedConnectionType();
+        if (selectedSource == null || selectedType == null) {
+            return;
+        }
+
+        int matchingIndex = 1;
+        for (PowerOutlet outlet : selectedSource.outlets()) {
+            if (outlet.type() != selectedType) {
+                continue;
+            }
+            connectionOutletComboBox.getItems().add(new OutletChoice(
+                    outlet.id(),
+                    outletLabel(outlet, matchingIndex)
+            ));
+            matchingIndex++;
+        }
+
+        if (connectionOutletComboBox.getItems().isEmpty()) {
+            return;
+        }
+        connectionOutletComboBox.getItems().stream()
+                .filter(choice -> choice.outletId().equals(currentOutletId))
+                .findFirst()
+                .ifPresentOrElse(
+                        choice -> connectionOutletComboBox.getSelectionModel().select(choice),
+                        () -> connectionOutletComboBox.getSelectionModel().selectFirst()
+                );
+    }
+
+    private String outletLabel(PowerOutlet outlet, int matchingIndex) {
+        int usedWatts = usedWatts(outlet.id());
+        return "%s %d - %d W kasutusel, %d W alles".formatted(
+                outlet.type().displayName(),
+                matchingIndex,
+                usedWatts,
+                outlet.capacityWatts() - usedWatts
+        );
+    }
+
+    private int outletTypeIndex(PowerSource source, PowerOutlet targetOutlet, int targetIndex) {
+        int matchingIndex = 0;
+        for (int index = 0; index <= targetIndex; index++) {
+            PowerOutlet outlet = source.outlets().get(index);
+            if (outlet.type() == targetOutlet.type()) {
+                matchingIndex++;
+            }
+        }
+        return matchingIndex;
     }
 
     private PowerSource selectedPowerSource() {
@@ -1091,7 +1155,12 @@ public class PancakePlannerApp extends Application {
             return true;
         }
 
-        if (plan.connectToPower(selectedSource.sourceId(), tent.id(), selectedConnectionType()).isEmpty()) {
+        if (plan.connectToPower(
+                selectedSource.sourceId(),
+                tent.id(),
+                selectedConnectionType(),
+                selectedConnectionOutletId()
+        ).isEmpty()) {
             showError("Vooluallikat ei rakendatud", "Valitud kapis ei ole selle ühenduse jaoks sobivat väljundit.");
             return false;
         }
@@ -1101,6 +1170,11 @@ public class PancakePlannerApp extends Application {
     private ConnectorType selectedConnectionType() {
         ConnectorType selectedType = connectionTypeComboBox.getSelectionModel().getSelectedItem();
         return selectedType == null ? ConnectorType.SCHUKO_230V : selectedType;
+    }
+
+    private String selectedConnectionOutletId() {
+        OutletChoice selectedOutlet = connectionOutletComboBox.getSelectionModel().getSelectedItem();
+        return selectedOutlet == null ? "" : selectedOutlet.outletId();
     }
 
     private void addEquipmentToSelectedTent() {
@@ -1241,8 +1315,9 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        for (PowerOutlet outlet : source.outlets()) {
-            outletList.getItems().add("%s - %d W".formatted(outlet.type().displayName(), outlet.capacityWatts()));
+        for (int index = 0; index < source.outlets().size(); index++) {
+            PowerOutlet outlet = source.outlets().get(index);
+            outletList.getItems().add("%s - %d W".formatted(outletLabel(outlet, outletTypeIndex(source, outlet, index)), outlet.capacityWatts()));
         }
     }
 
@@ -1276,10 +1351,12 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        for (PowerOutlet outlet : source.outlets()) {
+        for (int index = 0; index < source.outlets().size(); index++) {
+            PowerOutlet outlet = source.outlets().get(index);
             int usedWatts = usedWatts(outlet.id());
-            summaryList.getItems().add("  %s: %d W kasutusel, %d W alles".formatted(
+            summaryList.getItems().add("  %s %d: %d W kasutusel, %d W alles".formatted(
                     outlet.type().displayName(),
+                    outletTypeIndex(source, outlet, index),
                     usedWatts,
                     outlet.capacityWatts() - usedWatts
             ));
@@ -1485,6 +1562,13 @@ public class PancakePlannerApp extends Application {
             return sourceId.isBlank();
         }
 
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    private record OutletChoice(String outletId, String name) {
         @Override
         public String toString() {
             return name;
