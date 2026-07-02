@@ -107,6 +107,7 @@ public class PancakePlannerApp extends Application {
     private Button addEquipmentButton;
     private Button removeEquipmentButton;
     private ListView<String> outletList;
+    private TextField outletNameField;
     private ComboBox<ConnectorType> outletTypeComboBox;
     private TextField outletCapacityWattsField;
     private Button addOutletButton;
@@ -331,6 +332,8 @@ public class PancakePlannerApp extends Application {
         removeEquipmentButton.setOnAction(event -> removeSelectedEquipment());
         outletList = new ListView<>();
         outletList.setPrefHeight(100);
+        outletNameField = new TextField();
+        outletNameField.setPromptText("Valjundi nimi");
         outletTypeComboBox = new ComboBox<>();
         outletTypeComboBox.getItems().addAll(ConnectorType.values());
         outletTypeComboBox.setConverter(connectorTypeConverter());
@@ -382,6 +385,7 @@ public class PancakePlannerApp extends Application {
                 8,
                 new Label("Kapi väljundid"),
                 outletList,
+                outletNameField,
                 outletTypeComboBox,
                 outletCapacityWattsField,
                 addOutletButton,
@@ -787,6 +791,7 @@ public class PancakePlannerApp extends Application {
         addEquipmentButton.setDisable(!tentSelected);
         removeEquipmentButton.setDisable(!tentSelected);
         outletList.setDisable(!powerSourceSelected);
+        outletNameField.setDisable(!powerSourceSelected);
         outletTypeComboBox.setDisable(!powerSourceSelected);
         outletCapacityWattsField.setDisable(!powerSourceSelected);
         addOutletButton.setDisable(!powerSourceSelected);
@@ -1129,12 +1134,18 @@ public class PancakePlannerApp extends Application {
 
     private String outletLabel(PowerOutlet outlet, int matchingIndex) {
         int usedWatts = usedWatts(outlet.id());
-        return "%s %d - %d W kasutusel, %s".formatted(
-                outlet.type().displayName(),
-                matchingIndex,
+        return "%s - %d W kasutusel, %s".formatted(
+                outletDisplayName(outlet, matchingIndex),
                 usedWatts,
                 remainingWattsText(outlet.capacityWatts() - usedWatts)
         );
+    }
+
+    private String outletDisplayName(PowerOutlet outlet, int matchingIndex) {
+        String automaticName = "%s %d".formatted(outlet.type().displayName(), matchingIndex);
+        return outlet.name().isBlank()
+                ? automaticName
+                : "%s (%s)".formatted(outlet.name(), automaticName);
     }
 
     private String remainingWattsText(int remainingWatts) {
@@ -1266,7 +1277,8 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        source.addOutlet(new PowerOutlet(planFactory.newId(), selectedType, capacityWatts));
+        source.addOutlet(new PowerOutlet(planFactory.newId(), outletNameField.getText(), selectedType, capacityWatts));
+        outletNameField.clear();
         updateDefaultOutletCapacity();
         refreshOutletList();
         refreshSummary();
@@ -1330,6 +1342,7 @@ public class PancakePlannerApp extends Application {
     private void refreshOutletList() {
         outletList.getItems().clear();
         if (!(selectedObject instanceof PowerSource source)) {
+            outletNameField.clear();
             return;
         }
 
@@ -1372,9 +1385,8 @@ public class PancakePlannerApp extends Application {
         for (int index = 0; index < source.outlets().size(); index++) {
             PowerOutlet outlet = source.outlets().get(index);
             int usedWatts = usedWatts(outlet.id());
-            summaryList.getItems().add("  %s %d: %d W kasutusel, %s".formatted(
-                    outlet.type().displayName(),
-                    outletTypeIndex(source, outlet, index),
+            summaryList.getItems().add("  %s: %d W kasutusel, %s".formatted(
+                    outletDisplayName(outlet, outletTypeIndex(source, outlet, index)),
                     usedWatts,
                     remainingWattsText(outlet.capacityWatts() - usedWatts)
             ));

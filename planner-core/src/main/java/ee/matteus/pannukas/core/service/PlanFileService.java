@@ -125,6 +125,7 @@ public class PlanFileService {
             PowerOutlet outlet = source.outlets().get(index);
             String outletPrefix = prefix + "outlet." + index + ".";
             properties.setProperty(outletPrefix + "id", outlet.id());
+            properties.setProperty(outletPrefix + "name", outlet.name());
             properties.setProperty(outletPrefix + "type", outlet.type().name());
             properties.setProperty(outletPrefix + "capacityWatts", Integer.toString(outlet.capacityWatts()));
         }
@@ -181,6 +182,7 @@ public class PlanFileService {
             String outletPrefix = prefix + "outlet." + index + ".";
             source.addOutlet(new PowerOutlet(
                     properties.getProperty(outletPrefix + "id", ""),
+                    properties.getProperty(outletPrefix + "name", ""),
                     ConnectorType.valueOf(properties.getProperty(outletPrefix + "type", ConnectorType.SCHUKO_230V.name())),
                     intValue(properties, outletPrefix + "capacityWatts", 0)
             ));
