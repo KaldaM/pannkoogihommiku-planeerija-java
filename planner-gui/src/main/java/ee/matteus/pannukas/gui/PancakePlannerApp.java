@@ -47,6 +47,8 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -133,6 +135,9 @@ public class PancakePlannerApp extends Application {
         Button saveButton = new Button("Salvesta");
         saveButton.setOnAction(event -> savePlan());
 
+        Button exportSummaryButton = new Button("Ekspordi kokkuvõte");
+        exportSummaryButton.setOnAction(event -> exportSummary());
+
         Button openButton = new Button("Ava");
         openButton.setOnAction(event -> openPlan());
 
@@ -164,6 +169,7 @@ public class PancakePlannerApp extends Application {
                 addTentButton,
                 addPowerSourceButton,
                 saveButton,
+                exportSummaryButton,
                 openButton,
                 loadMapButton,
                 defaultMapButton,
@@ -1036,6 +1042,35 @@ public class PancakePlannerApp extends Application {
         } catch (IOException exception) {
             showError("Salvestamine ebaõnnestus", exception.getMessage());
         }
+    }
+
+    private void exportSummary() {
+        refreshSummary();
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Ekspordi kokkuvõte");
+        fileChooser.setInitialFileName("pannkoogihommiku-kokkuvote.txt");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Tekstifail", "*.txt"));
+        File file = fileChooser.showSaveDialog(stage);
+        if (file == null) {
+            return;
+        }
+
+        try {
+            Files.writeString(file.toPath(), summaryText(), StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            showError("Eksportimine ebaõnnestus", exception.getMessage());
+        }
+    }
+
+    private String summaryText() {
+        String lineSeparator = System.lineSeparator();
+        StringBuilder builder = new StringBuilder();
+        builder.append(plan.name()).append(lineSeparator).append(lineSeparator);
+        for (String row : summaryList.getItems()) {
+            builder.append(row).append(lineSeparator);
+        }
+        return builder.toString();
     }
 
     private void loadMapImage() {
