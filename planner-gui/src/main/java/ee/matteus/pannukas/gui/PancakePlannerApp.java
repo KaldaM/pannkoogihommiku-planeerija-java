@@ -104,9 +104,11 @@ public class PancakePlannerApp extends Application {
     private Button choosePowerSourceButton;
     private ToggleButton measureButton;
     private Button addTentButton;
+    private Button addPowerSourceButton;
     private PlannerObject selectedObject;
     private Tent pendingPowerSourceTent;
     private boolean pendingTentPlacement;
+    private boolean pendingPowerSourcePlacement;
     private Stage stage;
 
     @Override
@@ -137,7 +139,7 @@ public class PancakePlannerApp extends Application {
         addTentButton = new Button("Lisa telk");
         addTentButton.setOnAction(event -> addTent());
 
-        Button addPowerSourceButton = new Button("Lisa kapp");
+        addPowerSourceButton = new Button("Lisa kapp");
         addPowerSourceButton.setOnAction(event -> addPowerSource());
 
         Button saveButton = new Button("Salvesta");
@@ -205,6 +207,10 @@ public class PancakePlannerApp extends Application {
         mapPane.setOnMouseClicked(event -> {
             if (pendingTentPlacement && !mapDraggedSincePress) {
                 placeTent(new Position(event.getX(), event.getY()));
+                return;
+            }
+            if (pendingPowerSourcePlacement && !mapDraggedSincePress) {
+                placePowerSource(new Position(event.getX(), event.getY()));
                 return;
             }
             if (measuringActive && !mapDraggedSincePress) {
@@ -337,6 +343,7 @@ public class PancakePlannerApp extends Application {
 
     private void addTent() {
         pendingTentPlacement = !pendingTentPlacement;
+        pendingPowerSourcePlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
     }
@@ -353,9 +360,18 @@ public class PancakePlannerApp extends Application {
     }
 
     private void addPowerSource() {
-        PowerSource source = new PowerSource(planFactory.newId(), "Uus kapp", new Position(160, 160));
+        pendingPowerSourcePlacement = !pendingPowerSourcePlacement;
+        pendingTentPlacement = false;
+        pendingPowerSourceTent = null;
+        refreshPlacementButtons();
+    }
+
+    private void placePowerSource(Position position) {
+        PowerSource source = new PowerSource(planFactory.newId(), "Uus kapp", position);
         source.addOutlet(new PowerOutlet(planFactory.newId(), ConnectorType.SCHUKO_230V, 11000));
         plan.addObject(source);
+        pendingPowerSourcePlacement = false;
+        refreshPlacementButtons();
         refreshGroupFilters();
         selectObject(source);
         refreshSummary();
@@ -390,6 +406,7 @@ public class PancakePlannerApp extends Application {
         selectedObject = null;
         pendingPowerSourceTent = null;
         pendingTentPlacement = false;
+        pendingPowerSourcePlacement = false;
         measuringActive = false;
         if (measureButton != null) {
             measureButton.setSelected(false);
@@ -554,6 +571,12 @@ public class PancakePlannerApp extends Application {
             if (pendingTentPlacement) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
                 placeTent(new Position(mapPoint.getX(), mapPoint.getY()));
+                event.consume();
+                return;
+            }
+            if (pendingPowerSourcePlacement) {
+                Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                placePowerSource(new Position(mapPoint.getX(), mapPoint.getY()));
                 event.consume();
                 return;
             }
@@ -753,6 +776,7 @@ public class PancakePlannerApp extends Application {
             return;
         }
         pendingTentPlacement = false;
+        pendingPowerSourcePlacement = false;
         refreshPlacementButtons();
         if (pendingPowerSourceTent != null && pendingPowerSourceTent.id().equals(tent.id())) {
             pendingPowerSourceTent = null;
@@ -836,6 +860,7 @@ public class PancakePlannerApp extends Application {
         this.measuringActive = measuringActive;
         if (measuringActive) {
             pendingTentPlacement = false;
+            pendingPowerSourcePlacement = false;
             refreshPlacementButtons();
         }
         measurementStart = null;
@@ -844,6 +869,9 @@ public class PancakePlannerApp extends Application {
     private void refreshPlacementButtons() {
         if (addTentButton != null) {
             addTentButton.setText(pendingTentPlacement ? "Tühista telk" : "Lisa telk");
+        }
+        if (addPowerSourceButton != null) {
+            addPowerSourceButton.setText(pendingPowerSourcePlacement ? "Tühista kapp" : "Lisa kapp");
         }
     }
 
