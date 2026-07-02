@@ -525,8 +525,16 @@ public class PancakePlannerApp extends Application {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Salvestamata muudatused");
         alert.setHeaderText("Plaanis on salvestamata muudatusi");
-        alert.setContentText("Kui jatkad, lahevad viimased salvestamata muudatused kaotsi.");
-        return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
+        alert.setContentText("Kas soovid enne jätkamist plaani salvestada?");
+        ButtonType saveButton = new ButtonType("Salvesta");
+        ButtonType discardButton = new ButtonType("Ara salvesta");
+        alert.getButtonTypes().setAll(saveButton, discardButton, ButtonType.CANCEL);
+
+        ButtonType choice = alert.showAndWait().orElse(ButtonType.CANCEL);
+        if (choice == saveButton) {
+            return savePlan();
+        }
+        return choice == discardButton;
     }
 
     private void redrawMap() {
@@ -1687,35 +1695,36 @@ public class PancakePlannerApp extends Application {
         }
     }
 
-    private void savePlan() {
+    private boolean savePlan() {
         if (currentPlanFile == null) {
-            savePlanAs();
-            return;
+            return savePlanAs();
         }
 
-        savePlanToFile(currentPlanFile);
+        return savePlanToFile(currentPlanFile);
     }
 
-    private void savePlanAs() {
+    private boolean savePlanAs() {
         FileChooser fileChooser = createPlanFileChooser();
         if (currentPlanFile != null) {
             fileChooser.setInitialFileName(currentPlanFile.getName());
         }
         File file = fileChooser.showSaveDialog(stage);
         if (file == null) {
-            return;
+            return false;
         }
 
-        savePlanToFile(file);
+        return savePlanToFile(file);
     }
 
-    private void savePlanToFile(File file) {
+    private boolean savePlanToFile(File file) {
         try {
             planFileService.save(plan, file.toPath());
             currentPlanFile = file;
             markClean();
+            return true;
         } catch (IOException exception) {
             showError("Salvestamine ebaõnnestus", exception.getMessage());
+            return false;
         }
     }
 
