@@ -62,6 +62,7 @@ public class PancakePlannerApp extends Application {
     private CheckBox lockedCheckBox;
     private TextField tentWidthField;
     private TextField tentHeightField;
+    private TextField tentRotationField;
     private ColorPicker tentColorPicker;
     private ComboBox<PowerSourceChoice> powerSourceComboBox;
     private TextArea notesArea;
@@ -152,6 +153,7 @@ public class PancakePlannerApp extends Application {
         lockedCheckBox = new CheckBox("Lukus");
         tentWidthField = new TextField();
         tentHeightField = new TextField();
+        tentRotationField = new TextField();
         tentColorPicker = new ColorPicker();
         powerSourceComboBox = new ComboBox<>();
         notesArea = new TextArea();
@@ -176,9 +178,10 @@ public class PancakePlannerApp extends Application {
         form.addRow(3, new Label("Lukustus"), lockedCheckBox);
         form.addRow(4, new Label("Laius m"), tentWidthField);
         form.addRow(5, new Label("Pikkus m"), tentHeightField);
-        form.addRow(6, new Label("Telgi värv"), tentColorPicker);
-        form.addRow(7, new Label("Vooluallikas"), powerSourceComboBox);
-        form.addRow(8, new Label("Märkmed"), notesArea);
+        form.addRow(6, new Label("Pööre °"), tentRotationField);
+        form.addRow(7, new Label("Telgi värv"), tentColorPicker);
+        form.addRow(8, new Label("Vooluallikas"), powerSourceComboBox);
+        form.addRow(9, new Label("Märkmed"), notesArea);
 
         Button applyButton = new Button("Rakenda muudatused");
         applyButton.setOnAction(event -> applyDetails());
@@ -261,12 +264,18 @@ public class PancakePlannerApp extends Application {
     }
 
     private void drawTent(Tent tent) {
+        double widthPixels = tent.widthMeters() * PIXELS_PER_METER;
+        double heightPixels = tent.heightMeters() * PIXELS_PER_METER;
+        Position rotationOffset = rotationOffset(widthPixels, heightPixels, tent.rotationDegrees());
         Rectangle rectangle = new Rectangle(
                 tent.position().x(),
                 tent.position().y(),
-                tent.widthMeters() * PIXELS_PER_METER,
-                tent.heightMeters() * PIXELS_PER_METER
+                widthPixels,
+                heightPixels
         );
+        rectangle.setRotate(tent.rotationDegrees());
+        rectangle.setTranslateX(rotationOffset.x());
+        rectangle.setTranslateY(rotationOffset.y());
         rectangle.setArcWidth(4);
         rectangle.setArcHeight(4);
         rectangle.setFill(Color.web(tent.colorHex()));
@@ -343,6 +352,7 @@ public class PancakePlannerApp extends Application {
         deleteObjectButton.setDisable(!hasSelection);
         tentWidthField.setDisable(!tentSelected);
         tentHeightField.setDisable(!tentSelected);
+        tentRotationField.setDisable(!tentSelected);
         tentColorPicker.setDisable(!tentSelected);
         powerSourceComboBox.setDisable(!tentSelected);
         equipmentList.setDisable(!tentSelected);
@@ -359,6 +369,7 @@ public class PancakePlannerApp extends Application {
             lockedCheckBox.setSelected(false);
             tentWidthField.clear();
             tentHeightField.clear();
+            tentRotationField.clear();
             tentColorPicker.setValue(Color.web("#e74c3c"));
             refreshPowerSourceChoices();
             refreshEquipmentList();
@@ -373,10 +384,12 @@ public class PancakePlannerApp extends Application {
         if (selectedObject instanceof Tent tent) {
             tentWidthField.setText(formatMeters(tent.widthMeters()));
             tentHeightField.setText(formatMeters(tent.heightMeters()));
+            tentRotationField.setText(formatDegrees(tent.rotationDegrees()));
             tentColorPicker.setValue(Color.web(tent.colorHex()));
         } else {
             tentWidthField.clear();
             tentHeightField.clear();
+            tentRotationField.clear();
             tentColorPicker.setValue(Color.web("#2563eb"));
         }
         refreshPowerSourceChoices();
@@ -404,6 +417,9 @@ public class PancakePlannerApp extends Application {
         selectedObject.setLocked(lockedCheckBox.isSelected());
         if (selectedObject instanceof Tent tent) {
             if (!applyTentSize(tent)) {
+                return;
+            }
+            if (!applyTentRotation(tent)) {
                 return;
             }
             tent.setColorHex(toHex(tentColorPicker.getValue()));
@@ -440,11 +456,38 @@ public class PancakePlannerApp extends Application {
         }
     }
 
+    private boolean applyTentRotation(Tent tent) {
+        try {
+            double rotationDegrees = Double.parseDouble(tentRotationField.getText().trim().replace(',', '.'));
+            tent.setRotationDegrees(rotationDegrees);
+            return true;
+        } catch (NumberFormatException exception) {
+            showError("Pööret ei muudetud", "Sisesta telgi pööre arvuna kraadides.");
+            return false;
+        }
+    }
+
     private String formatMeters(double meters) {
         if (meters == Math.rint(meters)) {
             return "%.0f".formatted(meters);
         }
         return "%.2f".formatted(meters);
+    }
+
+    private String formatDegrees(double degrees) {
+        if (degrees == Math.rint(degrees)) {
+            return "%.0f".formatted(degrees);
+        }
+        return "%.2f".formatted(degrees);
+    }
+
+    private Position rotationOffset(double width, double height, double degrees) {
+        double radians = Math.toRadians(degrees);
+        double sin = Math.abs(Math.sin(radians));
+        double cos = Math.abs(Math.cos(radians));
+        double rotatedWidth = width * cos + height * sin;
+        double rotatedHeight = width * sin + height * cos;
+        return new Position((rotatedWidth - width) / 2, (rotatedHeight - height) / 2);
     }
 
     private void refreshPowerSourceChoices() {
