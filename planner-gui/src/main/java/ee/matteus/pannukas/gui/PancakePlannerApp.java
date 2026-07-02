@@ -90,7 +90,9 @@ public class PancakePlannerApp extends Application {
     private Button addEquipmentButton;
     private Button removeEquipmentButton;
     private Button deleteObjectButton;
+    private Button choosePowerSourceButton;
     private PlannerObject selectedObject;
+    private Tent pendingPowerSourceTent;
     private Stage stage;
 
     @Override
@@ -232,6 +234,7 @@ public class PancakePlannerApp extends Application {
         nameField = new TextField();
         groupField = new TextField();
         lockedCheckBox = new CheckBox("Lukus");
+        lockedCheckBox.setOnAction(event -> updateSelectedLock());
         tentWidthField = new TextField();
         tentHeightField = new TextField();
         tentRotationField = new TextField();
@@ -266,6 +269,8 @@ public class PancakePlannerApp extends Application {
 
         Button applyButton = new Button("Rakenda muudatused");
         applyButton.setOnAction(event -> applyDetails());
+        choosePowerSourceButton = new Button("Vali kapp kaardilt");
+        choosePowerSourceButton.setOnAction(event -> startPowerSourceSelectionFromMap());
         deleteObjectButton = new Button("Kustuta objekt");
         deleteObjectButton.setOnAction(event -> deleteSelectedObject());
 
@@ -280,7 +285,7 @@ public class PancakePlannerApp extends Application {
                 addEquipmentButton,
                 removeEquipmentButton
         );
-        VBox detailPanel = new VBox(10, form, applyButton, deleteObjectButton, equipmentPanel, summaryTitle);
+        VBox detailPanel = new VBox(10, form, applyButton, choosePowerSourceButton, deleteObjectButton, equipmentPanel, summaryTitle);
         detailPanel.setPadding(new Insets(0, 0, 12, 0));
         return detailPanel;
     }
@@ -443,6 +448,11 @@ public class PancakePlannerApp extends Application {
                 event.consume();
                 return;
             }
+            if (pendingPowerSourceTent != null && object instanceof PowerSource source) {
+                connectPowerSourceFromMap(source);
+                event.consume();
+                return;
+            }
             selectObject(object);
             event.consume();
         });
@@ -452,6 +462,11 @@ public class PancakePlannerApp extends Application {
         final Delta dragDelta = new Delta();
         node.setOnMousePressed(event -> {
             if (measuringActive) {
+                return;
+            }
+            if (pendingPowerSourceTent != null && object instanceof PowerSource source) {
+                connectPowerSourceFromMap(source);
+                event.consume();
                 return;
             }
             selectObject(object);
@@ -503,6 +518,13 @@ public class PancakePlannerApp extends Application {
         equipmentWattsField.setDisable(!tentSelected);
         addEquipmentButton.setDisable(!tentSelected);
         removeEquipmentButton.setDisable(!tentSelected);
+        choosePowerSourceButton.setDisable(!tentSelected);
+        boolean selectingPowerSourceForThisTent = tentSelected
+                && pendingPowerSourceTent != null
+                && pendingPowerSourceTent.id().equals(selectedObject.id());
+        choosePowerSourceButton.setText(selectingPowerSourceForThisTent
+                ? "Tühista kapi valik"
+                : "Vali kapp kaardilt");
 
         if (!hasSelection) {
             selectedTypeLabel.setText("Vali kaardilt objekt");
@@ -537,6 +559,40 @@ public class PancakePlannerApp extends Application {
         }
         refreshPowerSourceChoices();
         refreshEquipmentList();
+    }
+
+    private void startPowerSourceSelectionFromMap() {
+        if (!(selectedObject instanceof Tent tent)) {
+            return;
+        }
+        if (pendingPowerSourceTent != null && pendingPowerSourceTent.id().equals(tent.id())) {
+            pendingPowerSourceTent = null;
+            refreshDetails();
+            return;
+        }
+        pendingPowerSourceTent = tent;
+        refreshDetails();
+    }
+
+    private void connectPowerSourceFromMap(PowerSource source) {
+        Tent tent = pendingPowerSourceTent;
+        if (tent == null) {
+            return;
+        }
+        plan.connectToPower(source.id(), tent.id(), ConnectorType.SCHUKO_230V);
+        pendingPowerSourceTent = null;
+        selectedObject = tent;
+        refreshDetails();
+        redrawMap();
+        refreshSummary();
+    }
+
+    private void updateSelectedLock() {
+        if (selectedObject == null) {
+            return;
+        }
+        selectedObject.setLocked(lockedCheckBox.isSelected());
+        redrawMap();
     }
 
     private String objectTypeName(PlannerObject object) {
@@ -579,6 +635,7 @@ public class PancakePlannerApp extends Application {
 
         plan.removeObject(selectedObject.id());
         selectedObject = null;
+        pendingPowerSourceTent = null;
         redrawMap();
         refreshSummary();
         refreshDetails();
@@ -885,6 +942,7 @@ public class PancakePlannerApp extends Application {
         try {
             plan = planFileService.load(file.toPath());
             selectedObject = null;
+            pendingPowerSourceTent = null;
             redrawMap();
             refreshSummary();
             refreshDetails();
