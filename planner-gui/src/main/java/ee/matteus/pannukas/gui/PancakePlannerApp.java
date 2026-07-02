@@ -48,8 +48,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 public class PancakePlannerApp extends Application {
@@ -75,7 +77,10 @@ public class PancakePlannerApp extends Application {
     private boolean mapDraggedSincePress;
     private Position measurementStart;
     private final List<Node> measurementNodes = new ArrayList<>();
+    private final Set<String> visibleGroups = new HashSet<>();
+    private Set<String> knownGroups = new HashSet<>();
     private ListView<String> summaryList;
+    private VBox groupFilterPanel;
     private Label selectedTypeLabel;
     private TextField nameField;
     private TextField groupField;
@@ -106,6 +111,7 @@ public class PancakePlannerApp extends Application {
         root.setTop(createToolbar());
         root.setCenter(createContent());
 
+        refreshGroupFilters();
         redrawMap();
         refreshSummary();
         refreshDetails();
@@ -201,6 +207,9 @@ public class PancakePlannerApp extends Application {
 
         summaryList = new ListView<>();
         sidebar.setCenter(summaryList);
+        groupFilterPanel = new VBox(6);
+        groupFilterPanel.setPadding(new Insets(12, 0, 0, 0));
+        sidebar.setBottom(groupFilterPanel);
 
         SplitPane splitPane = new SplitPane(mapScrollPane, sidebar);
         splitPane.setDividerPositions(0.72);
@@ -296,6 +305,7 @@ public class PancakePlannerApp extends Application {
         Tent tent = new Tent(planFactory.newId(), "Uus telk", new Position(120, 120));
         tent.setGroupName("Määramata");
         plan.addObject(tent);
+        refreshGroupFilters();
         selectObject(tent);
         refreshSummary();
     }
@@ -304,6 +314,7 @@ public class PancakePlannerApp extends Application {
         PowerSource source = new PowerSource(planFactory.newId(), "Uus kapp", new Position(160, 160));
         source.addOutlet(new PowerOutlet(planFactory.newId(), ConnectorType.SCHUKO_230V, 11000));
         plan.addObject(source);
+        refreshGroupFilters();
         selectObject(source);
         refreshSummary();
     }
@@ -313,6 +324,9 @@ public class PancakePlannerApp extends Application {
         addMapImage();
         drawPowerConnections();
         for (PlannerObject object : plan.objects()) {
+            if (!isGroupVisible(object)) {
+                continue;
+            }
             if (object instanceof Tent tent) {
                 drawTent(tent);
             } else if (object instanceof PowerSource source) {
@@ -338,10 +352,14 @@ public class PancakePlannerApp extends Application {
 
     private void drawPowerConnections() {
         for (Tent tent : plan.tents()) {
+            if (!isGroupVisible(tent)) {
+                continue;
+            }
             plan.findPowerConnectionForConsumer(tent.id())
                     .flatMap(connection -> plan.findObject(connection.sourceId()))
                     .filter(PowerSource.class::isInstance)
                     .map(PowerSource.class::cast)
+                    .filter(this::isGroupVisible)
                     .ifPresent(source -> drawPowerConnection(tent, source));
         }
     }
@@ -511,6 +529,53 @@ public class PancakePlannerApp extends Application {
         return "%s [%s]".formatted(object.name(), object.groupName());
     }
 
+    private boolean isGroupVisible(PlannerObject object) {
+        return knownGroups.isEmpty() || visibleGroups.contains(groupNameForFilter(object));
+    }
+
+    private String groupNameForFilter(PlannerObject object) {
+        return object.groupName().isBlank() ? "Määramata" : object.groupName();
+    }
+
+    private void refreshGroupFilters() {
+        if (groupFilterPanel == null || plan == null) {
+            return;
+        }
+
+        Set<String> currentGroups = new HashSet<>();
+        for (PlannerObject object : plan.objects()) {
+            currentGroups.add(groupNameForFilter(object));
+        }
+
+        visibleGroups.retainAll(currentGroups);
+        for (String groupName : currentGroups) {
+            if (!knownGroups.contains(groupName)) {
+                visibleGroups.add(groupName);
+            }
+        }
+        knownGroups = currentGroups;
+
+        groupFilterPanel.getChildren().clear();
+        groupFilterPanel.getChildren().add(new Label("Grupi filtrid"));
+        Map<String, String> sortedGroups = new TreeMap<>();
+        for (String currentGroup : currentGroups) {
+            sortedGroups.put(currentGroup, currentGroup);
+        }
+        for (String groupName : sortedGroups.values()) {
+            CheckBox groupCheckBox = new CheckBox(groupName);
+            groupCheckBox.setSelected(visibleGroups.contains(groupName));
+            groupCheckBox.setOnAction(event -> {
+                if (groupCheckBox.isSelected()) {
+                    visibleGroups.add(groupName);
+                } else {
+                    visibleGroups.remove(groupName);
+                }
+                redrawMap();
+            });
+            groupFilterPanel.getChildren().add(groupCheckBox);
+        }
+    }
+
     private void applyLockedStroke(javafx.scene.shape.Shape shape, PlannerObject object) {
         shape.getStrokeDashArray().clear();
         if (object.locked()) {
@@ -642,6 +707,7 @@ public class PancakePlannerApp extends Application {
             tent.setColorHex(toHex(tentColorPicker.getValue()));
             applySelectedPowerSource(tent);
         }
+        refreshGroupFilters();
         redrawMap();
         refreshSummary();
     }
@@ -654,6 +720,7 @@ public class PancakePlannerApp extends Application {
         plan.removeObject(selectedObject.id());
         selectedObject = null;
         pendingPowerSourceTent = null;
+        refreshGroupFilters();
         redrawMap();
         refreshSummary();
         refreshDetails();
@@ -983,6 +1050,9 @@ public class PancakePlannerApp extends Application {
             plan = planFileService.load(file.toPath());
             selectedObject = null;
             pendingPowerSourceTent = null;
+            visibleGroups.clear();
+            knownGroups.clear();
+            refreshGroupFilters();
             redrawMap();
             refreshSummary();
             refreshDetails();
