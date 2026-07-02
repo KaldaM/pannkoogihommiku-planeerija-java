@@ -418,7 +418,7 @@ public class PancakePlannerApp extends Application {
         makeSelectable(rectangle, tent);
         makeDraggable(rectangle, tent);
 
-        Label label = new Label(tent.name());
+        Label label = new Label(mapLabel(tent));
         label.setLayoutX(tent.position().x());
         label.setLayoutY(tent.position().y() - 24);
         makeSelectable(label, tent);
@@ -434,7 +434,7 @@ public class PancakePlannerApp extends Application {
         makeSelectable(circle, source);
         makeDraggable(circle, source);
 
-        Label label = new Label(source.name());
+        Label label = new Label(mapLabel(source));
         label.setLayoutX(source.position().x() + 16);
         label.setLayoutY(source.position().y() - 12);
         makeSelectable(label, source);
@@ -500,6 +500,13 @@ public class PancakePlannerApp extends Application {
 
     private boolean isSelected(PlannerObject object) {
         return selectedObject != null && selectedObject.id().equals(object.id());
+    }
+
+    private String mapLabel(PlannerObject object) {
+        if (object.groupName().isBlank()) {
+            return object.name();
+        }
+        return "%s [%s]".formatted(object.name(), object.groupName());
     }
 
     private void refreshDetails() {
