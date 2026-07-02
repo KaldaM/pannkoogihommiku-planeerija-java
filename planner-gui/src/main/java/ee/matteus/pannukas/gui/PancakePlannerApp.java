@@ -77,6 +77,7 @@ public class PancakePlannerApp extends Application {
     private Pane mapContentPane;
     private Scale mapScale;
     private ImageView mapImageView;
+    private File currentPlanFile;
     private double zoomLevel = 1.0;
     private double mapWidth = MIN_MAP_WIDTH;
     private double mapHeight = MIN_MAP_HEIGHT;
@@ -164,6 +165,9 @@ public class PancakePlannerApp extends Application {
         Button saveButton = new Button("Salvesta");
         saveButton.setOnAction(event -> savePlan());
 
+        Button saveAsButton = new Button("Salvesta kui...");
+        saveAsButton.setOnAction(event -> savePlanAs());
+
         Button exportSummaryButton = new Button("Ekspordi kokkuvõte");
         exportSummaryButton.setOnAction(event -> exportSummary());
 
@@ -199,6 +203,7 @@ public class PancakePlannerApp extends Application {
                 addTentButton,
                 addPowerSourceButton,
                 saveButton,
+                saveAsButton,
                 exportSummaryButton,
                 openButton,
                 loadMapButton,
@@ -469,6 +474,7 @@ public class PancakePlannerApp extends Application {
         }
 
         plan = planFactory.createEmptyPlan();
+        currentPlanFile = null;
         resetPlanViewState();
     }
 
@@ -508,7 +514,8 @@ public class PancakePlannerApp extends Application {
         if (stage == null) {
             return;
         }
-        stage.setTitle("%sPannkoogihommiku planeerija".formatted(unsavedChanges ? "* " : ""));
+        String fileName = currentPlanFile == null ? "" : " - " + currentPlanFile.getName();
+        stage.setTitle("%sPannkoogihommiku planeerija%s".formatted(unsavedChanges ? "* " : "", fileName));
     }
 
     private boolean confirmDiscardUnsavedChanges() {
@@ -1681,14 +1688,31 @@ public class PancakePlannerApp extends Application {
     }
 
     private void savePlan() {
+        if (currentPlanFile == null) {
+            savePlanAs();
+            return;
+        }
+
+        savePlanToFile(currentPlanFile);
+    }
+
+    private void savePlanAs() {
         FileChooser fileChooser = createPlanFileChooser();
+        if (currentPlanFile != null) {
+            fileChooser.setInitialFileName(currentPlanFile.getName());
+        }
         File file = fileChooser.showSaveDialog(stage);
         if (file == null) {
             return;
         }
 
+        savePlanToFile(file);
+    }
+
+    private void savePlanToFile(File file) {
         try {
             planFileService.save(plan, file.toPath());
+            currentPlanFile = file;
             markClean();
         } catch (IOException exception) {
             showError("Salvestamine ebaõnnestus", exception.getMessage());
@@ -1892,6 +1916,7 @@ public class PancakePlannerApp extends Application {
 
         try {
             plan = planFileService.load(file.toPath());
+            currentPlanFile = file;
             resetPlanViewState();
         } catch (IOException | RuntimeException exception) {
             showError("Faili avamine ebaõnnestus", exception.getMessage());
