@@ -100,6 +100,11 @@ public class PancakePlannerApp extends Application {
     private TextField equipmentWattsField;
     private Button addEquipmentButton;
     private Button removeEquipmentButton;
+    private ListView<String> outletList;
+    private ComboBox<ConnectorType> outletTypeComboBox;
+    private TextField outletCapacityWattsField;
+    private Button addOutletButton;
+    private Button removeOutletButton;
     private Button deleteObjectButton;
     private Button choosePowerSourceButton;
     private ToggleButton measureButton;
@@ -303,6 +308,17 @@ public class PancakePlannerApp extends Application {
         addEquipmentButton.setOnAction(event -> addEquipmentToSelectedTent());
         removeEquipmentButton = new Button("Eemalda valitud");
         removeEquipmentButton.setOnAction(event -> removeSelectedEquipment());
+        outletList = new ListView<>();
+        outletList.setPrefHeight(100);
+        outletTypeComboBox = new ComboBox<>();
+        outletTypeComboBox.getItems().addAll(ConnectorType.values());
+        outletTypeComboBox.getSelectionModel().select(ConnectorType.SCHUKO_230V);
+        outletCapacityWattsField = new TextField();
+        outletCapacityWattsField.setPromptText("W");
+        addOutletButton = new Button("Lisa väljund");
+        addOutletButton.setOnAction(event -> addOutletToSelectedPowerSource());
+        removeOutletButton = new Button("Eemalda valitud");
+        removeOutletButton.setOnAction(event -> removeSelectedOutlet());
 
         GridPane form = new GridPane();
         form.setHgap(8);
@@ -336,7 +352,16 @@ public class PancakePlannerApp extends Application {
                 addEquipmentButton,
                 removeEquipmentButton
         );
-        VBox detailPanel = new VBox(10, planForm, form, applyButton, choosePowerSourceButton, deleteObjectButton, equipmentPanel, summaryTitle);
+        VBox outletPanel = new VBox(
+                8,
+                new Label("Kapi väljundid"),
+                outletList,
+                outletTypeComboBox,
+                outletCapacityWattsField,
+                addOutletButton,
+                removeOutletButton
+        );
+        VBox detailPanel = new VBox(10, planForm, form, applyButton, choosePowerSourceButton, deleteObjectButton, equipmentPanel, outletPanel, summaryTitle);
         detailPanel.setPadding(new Insets(0, 0, 12, 0));
         return detailPanel;
     }
@@ -713,6 +738,7 @@ public class PancakePlannerApp extends Application {
     private void refreshDetails() {
         boolean hasSelection = selectedObject != null;
         boolean tentSelected = selectedObject instanceof Tent;
+        boolean powerSourceSelected = selectedObject instanceof PowerSource;
         nameField.setDisable(!hasSelection);
         groupField.setDisable(!hasSelection);
         notesArea.setDisable(!hasSelection);
@@ -728,6 +754,11 @@ public class PancakePlannerApp extends Application {
         equipmentWattsField.setDisable(!tentSelected);
         addEquipmentButton.setDisable(!tentSelected);
         removeEquipmentButton.setDisable(!tentSelected);
+        outletList.setDisable(!powerSourceSelected);
+        outletTypeComboBox.setDisable(!powerSourceSelected);
+        outletCapacityWattsField.setDisable(!powerSourceSelected);
+        addOutletButton.setDisable(!powerSourceSelected);
+        removeOutletButton.setDisable(!powerSourceSelected);
         choosePowerSourceButton.setDisable(!tentSelected);
         boolean selectingPowerSourceForThisTent = tentSelected
                 && pendingPowerSourceTent != null
@@ -748,6 +779,7 @@ public class PancakePlannerApp extends Application {
             tentColorPicker.setValue(Color.web("#e74c3c"));
             refreshPowerSourceChoices();
             refreshEquipmentList();
+            refreshOutletList();
             return;
         }
 
@@ -769,6 +801,7 @@ public class PancakePlannerApp extends Application {
         }
         refreshPowerSourceChoices();
         refreshEquipmentList();
+        refreshOutletList();
     }
 
     private void startPowerSourceSelectionFromMap() {
@@ -1046,6 +1079,51 @@ public class PancakePlannerApp extends Application {
         refreshSummary();
     }
 
+    private void addOutletToSelectedPowerSource() {
+        if (!(selectedObject instanceof PowerSource source)) {
+            return;
+        }
+
+        ConnectorType selectedType = outletTypeComboBox.getSelectionModel().getSelectedItem();
+        if (selectedType == null) {
+            showError("Väljundit ei lisatud", "Vali väljundi tüüp.");
+            return;
+        }
+
+        int capacityWatts;
+        try {
+            capacityWatts = Integer.parseInt(outletCapacityWattsField.getText().trim());
+        } catch (NumberFormatException exception) {
+            showError("Väljundit ei lisatud", "Sisesta võimsus täisarvuna vattides.");
+            return;
+        }
+
+        if (capacityWatts <= 0) {
+            showError("Väljundit ei lisatud", "Võimsus peab olema positiivne.");
+            return;
+        }
+
+        source.addOutlet(new PowerOutlet(planFactory.newId(), selectedType, capacityWatts));
+        outletCapacityWattsField.clear();
+        refreshOutletList();
+        refreshSummary();
+    }
+
+    private void removeSelectedOutlet() {
+        if (!(selectedObject instanceof PowerSource source)) {
+            return;
+        }
+
+        int selectedIndex = outletList.getSelectionModel().getSelectedIndex();
+        if (selectedIndex < 0) {
+            return;
+        }
+
+        source.removeOutlet(selectedIndex);
+        refreshOutletList();
+        refreshSummary();
+    }
+
     private void refreshEquipmentList() {
         equipmentList.getItems().clear();
         if (!(selectedObject instanceof Tent tent)) {
@@ -1054,6 +1132,17 @@ public class PancakePlannerApp extends Application {
 
         for (Equipment item : tent.equipment()) {
             equipmentList.getItems().add("%s - %d W".formatted(item.name(), item.requiredWatts()));
+        }
+    }
+
+    private void refreshOutletList() {
+        outletList.getItems().clear();
+        if (!(selectedObject instanceof PowerSource source)) {
+            return;
+        }
+
+        for (PowerOutlet outlet : source.outlets()) {
+            outletList.getItems().add("%s - %d W".formatted(outlet.type().displayName(), outlet.capacityWatts()));
         }
     }
 

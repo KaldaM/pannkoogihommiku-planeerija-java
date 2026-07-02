@@ -15,6 +15,10 @@ public class PowerSource extends PlannerObject {
         outlets.add(outlet);
     }
 
+    public void removeOutlet(int index) {
+        outlets.remove(index);
+    }
+
     public List<PowerOutlet> outlets() {
         return Collections.unmodifiableList(outlets);
     }
