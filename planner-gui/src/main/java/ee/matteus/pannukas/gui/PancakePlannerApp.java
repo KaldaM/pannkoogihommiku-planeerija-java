@@ -304,6 +304,7 @@ public class PancakePlannerApp extends Application {
     private void redrawMap() {
         mapPane.getChildren().clear();
         addMapImage();
+        drawPowerConnections();
         for (PlannerObject object : plan.objects()) {
             if (object instanceof Tent tent) {
                 drawTent(tent);
@@ -326,6 +327,47 @@ public class PancakePlannerApp extends Application {
         mapHeight = Math.max(MIN_MAP_HEIGHT, image.getHeight());
         updateZoomContentSize();
         mapPane.getChildren().add(mapImageView);
+    }
+
+    private void drawPowerConnections() {
+        for (Tent tent : plan.tents()) {
+            plan.findPowerConnectionForConsumer(tent.id())
+                    .flatMap(connection -> plan.findObject(connection.sourceId()))
+                    .filter(PowerSource.class::isInstance)
+                    .map(PowerSource.class::cast)
+                    .ifPresent(source -> drawPowerConnection(tent, source));
+        }
+    }
+
+    private void drawPowerConnection(Tent tent, PowerSource source) {
+        Position tentCenter = objectCenter(tent);
+        Position sourceCenter = objectCenter(source);
+
+        Line line = new Line(tentCenter.x(), tentCenter.y(), sourceCenter.x(), sourceCenter.y());
+        line.setStroke(Color.web("#0f766e"));
+        line.setStrokeWidth(2.5);
+        line.setOpacity(0.85);
+        line.setMouseTransparent(true);
+
+        Label distanceLabel = new Label("%.1f m".formatted(distanceMeters(tentCenter, sourceCenter)));
+        distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,0.88); -fx-padding: 2 5 2 5; -fx-border-color: #0f766e;");
+        distanceLabel.setLayoutX((tentCenter.x() + sourceCenter.x()) / 2 + 6);
+        distanceLabel.setLayoutY((tentCenter.y() + sourceCenter.y()) / 2 + 6);
+        distanceLabel.setMouseTransparent(true);
+
+        mapPane.getChildren().addAll(line, distanceLabel);
+    }
+
+    private Position objectCenter(PlannerObject object) {
+        if (object instanceof Tent tent) {
+            double widthPixels = tent.widthMeters() * PIXELS_PER_METER;
+            double heightPixels = tent.heightMeters() * PIXELS_PER_METER;
+            return new Position(
+                    tent.position().x() + widthPixels / 2,
+                    tent.position().y() + heightPixels / 2
+            );
+        }
+        return object.position();
     }
 
     private Image loadImage(String imagePath) {
