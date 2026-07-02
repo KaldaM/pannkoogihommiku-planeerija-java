@@ -415,6 +415,7 @@ public class PancakePlannerApp extends Application {
         rectangle.setFill(Color.web(tent.colorHex()));
         rectangle.setStroke(Color.web("#222222"));
         rectangle.setStrokeWidth(isSelected(tent) ? 4 : 1);
+        applyLockedStroke(rectangle, tent);
         makeSelectable(rectangle, tent);
         makeDraggable(rectangle, tent);
 
@@ -431,6 +432,7 @@ public class PancakePlannerApp extends Application {
         circle.setFill(Color.web("#2563eb"));
         circle.setStroke(Color.web("#111827"));
         circle.setStrokeWidth(isSelected(source) ? 4 : 1);
+        applyLockedStroke(circle, source);
         makeSelectable(circle, source);
         makeDraggable(circle, source);
 
@@ -507,6 +509,13 @@ public class PancakePlannerApp extends Application {
             return object.name();
         }
         return "%s [%s]".formatted(object.name(), object.groupName());
+    }
+
+    private void applyLockedStroke(javafx.scene.shape.Shape shape, PlannerObject object) {
+        shape.getStrokeDashArray().clear();
+        if (object.locked()) {
+            shape.getStrokeDashArray().addAll(8.0, 5.0);
+        }
     }
 
     private void refreshDetails() {
