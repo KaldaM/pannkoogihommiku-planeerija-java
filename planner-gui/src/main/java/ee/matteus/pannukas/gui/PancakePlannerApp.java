@@ -24,9 +24,11 @@ import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
@@ -38,6 +40,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.transform.Scale;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -51,6 +54,8 @@ public class PancakePlannerApp extends Application {
     private static final String DEFAULT_MAP_PATH = "classpath:/maps/tavakaart.png";
     private static final String ORTHOPHOTO_MAP_PATH = "classpath:/maps/ortofoto.png";
     private static final double PIXELS_PER_METER = 24.0;
+    private static final double MIN_MAP_WIDTH = 760.0;
+    private static final double MIN_MAP_HEIGHT = 560.0;
 
     private final PlanFactory planFactory = new PlanFactory();
     private final PowerSummaryService powerSummaryService = new PowerSummaryService();
@@ -58,8 +63,14 @@ public class PancakePlannerApp extends Application {
 
     private EventPlan plan;
     private Pane mapPane;
+    private Pane mapContentPane;
+    private Scale mapScale;
     private ImageView mapImageView;
+    private double zoomLevel = 1.0;
+    private double mapWidth = MIN_MAP_WIDTH;
+    private double mapHeight = MIN_MAP_HEIGHT;
     private boolean measuringActive;
+    private boolean mapDraggedSincePress;
     private Position measurementStart;
     private final List<Node> measurementNodes = new ArrayList<>();
     private ListView<String> summaryList;
@@ -98,6 +109,7 @@ public class PancakePlannerApp extends Application {
         Scene scene = new Scene(root, 1200, 760);
         stage.setTitle("Pannkoogihommiku planeerija");
         stage.setScene(scene);
+        stage.setMaximized(true);
         stage.show();
     }
 
@@ -123,8 +135,17 @@ public class PancakePlannerApp extends Application {
         Button orthophotoButton = new Button("Ortofoto");
         orthophotoButton.setOnAction(event -> setMapImage(ORTHOPHOTO_MAP_PATH));
 
-        Button measureButton = new Button("Mõõdulint");
-        measureButton.setOnAction(event -> toggleMeasuring());
+        Button zoomInButton = new Button("+");
+        zoomInButton.setOnAction(event -> changeZoom(1.2));
+
+        Button zoomOutButton = new Button("-");
+        zoomOutButton.setOnAction(event -> changeZoom(1 / 1.2));
+
+        Button resetZoomButton = new Button("100%");
+        resetZoomButton.setOnAction(event -> setZoom(1.0));
+
+        ToggleButton measureButton = new ToggleButton("Mõõdulint");
+        measureButton.setOnAction(event -> setMeasuringActive(measureButton.isSelected()));
 
         Button clearMeasurementsButton = new Button("Tühjenda mõõdud");
         clearMeasurementsButton.setOnAction(event -> clearMeasurements());
@@ -137,6 +158,9 @@ public class PancakePlannerApp extends Application {
                 loadMapButton,
                 defaultMapButton,
                 orthophotoButton,
+                zoomInButton,
+                zoomOutButton,
+                resetZoomButton,
                 measureButton,
                 clearMeasurementsButton
         );
@@ -144,15 +168,28 @@ public class PancakePlannerApp extends Application {
 
     private SplitPane createContent() {
         mapPane = new Pane();
-        mapPane.setMinSize(760, 560);
+        mapPane.setMinSize(MIN_MAP_WIDTH, MIN_MAP_HEIGHT);
+        mapPane.setPrefSize(MIN_MAP_WIDTH, MIN_MAP_HEIGHT);
         mapPane.setStyle("-fx-background-color: #eef1ec;");
+        mapScale = new Scale(1.0, 1.0, 0.0, 0.0);
+        mapPane.getTransforms().add(mapScale);
         mapImageView = new ImageView();
         mapImageView.setPreserveRatio(true);
+        mapPane.setOnMousePressed(event -> mapDraggedSincePress = false);
+        mapPane.setOnMouseDragged(event -> mapDraggedSincePress = true);
         mapPane.setOnMouseClicked(event -> {
-            if (measuringActive) {
+            if (measuringActive && !mapDraggedSincePress) {
                 handleMeasureClick(new Position(event.getX(), event.getY()));
             }
         });
+        mapContentPane = new Pane(mapPane);
+        updateZoomContentSize();
+
+        ScrollPane mapScrollPane = new ScrollPane(mapContentPane);
+        mapScrollPane.setPannable(true);
+        mapScrollPane.setFitToWidth(false);
+        mapScrollPane.setFitToHeight(false);
+        mapScrollPane.setStyle("-fx-background: #eef1ec;");
 
         BorderPane sidebar = new BorderPane();
         sidebar.setPadding(new Insets(12));
@@ -161,9 +198,33 @@ public class PancakePlannerApp extends Application {
         summaryList = new ListView<>();
         sidebar.setCenter(summaryList);
 
-        SplitPane splitPane = new SplitPane(mapPane, sidebar);
+        SplitPane splitPane = new SplitPane(mapScrollPane, sidebar);
         splitPane.setDividerPositions(0.72);
         return splitPane;
+    }
+
+    private void changeZoom(double factor) {
+        setZoom(zoomLevel * factor);
+    }
+
+    private void setZoom(double zoomLevel) {
+        this.zoomLevel = Math.max(0.25, Math.min(4.0, zoomLevel));
+        if (mapScale != null) {
+            mapScale.setX(this.zoomLevel);
+            mapScale.setY(this.zoomLevel);
+        }
+        updateZoomContentSize();
+    }
+
+    private void updateZoomContentSize() {
+        if (mapPane != null) {
+            mapPane.setMinSize(mapWidth, mapHeight);
+            mapPane.setPrefSize(mapWidth, mapHeight);
+        }
+        if (mapContentPane != null) {
+            mapContentPane.setMinSize(mapWidth * zoomLevel, mapHeight * zoomLevel);
+            mapContentPane.setPrefSize(mapWidth * zoomLevel, mapHeight * zoomLevel);
+        }
     }
 
     private VBox createDetailPanel() {
@@ -261,6 +322,9 @@ public class PancakePlannerApp extends Application {
 
         mapImageView.setImage(image);
         mapImageView.setFitWidth(image.getWidth());
+        mapWidth = Math.max(MIN_MAP_WIDTH, image.getWidth());
+        mapHeight = Math.max(MIN_MAP_HEIGHT, image.getHeight());
+        updateZoomContentSize();
         mapPane.getChildren().add(mapImageView);
     }
 
@@ -349,8 +413,10 @@ public class PancakePlannerApp extends Application {
                 return;
             }
             selectObject(object);
-            dragDelta.x = event.getSceneX() - object.position().x();
-            dragDelta.y = event.getSceneY() - object.position().y();
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            dragDelta.x = mapPoint.getX() - object.position().x();
+            dragDelta.y = mapPoint.getY() - object.position().y();
+            event.consume();
         });
         node.setOnMouseDragged(event -> {
             if (measuringActive) {
@@ -359,9 +425,11 @@ public class PancakePlannerApp extends Application {
             if (object.locked()) {
                 return;
             }
-            object.moveTo(object.position().moveTo(event.getSceneX() - dragDelta.x, event.getSceneY() - dragDelta.y));
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            object.moveTo(object.position().moveTo(mapPoint.getX() - dragDelta.x, mapPoint.getY() - dragDelta.y));
             redrawMap();
             refreshSummary();
+            event.consume();
         });
     }
 
@@ -474,8 +542,8 @@ public class PancakePlannerApp extends Application {
         refreshDetails();
     }
 
-    private void toggleMeasuring() {
-        measuringActive = !measuringActive;
+    private void setMeasuringActive(boolean measuringActive) {
+        this.measuringActive = measuringActive;
         measurementStart = null;
     }
 
