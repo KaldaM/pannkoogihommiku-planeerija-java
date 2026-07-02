@@ -1317,6 +1317,13 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
+        List<Tent> connectedTents = connectedTents(outlet.id());
+        if (outlet.type() != selectedType
+                && !connectedTents.isEmpty()
+                && !confirmOutletTypeChange(outlet, selectedType, connectedTents)) {
+            return;
+        }
+
         outlet.rename(outletNameField.getText());
         outlet.setType(selectedType);
         outlet.setCapacityWatts(capacityWatts);
@@ -1387,6 +1394,22 @@ public class PancakePlannerApp extends Application {
                 .reduce("", (rows, row) -> rows + row + System.lineSeparator());
         alert.setContentText("%s kustutamisel eemaldatakse nende telkide vooluyhendused:%n%n%s".formatted(
                 outlet.name().isBlank() ? outlet.type().displayName() : outlet.name(),
+                tentRows
+        ));
+        return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
+    }
+
+    private boolean confirmOutletTypeChange(PowerOutlet outlet, ConnectorType selectedType, List<Tent> connectedTents) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Muuda valjundi tyypi");
+        alert.setHeaderText("See valjund on kasutusel");
+        String tentRows = connectedTents.stream()
+                .map(tent -> "- " + tent.name())
+                .reduce("", (rows, row) -> rows + row + System.lineSeparator());
+        alert.setContentText("%s tyyp muutub: %s -> %s.%n%nNende telkide yhenduse tyyp muutub samuti:%n%n%s".formatted(
+                outlet.name().isBlank() ? outlet.type().displayName() : outlet.name(),
+                outlet.type().displayName(),
+                selectedType.displayName(),
                 tentRows
         ));
         return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
