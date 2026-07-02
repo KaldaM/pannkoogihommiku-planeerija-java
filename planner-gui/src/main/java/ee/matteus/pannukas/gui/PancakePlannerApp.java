@@ -26,6 +26,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
@@ -243,6 +244,16 @@ public class PancakePlannerApp extends Application {
         summaryList = new ListView<>();
         summaryList.setMinHeight(180);
         summaryList.setPrefHeight(260);
+        summaryList.setCellFactory(list -> new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : item);
+                setStyle(!empty && item != null && item.contains("ULEKOORMUS")
+                        ? "-fx-text-fill: #b91c1c; -fx-font-weight: bold;"
+                        : "");
+            }
+        });
         sidebar.getChildren().add(summaryList);
         groupFilterPanel = new VBox(6);
         groupFilterPanel.setPadding(new Insets(12, 0, 0, 0));
@@ -1118,12 +1129,19 @@ public class PancakePlannerApp extends Application {
 
     private String outletLabel(PowerOutlet outlet, int matchingIndex) {
         int usedWatts = usedWatts(outlet.id());
-        return "%s %d - %d W kasutusel, %d W alles".formatted(
+        return "%s %d - %d W kasutusel, %s".formatted(
                 outlet.type().displayName(),
                 matchingIndex,
                 usedWatts,
-                outlet.capacityWatts() - usedWatts
+                remainingWattsText(outlet.capacityWatts() - usedWatts)
         );
+    }
+
+    private String remainingWattsText(int remainingWatts) {
+        if (remainingWatts < 0) {
+            return "ULEKOORMUS %d W".formatted(Math.abs(remainingWatts));
+        }
+        return "%d W alles".formatted(remainingWatts);
     }
 
     private int outletTypeIndex(PowerSource source, PowerOutlet targetOutlet, int targetIndex) {
@@ -1331,10 +1349,10 @@ public class PancakePlannerApp extends Application {
     private void refreshSummary() {
         summaryList.getItems().clear();
         for (PowerSummary summary : powerSummaryService.summaries(plan)) {
-            summaryList.getItems().add("%s: %d W kasutusel, %d W alles".formatted(
+            summaryList.getItems().add("%s: %d W kasutusel, %s".formatted(
                     summary.sourceName(),
                     summary.usedWatts(),
-                    summary.remainingWatts()
+                    remainingWattsText(summary.remainingWatts())
             ));
             addConnectedConsumers(summary.sourceId());
         }
@@ -1354,11 +1372,11 @@ public class PancakePlannerApp extends Application {
         for (int index = 0; index < source.outlets().size(); index++) {
             PowerOutlet outlet = source.outlets().get(index);
             int usedWatts = usedWatts(outlet.id());
-            summaryList.getItems().add("  %s %d: %d W kasutusel, %d W alles".formatted(
+            summaryList.getItems().add("  %s %d: %d W kasutusel, %s".formatted(
                     outlet.type().displayName(),
                     outletTypeIndex(source, outlet, index),
                     usedWatts,
-                    outlet.capacityWatts() - usedWatts
+                    remainingWattsText(outlet.capacityWatts() - usedWatts)
             ));
             addConnectedConsumers(sourceId, outlet.id(), "    ");
         }
