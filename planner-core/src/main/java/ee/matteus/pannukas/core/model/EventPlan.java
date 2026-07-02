@@ -2,14 +2,17 @@ package ee.matteus.pannukas.core.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class EventPlan {
     private String name;
     private String mapImagePath;
     private final List<PlannerObject> objects = new ArrayList<>();
     private final List<PowerConnection> powerConnections = new ArrayList<>();
+    private final Set<String> hiddenGroups = new HashSet<>();
 
     public EventPlan(String name) {
         this.name = name;
@@ -81,5 +84,24 @@ public class EventPlan {
 
     public List<PowerConnection> powerConnections() {
         return Collections.unmodifiableList(powerConnections);
+    }
+
+    public Set<String> hiddenGroups() {
+        return Collections.unmodifiableSet(hiddenGroups);
+    }
+
+    public void setGroupHidden(String groupName, boolean hidden) {
+        if (groupName == null || groupName.isBlank()) {
+            return;
+        }
+        if (hidden) {
+            hiddenGroups.add(groupName);
+        } else {
+            hiddenGroups.remove(groupName);
+        }
+    }
+
+    public void clearHiddenGroups() {
+        hiddenGroups.clear();
     }
 }

@@ -201,17 +201,22 @@ public class PancakePlannerApp extends Application {
         mapScrollPane.setFitToHeight(false);
         mapScrollPane.setStyle("-fx-background: #eef1ec;");
 
-        BorderPane sidebar = new BorderPane();
+        VBox sidebar = new VBox(10);
         sidebar.setPadding(new Insets(12));
-        sidebar.setTop(createDetailPanel());
+        sidebar.getChildren().add(createDetailPanel());
 
         summaryList = new ListView<>();
-        sidebar.setCenter(summaryList);
+        summaryList.setMinHeight(180);
+        summaryList.setPrefHeight(260);
+        sidebar.getChildren().add(summaryList);
         groupFilterPanel = new VBox(6);
         groupFilterPanel.setPadding(new Insets(12, 0, 0, 0));
-        sidebar.setBottom(groupFilterPanel);
+        sidebar.getChildren().add(groupFilterPanel);
 
-        SplitPane splitPane = new SplitPane(mapScrollPane, sidebar);
+        ScrollPane sidebarScrollPane = new ScrollPane(sidebar);
+        sidebarScrollPane.setFitToWidth(true);
+
+        SplitPane splitPane = new SplitPane(mapScrollPane, sidebarScrollPane);
         splitPane.setDividerPositions(0.72);
         return splitPane;
     }
@@ -547,9 +552,18 @@ public class PancakePlannerApp extends Application {
             currentGroups.add(groupNameForFilter(object));
         }
 
+        Set<String> hiddenGroups = new HashSet<>(plan.hiddenGroups());
+        hiddenGroups.retainAll(currentGroups);
+        plan.clearHiddenGroups();
+        for (String hiddenGroup : hiddenGroups) {
+            plan.setGroupHidden(hiddenGroup, true);
+        }
+
         visibleGroups.retainAll(currentGroups);
         for (String groupName : currentGroups) {
-            if (!knownGroups.contains(groupName)) {
+            if (hiddenGroups.contains(groupName)) {
+                visibleGroups.remove(groupName);
+            } else if (!knownGroups.contains(groupName)) {
                 visibleGroups.add(groupName);
             }
         }
@@ -567,8 +581,10 @@ public class PancakePlannerApp extends Application {
             groupCheckBox.setOnAction(event -> {
                 if (groupCheckBox.isSelected()) {
                     visibleGroups.add(groupName);
+                    plan.setGroupHidden(groupName, false);
                 } else {
                     visibleGroups.remove(groupName);
+                    plan.setGroupHidden(groupName, true);
                 }
                 redrawMap();
             });

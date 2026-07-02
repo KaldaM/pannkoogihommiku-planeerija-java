@@ -24,6 +24,14 @@ public class PlanFileService {
         properties.setProperty("format", "pannukas-plan-v1");
         properties.setProperty("plan.name", plan.name());
         properties.setProperty("plan.mapImagePath", plan.mapImagePath());
+        properties.setProperty("hiddenGroups.count", Integer.toString(plan.hiddenGroups().size()));
+
+        int hiddenGroupIndex = 0;
+        for (String hiddenGroup : plan.hiddenGroups()) {
+            properties.setProperty("hiddenGroup." + hiddenGroupIndex, hiddenGroup);
+            hiddenGroupIndex++;
+        }
+
         properties.setProperty("objects.count", Integer.toString(plan.objects().size()));
 
         List<PlannerObject> objects = plan.objects();
@@ -67,6 +75,11 @@ public class PlanFileService {
                     properties.getProperty(prefix + "consumerId", ""),
                     ConnectorType.valueOf(properties.getProperty(prefix + "connectorType", ConnectorType.SCHUKO_230V.name()))
             );
+        }
+
+        int hiddenGroupCount = intValue(properties, "hiddenGroups.count", 0);
+        for (int index = 0; index < hiddenGroupCount; index++) {
+            plan.setGroupHidden(properties.getProperty("hiddenGroup." + index, ""), true);
         }
 
         return plan;
