@@ -49,6 +49,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class PancakePlannerApp extends Application {
     private static final String DEFAULT_MAP_PATH = "classpath:/maps/tavakaart.png";
@@ -846,6 +848,7 @@ public class PancakePlannerApp extends Application {
             addConnectedConsumers(summary.sourceId());
         }
         addCableSummary();
+        addGroupSummary();
     }
 
     private void addConnectedConsumers(String sourceId) {
@@ -899,6 +902,27 @@ public class PancakePlannerApp extends Application {
         summaryList.getItems().add("Kaablid");
         summaryList.getItems().addAll(cableRows);
         summaryList.getItems().add("Kokku: %.1f m".formatted(totalLengthMeters));
+    }
+
+    private void addGroupSummary() {
+        if (plan.objects().isEmpty()) {
+            return;
+        }
+
+        Map<String, List<PlannerObject>> objectsByGroup = new TreeMap<>();
+        for (PlannerObject object : plan.objects()) {
+            String groupName = object.groupName().isBlank() ? "Määramata" : object.groupName();
+            objectsByGroup.computeIfAbsent(groupName, ignored -> new ArrayList<>()).add(object);
+        }
+
+        summaryList.getItems().add("");
+        summaryList.getItems().add("Grupid");
+        for (Map.Entry<String, List<PlannerObject>> entry : objectsByGroup.entrySet()) {
+            summaryList.getItems().add(entry.getKey());
+            for (PlannerObject object : entry.getValue()) {
+                summaryList.getItems().add("  - %s (%s)".formatted(object.name(), objectTypeName(object)));
+            }
+        }
     }
 
     private void savePlan() {
