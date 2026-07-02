@@ -1321,9 +1321,7 @@ public class PancakePlannerApp extends Application {
         outlet.setType(selectedType);
         outlet.setCapacityWatts(capacityWatts);
         plan.updateConnectorTypeForOutlet(outlet.id(), selectedType);
-        refreshOutletList();
-        refreshPowerSourceChoices();
-        refreshSummary();
+        refreshAfterOutletChange(outlet.id());
     }
 
     private void removeSelectedOutlet() {
@@ -1345,10 +1343,29 @@ public class PancakePlannerApp extends Application {
         plan.disconnectPowerFromOutlet(outlet.id());
         source.removeOutlet(selectedIndex);
         outletNameField.clear();
+        refreshAfterOutletChange("");
+    }
+
+    private void refreshAfterOutletChange(String preferredOutletId) {
         refreshOutletList();
+        selectOutletInList(preferredOutletId);
         refreshPowerSourceChoices();
+        refreshConnectionOutletChoices(preferredOutletId);
         redrawMap();
         refreshSummary();
+        refreshOutletActionButtons();
+    }
+
+    private void selectOutletInList(String outletId) {
+        if (outletId == null || outletId.isBlank() || !(selectedObject instanceof PowerSource source)) {
+            return;
+        }
+        for (int index = 0; index < source.outlets().size(); index++) {
+            if (source.outlets().get(index).id().equals(outletId)) {
+                outletList.getSelectionModel().select(index);
+                return;
+            }
+        }
     }
 
     private List<Tent> connectedTents(String outletId) {
