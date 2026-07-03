@@ -1981,7 +1981,7 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        summaryList.getItems().add("");
+        addSummarySpacerIfNeeded();
         summaryList.getItems().add("Kaablid");
         summaryList.getItems().addAll(cableRows);
         summaryList.getItems().add("Kokku: %.1f m".formatted(totalLengthMeters));
@@ -1992,13 +1992,19 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        summaryList.getItems().add("");
+        addSummarySpacerIfNeeded();
         summaryList.getItems().add("Grupid");
         for (Map.Entry<String, List<PlannerObject>> entry : objectsByGroup().entrySet()) {
             summaryList.getItems().add(entry.getKey());
             for (PlannerObject object : entry.getValue()) {
                 summaryList.getItems().add("  - %s (%s)".formatted(object.name(), objectTypeName(object)));
             }
+        }
+    }
+
+    private void addSummarySpacerIfNeeded() {
+        if (!summaryList.getItems().isEmpty()) {
+            summaryList.getItems().add("");
         }
     }
 
