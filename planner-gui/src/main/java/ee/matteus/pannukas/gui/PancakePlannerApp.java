@@ -367,18 +367,22 @@ public class PancakePlannerApp extends Application {
         GridPane form = new GridPane();
         form.setHgap(8);
         form.setVgap(8);
-        form.addRow(0, new Label("Tüüp"), selectedTypeLabel);
-        form.addRow(1, new Label("Nimi"), nameField);
-        form.addRow(2, new Label("Grupp"), groupField);
-        form.addRow(3, new Label("Lukustus"), lockedCheckBox);
-        form.addRow(4, new Label("Laius m"), tentWidthField);
-        form.addRow(5, new Label("Pikkus m"), tentHeightField);
-        form.addRow(6, new Label("Pööre °"), tentRotationField);
-        form.addRow(7, new Label("Telgi värv"), tentColorPicker);
-        form.addRow(8, new Label("Vooluallikas"), powerSourceComboBox);
-        form.addRow(9, new Label("Ühenduse tüüp"), connectionTypeComboBox);
-        form.addRow(10, new Label("Väljund"), connectionOutletComboBox);
-        form.addRow(11, new Label("Märkmed"), notesArea);
+        form.add(sectionLabel("Objekt"), 0, 0, 2, 1);
+        form.addRow(1, new Label("Tüüp"), selectedTypeLabel);
+        form.addRow(2, new Label("Nimi"), nameField);
+        form.addRow(3, new Label("Grupp"), groupField);
+        form.addRow(4, new Label("Lukustus"), lockedCheckBox);
+        form.add(sectionLabel("Telk"), 0, 5, 2, 1);
+        form.addRow(6, new Label("Laius m"), tentWidthField);
+        form.addRow(7, new Label("Pikkus m"), tentHeightField);
+        form.addRow(8, new Label("Pööre °"), tentRotationField);
+        form.addRow(9, new Label("Telgi värv"), tentColorPicker);
+        form.add(sectionLabel("Vool"), 0, 10, 2, 1);
+        form.addRow(11, new Label("Vooluallikas"), powerSourceComboBox);
+        form.addRow(12, new Label("Ühenduse tüüp"), connectionTypeComboBox);
+        form.addRow(13, new Label("Väljund"), connectionOutletComboBox);
+        form.add(sectionLabel("Märkmed"), 0, 14, 2, 1);
+        form.addRow(15, new Label("Märkmed"), notesArea);
 
         Button applyButton = new Button("Rakenda muudatused");
         applyButton.setOnAction(event -> applyDetails());
@@ -412,6 +416,12 @@ public class PancakePlannerApp extends Application {
         VBox detailPanel = new VBox(10, planForm, form, applyButton, choosePowerSourceButton, deleteObjectButton, equipmentPanel, outletPanel, summaryTitle);
         detailPanel.setPadding(new Insets(0, 0, 12, 0));
         return detailPanel;
+    }
+
+    private Label sectionLabel(String text) {
+        Label label = new Label(text);
+        label.setStyle("-fx-font-weight: bold; -fx-padding: 8 0 0 0;");
+        return label;
     }
 
     private void addTent() {
