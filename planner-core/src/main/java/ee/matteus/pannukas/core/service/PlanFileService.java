@@ -2,6 +2,7 @@ package ee.matteus.pannukas.core.service;
 
 import ee.matteus.pannukas.core.model.ConnectorType;
 import ee.matteus.pannukas.core.model.CustomObject;
+import ee.matteus.pannukas.core.model.CustomObjectShape;
 import ee.matteus.pannukas.core.model.Equipment;
 import ee.matteus.pannukas.core.model.EventPlan;
 import ee.matteus.pannukas.core.model.PlannerObject;
@@ -101,8 +102,8 @@ public class PlanFileService {
             writeTent(properties, prefix, tent);
         } else if (object instanceof PowerSource source) {
             writePowerSource(properties, prefix, source);
-        } else if (object instanceof CustomObject) {
-            properties.setProperty(prefix + "type", "CUSTOM_OBJECT");
+        } else if (object instanceof CustomObject customObject) {
+            writeCustomObject(properties, prefix, customObject);
         }
     }
 
@@ -132,6 +133,12 @@ public class PlanFileService {
             properties.setProperty(outletPrefix + "type", outlet.type().name());
             properties.setProperty(outletPrefix + "capacityWatts", Integer.toString(outlet.capacityWatts()));
         }
+    }
+
+    private void writeCustomObject(Properties properties, String prefix, CustomObject object) {
+        properties.setProperty(prefix + "type", "CUSTOM_OBJECT");
+        properties.setProperty(prefix + "shape", object.shape().name());
+        properties.setProperty(prefix + "colorHex", object.colorHex());
     }
 
     private PlannerObject readObject(Properties properties, String prefix) {
@@ -196,11 +203,14 @@ public class PlanFileService {
     }
 
     private CustomObject readCustomObject(Properties properties, String prefix) {
-        return new CustomObject(
+        CustomObject object = new CustomObject(
                 properties.getProperty(prefix + "id", ""),
                 properties.getProperty(prefix + "name", "Objekt"),
                 readPosition(properties, prefix)
         );
+        object.setShape(CustomObjectShape.valueOf(properties.getProperty(prefix + "shape", CustomObjectShape.SQUARE.name())));
+        object.setColorHex(properties.getProperty(prefix + "colorHex", "#9ca3af"));
+        return object;
     }
 
     private Position readPosition(Properties properties, String prefix) {

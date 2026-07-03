@@ -2,6 +2,7 @@ package ee.matteus.pannukas.gui;
 
 import ee.matteus.pannukas.core.model.ConnectorType;
 import ee.matteus.pannukas.core.model.CustomObject;
+import ee.matteus.pannukas.core.model.CustomObjectShape;
 import ee.matteus.pannukas.core.model.Equipment;
 import ee.matteus.pannukas.core.model.EventPlan;
 import ee.matteus.pannukas.core.model.PlannerObject;
@@ -100,6 +101,8 @@ public class PancakePlannerApp extends Application {
     private TextField tentHeightField;
     private TextField tentRotationField;
     private ColorPicker tentColorPicker;
+    private ComboBox<CustomObjectShape> customObjectShapeComboBox;
+    private ColorPicker customObjectColorPicker;
     private ComboBox<PowerSourceChoice> powerSourceComboBox;
     private ComboBox<ConnectorType> connectionTypeComboBox;
     private ComboBox<OutletChoice> connectionOutletComboBox;
@@ -336,6 +339,11 @@ public class PancakePlannerApp extends Application {
         tentHeightField = new TextField();
         tentRotationField = new TextField();
         tentColorPicker = new ColorPicker();
+        customObjectShapeComboBox = new ComboBox<>();
+        customObjectShapeComboBox.getItems().addAll(CustomObjectShape.values());
+        customObjectShapeComboBox.setConverter(customObjectShapeConverter());
+        customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
+        customObjectColorPicker = new ColorPicker();
         powerSourceComboBox = new ComboBox<>();
         powerSourceComboBox.setOnAction(event -> refreshConnectionTypeChoices(null));
         connectionTypeComboBox = new ComboBox<>();
@@ -383,17 +391,19 @@ public class PancakePlannerApp extends Application {
         form.addRow(2, new Label("Nimi"), nameField);
         form.addRow(3, new Label("Grupp"), groupField);
         form.addRow(4, new Label("Lukustus"), lockedCheckBox);
-        form.add(sectionLabel("Telk"), 0, 5, 2, 1);
-        form.addRow(6, new Label("Laius m"), tentWidthField);
-        form.addRow(7, new Label("Pikkus m"), tentHeightField);
-        form.addRow(8, new Label("Pööre °"), tentRotationField);
-        form.addRow(9, new Label("Telgi värv"), tentColorPicker);
-        form.add(sectionLabel("Vool"), 0, 10, 2, 1);
-        form.addRow(11, new Label("Vooluallikas"), powerSourceComboBox);
-        form.addRow(12, new Label("Ühenduse tüüp"), connectionTypeComboBox);
-        form.addRow(13, new Label("Väljund"), connectionOutletComboBox);
-        form.add(sectionLabel("Märkmed"), 0, 14, 2, 1);
-        form.addRow(15, new Label("Märkmed"), notesArea);
+        form.addRow(5, new Label("Objekti kuju"), customObjectShapeComboBox);
+        form.addRow(6, new Label("Objekti värv"), customObjectColorPicker);
+        form.add(sectionLabel("Telk"), 0, 7, 2, 1);
+        form.addRow(8, new Label("Laius m"), tentWidthField);
+        form.addRow(9, new Label("Pikkus m"), tentHeightField);
+        form.addRow(10, new Label("Pööre °"), tentRotationField);
+        form.addRow(11, new Label("Telgi värv"), tentColorPicker);
+        form.add(sectionLabel("Vool"), 0, 12, 2, 1);
+        form.addRow(13, new Label("Vooluallikas"), powerSourceComboBox);
+        form.addRow(14, new Label("Ühenduse tüüp"), connectionTypeComboBox);
+        form.addRow(15, new Label("Väljund"), connectionOutletComboBox);
+        form.add(sectionLabel("Märkmed"), 0, 16, 2, 1);
+        form.addRow(17, new Label("Märkmed"), notesArea);
 
         Button applyButton = new Button("Rakenda muudatused");
         applyButton.setOnAction(event -> applyDetails());
@@ -728,22 +738,28 @@ public class PancakePlannerApp extends Application {
     }
 
     private void drawCustomObject(CustomObject object) {
-        Rectangle rectangle = new Rectangle(object.position().x() - 12, object.position().y() - 12, 24, 24);
-        rectangle.setArcWidth(4);
-        rectangle.setArcHeight(4);
-        rectangle.setFill(Color.web("#9ca3af"));
-        rectangle.setStroke(Color.web("#111827"));
-        rectangle.setStrokeWidth(isSelected(object) ? 4 : 1);
-        applyLockedStroke(rectangle, object);
-        makeSelectable(rectangle, object);
-        makeDraggable(rectangle, object);
+        javafx.scene.shape.Shape shape;
+        if (object.shape() == CustomObjectShape.CIRCLE) {
+            shape = new Circle(object.position().x(), object.position().y(), 12);
+        } else {
+            Rectangle rectangle = new Rectangle(object.position().x() - 12, object.position().y() - 12, 24, 24);
+            rectangle.setArcWidth(4);
+            rectangle.setArcHeight(4);
+            shape = rectangle;
+        }
+        shape.setFill(Color.web(object.colorHex()));
+        shape.setStroke(Color.web("#111827"));
+        shape.setStrokeWidth(isSelected(object) ? 4 : 1);
+        applyLockedStroke(shape, object);
+        makeSelectable(shape, object);
+        makeDraggable(shape, object);
 
         Label label = new Label(mapLabel(object));
         label.setLayoutX(object.position().x() + 16);
         label.setLayoutY(object.position().y() - 12);
         makeSelectable(label, object);
 
-        mapPane.getChildren().addAll(rectangle, label);
+        mapPane.getChildren().addAll(shape, label);
     }
 
     private void makeSelectable(Node node, PlannerObject object) {
@@ -902,11 +918,14 @@ public class PancakePlannerApp extends Application {
         boolean hasSelection = selectedObject != null;
         boolean tentSelected = selectedObject instanceof Tent;
         boolean powerSourceSelected = selectedObject instanceof PowerSource;
+        boolean customObjectSelected = selectedObject instanceof CustomObject;
         nameField.setDisable(!hasSelection);
         groupField.setDisable(!hasSelection);
         notesArea.setDisable(!hasSelection);
         lockedCheckBox.setDisable(!hasSelection);
         deleteObjectButton.setDisable(!hasSelection);
+        customObjectShapeComboBox.setDisable(!customObjectSelected);
+        customObjectColorPicker.setDisable(!customObjectSelected);
         tentWidthField.setDisable(!tentSelected);
         tentHeightField.setDisable(!tentSelected);
         tentRotationField.setDisable(!tentSelected);
@@ -945,6 +964,8 @@ public class PancakePlannerApp extends Application {
             tentHeightField.clear();
             tentRotationField.clear();
             tentColorPicker.setValue(Color.web("#e74c3c"));
+            customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
+            customObjectColorPicker.setValue(Color.web("#9ca3af"));
             refreshPowerSourceChoices();
             refreshEquipmentList();
             refreshOutletList();
@@ -961,11 +982,22 @@ public class PancakePlannerApp extends Application {
             tentHeightField.setText(formatMeters(tent.heightMeters()));
             tentRotationField.setText(formatDegrees(tent.rotationDegrees()));
             tentColorPicker.setValue(Color.web(tent.colorHex()));
+            customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
+            customObjectColorPicker.setValue(Color.web("#9ca3af"));
+        } else if (selectedObject instanceof CustomObject customObject) {
+            tentWidthField.clear();
+            tentHeightField.clear();
+            tentRotationField.clear();
+            tentColorPicker.setValue(Color.web("#2563eb"));
+            customObjectShapeComboBox.getSelectionModel().select(customObject.shape());
+            customObjectColorPicker.setValue(Color.web(customObject.colorHex()));
         } else {
             tentWidthField.clear();
             tentHeightField.clear();
             tentRotationField.clear();
             tentColorPicker.setValue(Color.web("#2563eb"));
+            customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
+            customObjectColorPicker.setValue(Color.web("#9ca3af"));
         }
         refreshPowerSourceChoices();
         refreshEquipmentList();
@@ -1048,6 +1080,10 @@ public class PancakePlannerApp extends Application {
             if (!applySelectedPowerSource(tent)) {
                 return;
             }
+        } else if (selectedObject instanceof CustomObject customObject) {
+            CustomObjectShape selectedShape = customObjectShapeComboBox.getSelectionModel().getSelectedItem();
+            customObject.setShape(selectedShape);
+            customObject.setColorHex(toHex(customObjectColorPicker.getValue()));
         }
         refreshGroupFilters();
         redrawMap();
@@ -1608,6 +1644,25 @@ public class PancakePlannerApp extends Application {
                     }
                 }
                 return ConnectorType.SCHUKO_230V;
+            }
+        };
+    }
+
+    private StringConverter<CustomObjectShape> customObjectShapeConverter() {
+        return new StringConverter<>() {
+            @Override
+            public String toString(CustomObjectShape shape) {
+                return shape == null ? "" : shape.displayName();
+            }
+
+            @Override
+            public CustomObjectShape fromString(String text) {
+                for (CustomObjectShape shape : CustomObjectShape.values()) {
+                    if (shape.displayName().equals(text) || shape.name().equals(text)) {
+                        return shape;
+                    }
+                }
+                return CustomObjectShape.SQUARE;
             }
         };
     }
