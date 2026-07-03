@@ -34,6 +34,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.BorderPane;
@@ -96,6 +97,9 @@ public class PancakePlannerApp extends Application {
     private CheckBox showCableSummaryCheckBox;
     private CheckBox showGroupSummaryCheckBox;
     private VBox groupFilterPanel;
+    private TitledPane equipmentSection;
+    private TitledPane outletSection;
+    private TitledPane groupFilterSection;
     private TextField planNameField;
     private Label selectedTypeLabel;
     private TextField nameField;
@@ -282,7 +286,18 @@ public class PancakePlannerApp extends Application {
 
         VBox sidebar = new VBox(10);
         sidebar.setPadding(new Insets(12));
-        sidebar.getChildren().add(createDetailPanel());
+        sidebar.getChildren().add(collapsibleSection("Valitud objekt", createDetailPanel(), true));
+
+        showPowerSummaryCheckBox = new CheckBox("Vool");
+        showPowerSummaryCheckBox.setSelected(true);
+        showPowerSummaryCheckBox.setOnAction(event -> refreshSummary());
+        showCableSummaryCheckBox = new CheckBox("Kaablid");
+        showCableSummaryCheckBox.setSelected(true);
+        showCableSummaryCheckBox.setOnAction(event -> refreshSummary());
+        showGroupSummaryCheckBox = new CheckBox("Grupid");
+        showGroupSummaryCheckBox.setSelected(true);
+        showGroupSummaryCheckBox.setOnAction(event -> refreshSummary());
+        HBox summaryFilters = new HBox(10, showPowerSummaryCheckBox, showCableSummaryCheckBox, showGroupSummaryCheckBox);
 
         summaryList = new ListView<>();
         summaryList.setMinHeight(180);
@@ -297,11 +312,14 @@ public class PancakePlannerApp extends Application {
                         : "");
             }
         });
-        sidebar.getChildren().add(summaryList);
-        sidebar.getChildren().addAll(equipmentPanel, outletPanel);
+        sidebar.getChildren().add(collapsibleSection("Voolu kokkuvõte", new VBox(8, summaryFilters, summaryList), true));
+        equipmentSection = collapsibleSection("Telgi seadmed", equipmentPanel, false);
+        outletSection = collapsibleSection("Kapi väljundid", outletPanel, false);
+        sidebar.getChildren().addAll(equipmentSection, outletSection);
         groupFilterPanel = new VBox(6);
         groupFilterPanel.setPadding(new Insets(12, 0, 0, 0));
-        sidebar.getChildren().add(groupFilterPanel);
+        groupFilterSection = collapsibleSection("Grupi filtrid", groupFilterPanel, false);
+        sidebar.getChildren().add(groupFilterSection);
 
         ScrollPane sidebarScrollPane = new ScrollPane(sidebar);
         sidebarScrollPane.setFitToWidth(true);
@@ -443,21 +461,8 @@ public class PancakePlannerApp extends Application {
         deleteObjectButton = new Button("Kustuta objekt");
         deleteObjectButton.setOnAction(event -> deleteSelectedObject());
 
-        Label summaryTitle = new Label("Voolu kokkuvõte");
-        showPowerSummaryCheckBox = new CheckBox("Vool");
-        showPowerSummaryCheckBox.setSelected(true);
-        showPowerSummaryCheckBox.setOnAction(event -> refreshSummary());
-        showCableSummaryCheckBox = new CheckBox("Kaablid");
-        showCableSummaryCheckBox.setSelected(true);
-        showCableSummaryCheckBox.setOnAction(event -> refreshSummary());
-        showGroupSummaryCheckBox = new CheckBox("Grupid");
-        showGroupSummaryCheckBox.setSelected(true);
-        showGroupSummaryCheckBox.setOnAction(event -> refreshSummary());
-        HBox summaryFilters = new HBox(10, showPowerSummaryCheckBox, showCableSummaryCheckBox, showGroupSummaryCheckBox);
-
         equipmentPanel = new VBox(
                 8,
-                new Label("Telgi seadmed"),
                 equipmentList,
                 equipmentNameField,
                 equipmentWattsField,
@@ -466,7 +471,6 @@ public class PancakePlannerApp extends Application {
         );
         outletPanel = new VBox(
                 8,
-                new Label("Kapi väljundid"),
                 outletList,
                 outletNameField,
                 outletTypeComboBox,
@@ -478,7 +482,6 @@ public class PancakePlannerApp extends Application {
         VBox detailPanel = new VBox(
                 10,
                 planForm,
-                sectionLabel("Valitud objekt"),
                 baseForm,
                 customObjectPanel,
                 tentPanel,
@@ -486,9 +489,7 @@ public class PancakePlannerApp extends Application {
                 new VBox(8, sectionLabel("Märkmed"), notesForm),
                 applyButton,
                 choosePowerSourceButton,
-                deleteObjectButton,
-                summaryTitle,
-                summaryFilters
+                deleteObjectButton
         );
         detailPanel.setPadding(new Insets(0, 0, 12, 0));
         return detailPanel;
@@ -505,6 +506,13 @@ public class PancakePlannerApp extends Application {
         grid.setHgap(8);
         grid.setVgap(8);
         return grid;
+    }
+
+    private TitledPane collapsibleSection(String title, Node content, boolean expanded) {
+        TitledPane pane = new TitledPane(title, content);
+        pane.setExpanded(expanded);
+        pane.setCollapsible(true);
+        return pane;
     }
 
     private void addTent() {
@@ -935,6 +943,9 @@ public class PancakePlannerApp extends Application {
         for (PlannerObject object : plan.objects()) {
             currentGroups.add(groupNameForFilter(object));
         }
+        if (groupFilterSection != null) {
+            setSectionVisible(groupFilterSection, !currentGroups.isEmpty());
+        }
 
         Set<String> hiddenGroups = new HashSet<>(plan.hiddenGroups());
         hiddenGroups.retainAll(currentGroups);
@@ -954,7 +965,6 @@ public class PancakePlannerApp extends Application {
         knownGroups = currentGroups;
 
         groupFilterPanel.getChildren().clear();
-        groupFilterPanel.getChildren().add(new Label("Grupi filtrid"));
         Map<String, String> sortedGroups = new TreeMap<>();
         for (String currentGroup : currentGroups) {
             sortedGroups.put(currentGroup, currentGroup);
@@ -1026,8 +1036,8 @@ public class PancakePlannerApp extends Application {
         setSectionVisible(customObjectPanel, customObjectSelected);
         setSectionVisible(tentPanel, tentSelected);
         setSectionVisible(powerConnectionPanel, tentSelected);
-        setSectionVisible(equipmentPanel, tentSelected);
-        setSectionVisible(outletPanel, powerSourceSelected);
+        setSectionVisible(equipmentSection, tentSelected);
+        setSectionVisible(outletSection, powerSourceSelected);
         setSectionVisible(choosePowerSourceButton, tentSelected);
         setSectionVisible(deleteObjectButton, hasSelection);
 
