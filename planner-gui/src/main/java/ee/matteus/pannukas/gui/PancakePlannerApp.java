@@ -377,8 +377,8 @@ public class PancakePlannerApp extends Application {
         form.addRow(7, new Label("Telgi värv"), tentColorPicker);
         form.addRow(8, new Label("Vooluallikas"), powerSourceComboBox);
         form.addRow(9, new Label("Ühenduse tüüp"), connectionTypeComboBox);
-        form.addRow(11, new Label("Väljund"), connectionOutletComboBox);
-        form.addRow(10, new Label("Märkmed"), notesArea);
+        form.addRow(10, new Label("Väljund"), connectionOutletComboBox);
+        form.addRow(11, new Label("Märkmed"), notesArea);
 
         Button applyButton = new Button("Rakenda muudatused");
         applyButton.setOnAction(event -> applyDetails());
