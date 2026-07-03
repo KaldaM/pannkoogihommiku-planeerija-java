@@ -59,6 +59,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +69,11 @@ import java.util.TreeMap;
 public class PancakePlannerApp extends Application {
     private static final String DEFAULT_MAP_PATH = "classpath:/maps/tavakaart.png";
     private static final String ORTHOPHOTO_MAP_PATH = "classpath:/maps/ortofoto.png";
+    private static final String SELECTED_OBJECT_SECTION = "selectedObject";
+    private static final String SUMMARY_SECTION = "summary";
+    private static final String EQUIPMENT_SECTION = "equipment";
+    private static final String OUTLET_SECTION = "outlet";
+    private static final String GROUP_FILTER_SECTION = "groupFilter";
     private static final double PIXELS_PER_METER = 24.0;
     private static final double MIN_MAP_WIDTH = 760.0;
     private static final double MIN_MAP_HEIGHT = 560.0;
@@ -91,6 +97,7 @@ public class PancakePlannerApp extends Application {
     private Position measurementStart;
     private final List<Node> measurementNodes = new ArrayList<>();
     private final Set<String> visibleGroups = new HashSet<>();
+    private final Map<String, Boolean> sidebarSectionStates = new HashMap<>();
     private Set<String> knownGroups = new HashSet<>();
     private ListView<String> summaryList;
     private CheckBox showPowerSummaryCheckBox;
@@ -286,7 +293,7 @@ public class PancakePlannerApp extends Application {
 
         VBox sidebar = new VBox(10);
         sidebar.setPadding(new Insets(12));
-        sidebar.getChildren().add(collapsibleSection("Valitud objekt", createDetailPanel(), true));
+        sidebar.getChildren().add(collapsibleSection(SELECTED_OBJECT_SECTION, "Valitud objekt", createDetailPanel(), true));
 
         showPowerSummaryCheckBox = new CheckBox("Vool");
         showPowerSummaryCheckBox.setSelected(true);
@@ -312,10 +319,10 @@ public class PancakePlannerApp extends Application {
                         : "");
             }
         });
-        sidebar.getChildren().add(collapsibleSection("Voolu kokkuvõte", new VBox(8, summaryFilters, summaryList), true));
+        sidebar.getChildren().add(collapsibleSection(SUMMARY_SECTION, "Voolu kokkuvõte", new VBox(8, summaryFilters, summaryList), true));
         groupFilterPanel = new VBox(6);
         groupFilterPanel.setPadding(new Insets(12, 0, 0, 0));
-        groupFilterSection = collapsibleSection("Grupi filtrid", groupFilterPanel, false);
+        groupFilterSection = collapsibleSection(GROUP_FILTER_SECTION, "Grupi filtrid", groupFilterPanel, false);
         sidebar.getChildren().add(groupFilterSection);
 
         ScrollPane sidebarScrollPane = new ScrollPane(sidebar);
@@ -466,7 +473,7 @@ public class PancakePlannerApp extends Application {
                 addEquipmentButton,
                 removeEquipmentButton
         );
-        equipmentSection = collapsibleSection("Telgi seadmed", equipmentPanel, false);
+        equipmentSection = collapsibleSection(EQUIPMENT_SECTION, "Telgi seadmed", equipmentPanel, false);
         outletPanel = new VBox(
                 8,
                 outletList,
@@ -477,7 +484,7 @@ public class PancakePlannerApp extends Application {
                 updateOutletButton,
                 removeOutletButton
         );
-        outletSection = collapsibleSection("Kapi väljundid", outletPanel, false);
+        outletSection = collapsibleSection(OUTLET_SECTION, "Kapi väljundid", outletPanel, false);
         VBox detailPanel = new VBox(
                 10,
                 planForm,
@@ -509,10 +516,13 @@ public class PancakePlannerApp extends Application {
         return grid;
     }
 
-    private TitledPane collapsibleSection(String title, Node content, boolean expanded) {
+    private TitledPane collapsibleSection(String stateKey, String title, Node content, boolean expandedByDefault) {
         TitledPane pane = new TitledPane(title, content);
-        pane.setExpanded(expanded);
+        pane.setExpanded(sidebarSectionStates.getOrDefault(stateKey, expandedByDefault));
         pane.setCollapsible(true);
+        pane.expandedProperty().addListener((observable, oldValue, newValue) ->
+                sidebarSectionStates.put(stateKey, newValue)
+        );
         return pane;
     }
 
