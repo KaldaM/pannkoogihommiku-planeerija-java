@@ -125,6 +125,11 @@ public class PancakePlannerApp extends Application {
     private Button addOutletButton;
     private Button updateOutletButton;
     private Button removeOutletButton;
+    private VBox customObjectPanel;
+    private VBox tentPanel;
+    private VBox powerConnectionPanel;
+    private VBox equipmentPanel;
+    private VBox outletPanel;
     private Button deleteObjectButton;
     private Button choosePowerSourceButton;
     private ToggleButton measureButton;
@@ -289,6 +294,7 @@ public class PancakePlannerApp extends Application {
             }
         });
         sidebar.getChildren().add(summaryList);
+        sidebar.getChildren().addAll(equipmentPanel, outletPanel);
         groupFilterPanel = new VBox(6);
         groupFilterPanel.setPadding(new Insets(12, 0, 0, 0));
         sidebar.getChildren().add(groupFilterPanel);
@@ -396,30 +402,35 @@ public class PancakePlannerApp extends Application {
         removeOutletButton = new Button("Eemalda valitud");
         removeOutletButton.setOnAction(event -> removeSelectedOutlet());
 
-        GridPane form = new GridPane();
-        form.setHgap(8);
-        form.setVgap(8);
-        form.add(sectionLabel("Objekt"), 0, 0, 2, 1);
-        form.addRow(1, new Label("Tüüp"), selectedTypeLabel);
-        form.addRow(2, new Label("Nimi"), nameField);
-        form.addRow(3, new Label("Grupp"), groupField);
-        form.addRow(4, new Label("Lukustus"), lockedCheckBox);
-        form.addRow(5, new Label("Objekti kuju"), customObjectShapeComboBox);
-        form.addRow(6, new Label("Objekti värv"), customObjectColorPicker);
-        form.addRow(7, customObjectWidthLabel, customObjectWidthField);
-        form.addRow(8, customObjectHeightLabel, customObjectHeightField);
-        form.addRow(9, customObjectRotationLabel, customObjectRotationField);
-        form.add(sectionLabel("Telk"), 0, 10, 2, 1);
-        form.addRow(11, new Label("Laius m"), tentWidthField);
-        form.addRow(12, new Label("Pikkus m"), tentHeightField);
-        form.addRow(13, new Label("Pööre °"), tentRotationField);
-        form.addRow(14, new Label("Telgi värv"), tentColorPicker);
-        form.add(sectionLabel("Vool"), 0, 15, 2, 1);
-        form.addRow(16, new Label("Vooluallikas"), powerSourceComboBox);
-        form.addRow(17, new Label("Ühenduse tüüp"), connectionTypeComboBox);
-        form.addRow(18, new Label("Väljund"), connectionOutletComboBox);
-        form.add(sectionLabel("Märkmed"), 0, 19, 2, 1);
-        form.addRow(20, new Label("Märkmed"), notesArea);
+        GridPane baseForm = detailGrid();
+        baseForm.addRow(0, new Label("Tüüp"), selectedTypeLabel);
+        baseForm.addRow(1, new Label("Nimi"), nameField);
+        baseForm.addRow(2, new Label("Grupp"), groupField);
+        baseForm.addRow(3, new Label("Lukustus"), lockedCheckBox);
+
+        GridPane customObjectForm = detailGrid();
+        customObjectForm.addRow(0, new Label("Kuju"), customObjectShapeComboBox);
+        customObjectForm.addRow(1, new Label("Värv"), customObjectColorPicker);
+        customObjectForm.addRow(2, customObjectWidthLabel, customObjectWidthField);
+        customObjectForm.addRow(3, customObjectHeightLabel, customObjectHeightField);
+        customObjectForm.addRow(4, customObjectRotationLabel, customObjectRotationField);
+        customObjectPanel = new VBox(8, sectionLabel("Objekt"), customObjectForm);
+
+        GridPane tentForm = detailGrid();
+        tentForm.addRow(0, new Label("Laius m"), tentWidthField);
+        tentForm.addRow(1, new Label("Pikkus m"), tentHeightField);
+        tentForm.addRow(2, new Label("Pööre °"), tentRotationField);
+        tentForm.addRow(3, new Label("Värv"), tentColorPicker);
+        tentPanel = new VBox(8, sectionLabel("Telk"), tentForm);
+
+        GridPane powerConnectionForm = detailGrid();
+        powerConnectionForm.addRow(0, new Label("Vooluallikas"), powerSourceComboBox);
+        powerConnectionForm.addRow(1, new Label("Ühenduse tüüp"), connectionTypeComboBox);
+        powerConnectionForm.addRow(2, new Label("Väljund"), connectionOutletComboBox);
+        powerConnectionPanel = new VBox(8, sectionLabel("Vool"), powerConnectionForm);
+
+        GridPane notesForm = detailGrid();
+        notesForm.addRow(0, new Label("Märkmed"), notesArea);
 
         Button applyButton = new Button("Rakenda muudatused");
         applyButton.setOnAction(event -> applyDetails());
@@ -430,7 +441,7 @@ public class PancakePlannerApp extends Application {
 
         Label summaryTitle = new Label("Voolu kokkuvõte");
 
-        VBox equipmentPanel = new VBox(
+        equipmentPanel = new VBox(
                 8,
                 new Label("Telgi seadmed"),
                 equipmentList,
@@ -439,7 +450,7 @@ public class PancakePlannerApp extends Application {
                 addEquipmentButton,
                 removeEquipmentButton
         );
-        VBox outletPanel = new VBox(
+        outletPanel = new VBox(
                 8,
                 new Label("Kapi väljundid"),
                 outletList,
@@ -450,7 +461,20 @@ public class PancakePlannerApp extends Application {
                 updateOutletButton,
                 removeOutletButton
         );
-        VBox detailPanel = new VBox(10, planForm, form, applyButton, choosePowerSourceButton, deleteObjectButton, equipmentPanel, outletPanel, summaryTitle);
+        VBox detailPanel = new VBox(
+                10,
+                planForm,
+                sectionLabel("Valitud objekt"),
+                baseForm,
+                customObjectPanel,
+                tentPanel,
+                powerConnectionPanel,
+                new VBox(8, sectionLabel("Märkmed"), notesForm),
+                applyButton,
+                choosePowerSourceButton,
+                deleteObjectButton,
+                summaryTitle
+        );
         detailPanel.setPadding(new Insets(0, 0, 12, 0));
         return detailPanel;
     }
@@ -459,6 +483,13 @@ public class PancakePlannerApp extends Application {
         Label label = new Label(text);
         label.setStyle("-fx-font-weight: bold; -fx-padding: 8 0 0 0;");
         return label;
+    }
+
+    private GridPane detailGrid() {
+        GridPane grid = new GridPane();
+        grid.setHgap(8);
+        grid.setVgap(8);
+        return grid;
     }
 
     private void addTent() {
@@ -977,6 +1008,13 @@ public class PancakePlannerApp extends Application {
         choosePowerSourceButton.setText(selectingPowerSourceForThisTent
                 ? "Tühista kapi valik"
                 : "Vali kapp kaardilt");
+        setSectionVisible(customObjectPanel, customObjectSelected);
+        setSectionVisible(tentPanel, tentSelected);
+        setSectionVisible(powerConnectionPanel, tentSelected);
+        setSectionVisible(equipmentPanel, tentSelected);
+        setSectionVisible(outletPanel, powerSourceSelected);
+        setSectionVisible(choosePowerSourceButton, tentSelected);
+        setSectionVisible(deleteObjectButton, hasSelection);
 
         if (!hasSelection) {
             selectedTypeLabel.setText("Vali kaardilt objekt");
@@ -1059,6 +1097,11 @@ public class PancakePlannerApp extends Application {
         if (customObjectSelected && !circleSelected && customObjectRotationField.getText().isBlank()) {
             customObjectRotationField.setText("0");
         }
+    }
+
+    private void setSectionVisible(Node node, boolean visible) {
+        node.setVisible(visible);
+        node.setManaged(visible);
     }
 
     private void startPowerSourceSelectionFromMap() {
