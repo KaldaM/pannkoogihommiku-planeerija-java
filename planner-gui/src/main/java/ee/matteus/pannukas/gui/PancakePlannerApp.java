@@ -1,6 +1,7 @@
 package ee.matteus.pannukas.gui;
 
 import ee.matteus.pannukas.core.model.ConnectorType;
+import ee.matteus.pannukas.core.model.CustomObject;
 import ee.matteus.pannukas.core.model.Equipment;
 import ee.matteus.pannukas.core.model.EventPlan;
 import ee.matteus.pannukas.core.model.PlannerObject;
@@ -120,10 +121,12 @@ public class PancakePlannerApp extends Application {
     private ToggleButton measureButton;
     private Button addTentButton;
     private Button addPowerSourceButton;
+    private Button addCustomObjectButton;
     private PlannerObject selectedObject;
     private Tent pendingPowerSourceTent;
     private boolean pendingTentPlacement;
     private boolean pendingPowerSourcePlacement;
+    private boolean pendingCustomObjectPlacement;
     private boolean unsavedChanges;
     private Stage stage;
 
@@ -162,6 +165,9 @@ public class PancakePlannerApp extends Application {
 
         addPowerSourceButton = new Button("Lisa kapp");
         addPowerSourceButton.setOnAction(event -> addPowerSource());
+
+        addCustomObjectButton = new Button("Lisa objekt");
+        addCustomObjectButton.setOnAction(event -> addCustomObject());
 
         Button saveButton = new Button("Salvesta");
         saveButton.setOnAction(event -> savePlan());
@@ -203,6 +209,7 @@ public class PancakePlannerApp extends Application {
                 newPlanButton,
                 addTentButton,
                 addPowerSourceButton,
+                addCustomObjectButton,
                 saveButton,
                 saveAsButton,
                 exportSummaryButton,
@@ -236,6 +243,10 @@ public class PancakePlannerApp extends Application {
             }
             if (pendingPowerSourcePlacement && !mapDraggedSincePress) {
                 placePowerSource(new Position(event.getX(), event.getY()));
+                return;
+            }
+            if (pendingCustomObjectPlacement && !mapDraggedSincePress) {
+                placeCustomObject(new Position(event.getX(), event.getY()));
                 return;
             }
             if (measuringActive && !mapDraggedSincePress) {
@@ -427,6 +438,7 @@ public class PancakePlannerApp extends Application {
     private void addTent() {
         pendingTentPlacement = !pendingTentPlacement;
         pendingPowerSourcePlacement = false;
+        pendingCustomObjectPlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
     }
@@ -446,6 +458,7 @@ public class PancakePlannerApp extends Application {
     private void addPowerSource() {
         pendingPowerSourcePlacement = !pendingPowerSourcePlacement;
         pendingTentPlacement = false;
+        pendingCustomObjectPlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
     }
@@ -462,6 +475,26 @@ public class PancakePlannerApp extends Application {
         refreshPlacementButtons();
         refreshGroupFilters();
         selectObject(source);
+        refreshSummary();
+        markDirty();
+    }
+
+    private void addCustomObject() {
+        pendingCustomObjectPlacement = !pendingCustomObjectPlacement;
+        pendingTentPlacement = false;
+        pendingPowerSourcePlacement = false;
+        pendingPowerSourceTent = null;
+        refreshPlacementButtons();
+    }
+
+    private void placeCustomObject(Position position) {
+        CustomObject object = new CustomObject(planFactory.newId(), "Uus objekt", position);
+        object.setGroupName("Määramata");
+        plan.addObject(object);
+        pendingCustomObjectPlacement = false;
+        refreshPlacementButtons();
+        refreshGroupFilters();
+        selectObject(object);
         refreshSummary();
         markDirty();
     }
@@ -494,6 +527,7 @@ public class PancakePlannerApp extends Application {
         pendingPowerSourceTent = null;
         pendingTentPlacement = false;
         pendingPowerSourcePlacement = false;
+        pendingCustomObjectPlacement = false;
         measuringActive = false;
         if (measureButton != null) {
             measureButton.setSelected(false);
@@ -560,6 +594,8 @@ public class PancakePlannerApp extends Application {
                 drawTent(tent);
             } else if (object instanceof PowerSource source) {
                 drawPowerSource(source);
+            } else if (object instanceof CustomObject customObject) {
+                drawCustomObject(customObject);
             }
         }
         mapPane.getChildren().addAll(measurementNodes);
@@ -691,6 +727,25 @@ public class PancakePlannerApp extends Application {
         mapPane.getChildren().addAll(circle, label);
     }
 
+    private void drawCustomObject(CustomObject object) {
+        Rectangle rectangle = new Rectangle(object.position().x() - 12, object.position().y() - 12, 24, 24);
+        rectangle.setArcWidth(4);
+        rectangle.setArcHeight(4);
+        rectangle.setFill(Color.web("#9ca3af"));
+        rectangle.setStroke(Color.web("#111827"));
+        rectangle.setStrokeWidth(isSelected(object) ? 4 : 1);
+        applyLockedStroke(rectangle, object);
+        makeSelectable(rectangle, object);
+        makeDraggable(rectangle, object);
+
+        Label label = new Label(mapLabel(object));
+        label.setLayoutX(object.position().x() + 16);
+        label.setLayoutY(object.position().y() - 12);
+        makeSelectable(label, object);
+
+        mapPane.getChildren().addAll(rectangle, label);
+    }
+
     private void makeSelectable(Node node, PlannerObject object) {
         node.setOnMouseClicked(event -> {
             if (pendingTentPlacement) {
@@ -702,6 +757,12 @@ public class PancakePlannerApp extends Application {
             if (pendingPowerSourcePlacement) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
                 placePowerSource(new Position(mapPoint.getX(), mapPoint.getY()));
+                event.consume();
+                return;
+            }
+            if (pendingCustomObjectPlacement) {
+                Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                placeCustomObject(new Position(mapPoint.getX(), mapPoint.getY()));
                 event.consume();
                 return;
             }
@@ -917,6 +978,7 @@ public class PancakePlannerApp extends Application {
         }
         pendingTentPlacement = false;
         pendingPowerSourcePlacement = false;
+        pendingCustomObjectPlacement = false;
         refreshPlacementButtons();
         if (pendingPowerSourceTent != null && pendingPowerSourceTent.id().equals(tent.id())) {
             pendingPowerSourceTent = null;
@@ -959,6 +1021,9 @@ public class PancakePlannerApp extends Application {
         }
         if (object instanceof PowerSource) {
             return "Elektrikapp";
+        }
+        if (object instanceof CustomObject) {
+            return "Objekt";
         }
         return "Objekt";
     }
@@ -1010,6 +1075,7 @@ public class PancakePlannerApp extends Application {
         if (measuringActive) {
             pendingTentPlacement = false;
             pendingPowerSourcePlacement = false;
+            pendingCustomObjectPlacement = false;
             refreshPlacementButtons();
         }
         measurementStart = null;
@@ -1021,6 +1087,9 @@ public class PancakePlannerApp extends Application {
         }
         if (addPowerSourceButton != null) {
             addPowerSourceButton.setText(pendingPowerSourcePlacement ? "Tühista kapp" : "Lisa kapp");
+        }
+        if (addCustomObjectButton != null) {
+            addCustomObjectButton.setText(pendingCustomObjectPlacement ? "Tühista objekt" : "Lisa objekt");
         }
     }
 

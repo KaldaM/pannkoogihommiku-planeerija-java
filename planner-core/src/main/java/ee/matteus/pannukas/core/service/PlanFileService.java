@@ -1,6 +1,7 @@
 package ee.matteus.pannukas.core.service;
 
 import ee.matteus.pannukas.core.model.ConnectorType;
+import ee.matteus.pannukas.core.model.CustomObject;
 import ee.matteus.pannukas.core.model.Equipment;
 import ee.matteus.pannukas.core.model.EventPlan;
 import ee.matteus.pannukas.core.model.PlannerObject;
@@ -100,6 +101,8 @@ public class PlanFileService {
             writeTent(properties, prefix, tent);
         } else if (object instanceof PowerSource source) {
             writePowerSource(properties, prefix, source);
+        } else if (object instanceof CustomObject) {
+            properties.setProperty(prefix + "type", "CUSTOM_OBJECT");
         }
     }
 
@@ -136,6 +139,8 @@ public class PlanFileService {
         PlannerObject object;
         if ("POWER_SOURCE".equals(type)) {
             object = readPowerSource(properties, prefix);
+        } else if ("CUSTOM_OBJECT".equals(type)) {
+            object = readCustomObject(properties, prefix);
         } else {
             object = readTent(properties, prefix);
         }
@@ -188,6 +193,14 @@ public class PlanFileService {
             ));
         }
         return source;
+    }
+
+    private CustomObject readCustomObject(Properties properties, String prefix) {
+        return new CustomObject(
+                properties.getProperty(prefix + "id", ""),
+                properties.getProperty(prefix + "name", "Objekt"),
+                readPosition(properties, prefix)
+        );
     }
 
     private Position readPosition(Properties properties, String prefix) {
