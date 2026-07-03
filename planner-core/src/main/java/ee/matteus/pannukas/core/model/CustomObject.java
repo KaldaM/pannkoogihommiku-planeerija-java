@@ -5,6 +5,7 @@ public class CustomObject extends PlannerObject {
     private String colorHex;
     private double widthMeters;
     private double heightMeters;
+    private double rotationDegrees;
 
     public CustomObject(String id, String name, Position position) {
         super(id, name, position);
@@ -12,6 +13,7 @@ public class CustomObject extends PlannerObject {
         this.colorHex = "#9ca3af";
         this.widthMeters = 1.0;
         this.heightMeters = 1.0;
+        this.rotationDegrees = 0;
     }
 
     public CustomObjectShape shape() {
@@ -38,11 +40,19 @@ public class CustomObject extends PlannerObject {
         return heightMeters;
     }
 
+    public double rotationDegrees() {
+        return rotationDegrees;
+    }
+
     public void setSizeMeters(double widthMeters, double heightMeters) {
         if (widthMeters <= 0 || heightMeters <= 0) {
             throw new IllegalArgumentException("Objekti mõõdud peavad olema positiivsed.");
         }
         this.widthMeters = widthMeters;
         this.heightMeters = heightMeters;
+    }
+
+    public void setRotationDegrees(double rotationDegrees) {
+        this.rotationDegrees = rotationDegrees;
     }
 }

@@ -141,6 +141,7 @@ public class PlanFileService {
         properties.setProperty(prefix + "colorHex", object.colorHex());
         properties.setProperty(prefix + "widthMeters", Double.toString(object.widthMeters()));
         properties.setProperty(prefix + "heightMeters", Double.toString(object.heightMeters()));
+        properties.setProperty(prefix + "rotationDegrees", Double.toString(object.rotationDegrees()));
     }
 
     private PlannerObject readObject(Properties properties, String prefix) {
@@ -216,6 +217,7 @@ public class PlanFileService {
                 doubleValue(properties, prefix + "widthMeters", 1.0),
                 doubleValue(properties, prefix + "heightMeters", 1.0)
         );
+        object.setRotationDegrees(doubleValue(properties, prefix + "rotationDegrees", 0));
         return object;
     }
 

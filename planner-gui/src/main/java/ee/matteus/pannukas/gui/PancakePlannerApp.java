@@ -107,6 +107,8 @@ public class PancakePlannerApp extends Application {
     private Label customObjectHeightLabel;
     private TextField customObjectWidthField;
     private TextField customObjectHeightField;
+    private Label customObjectRotationLabel;
+    private TextField customObjectRotationField;
     private ComboBox<PowerSourceChoice> powerSourceComboBox;
     private ComboBox<ConnectorType> connectionTypeComboBox;
     private ComboBox<OutletChoice> connectionOutletComboBox;
@@ -352,6 +354,8 @@ public class PancakePlannerApp extends Application {
         customObjectHeightLabel = new Label("Objekti pikkus m");
         customObjectWidthField = new TextField();
         customObjectHeightField = new TextField();
+        customObjectRotationLabel = new Label("Objekti pööre °");
+        customObjectRotationField = new TextField();
         customObjectShapeComboBox.setOnAction(event -> updateCustomObjectSizeFields());
         powerSourceComboBox = new ComboBox<>();
         powerSourceComboBox.setOnAction(event -> refreshConnectionTypeChoices(null));
@@ -404,17 +408,18 @@ public class PancakePlannerApp extends Application {
         form.addRow(6, new Label("Objekti värv"), customObjectColorPicker);
         form.addRow(7, customObjectWidthLabel, customObjectWidthField);
         form.addRow(8, customObjectHeightLabel, customObjectHeightField);
-        form.add(sectionLabel("Telk"), 0, 9, 2, 1);
-        form.addRow(10, new Label("Laius m"), tentWidthField);
-        form.addRow(11, new Label("Pikkus m"), tentHeightField);
-        form.addRow(12, new Label("Pööre °"), tentRotationField);
-        form.addRow(13, new Label("Telgi värv"), tentColorPicker);
-        form.add(sectionLabel("Vool"), 0, 14, 2, 1);
-        form.addRow(15, new Label("Vooluallikas"), powerSourceComboBox);
-        form.addRow(16, new Label("Ühenduse tüüp"), connectionTypeComboBox);
-        form.addRow(17, new Label("Väljund"), connectionOutletComboBox);
-        form.add(sectionLabel("Märkmed"), 0, 18, 2, 1);
-        form.addRow(19, new Label("Märkmed"), notesArea);
+        form.addRow(9, customObjectRotationLabel, customObjectRotationField);
+        form.add(sectionLabel("Telk"), 0, 10, 2, 1);
+        form.addRow(11, new Label("Laius m"), tentWidthField);
+        form.addRow(12, new Label("Pikkus m"), tentHeightField);
+        form.addRow(13, new Label("Pööre °"), tentRotationField);
+        form.addRow(14, new Label("Telgi värv"), tentColorPicker);
+        form.add(sectionLabel("Vool"), 0, 15, 2, 1);
+        form.addRow(16, new Label("Vooluallikas"), powerSourceComboBox);
+        form.addRow(17, new Label("Ühenduse tüüp"), connectionTypeComboBox);
+        form.addRow(18, new Label("Väljund"), connectionOutletComboBox);
+        form.add(sectionLabel("Märkmed"), 0, 19, 2, 1);
+        form.addRow(20, new Label("Märkmed"), notesArea);
 
         Button applyButton = new Button("Rakenda muudatused");
         applyButton.setOnAction(event -> applyDetails());
@@ -763,6 +768,7 @@ public class PancakePlannerApp extends Application {
             );
             rectangle.setArcWidth(4);
             rectangle.setArcHeight(4);
+            rectangle.setRotate(object.rotationDegrees());
             shape = rectangle;
         }
         shape.setFill(Color.web(object.colorHex()));
@@ -986,6 +992,7 @@ public class PancakePlannerApp extends Application {
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             customObjectWidthField.clear();
             customObjectHeightField.clear();
+            customObjectRotationField.clear();
             refreshPowerSourceChoices();
             refreshEquipmentList();
             refreshOutletList();
@@ -1006,6 +1013,7 @@ public class PancakePlannerApp extends Application {
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             customObjectWidthField.clear();
             customObjectHeightField.clear();
+            customObjectRotationField.clear();
         } else if (selectedObject instanceof CustomObject customObject) {
             tentWidthField.clear();
             tentHeightField.clear();
@@ -1015,6 +1023,7 @@ public class PancakePlannerApp extends Application {
             customObjectColorPicker.setValue(Color.web(customObject.colorHex()));
             customObjectWidthField.setText(formatMeters(customObject.widthMeters()));
             customObjectHeightField.setText(formatMeters(customObject.heightMeters()));
+            customObjectRotationField.setText(formatDegrees(customObject.rotationDegrees()));
         } else {
             tentWidthField.clear();
             tentHeightField.clear();
@@ -1024,6 +1033,7 @@ public class PancakePlannerApp extends Application {
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             customObjectWidthField.clear();
             customObjectHeightField.clear();
+            customObjectRotationField.clear();
         }
         refreshPowerSourceChoices();
         refreshEquipmentList();
@@ -1041,6 +1051,14 @@ public class PancakePlannerApp extends Application {
         customObjectHeightField.setManaged(!circleSelected);
         customObjectWidthField.setDisable(!customObjectSelected);
         customObjectHeightField.setDisable(!customObjectSelected || circleSelected);
+        customObjectRotationLabel.setVisible(!circleSelected);
+        customObjectRotationLabel.setManaged(!circleSelected);
+        customObjectRotationField.setVisible(!circleSelected);
+        customObjectRotationField.setManaged(!circleSelected);
+        customObjectRotationField.setDisable(!customObjectSelected || circleSelected);
+        if (customObjectSelected && !circleSelected && customObjectRotationField.getText().isBlank()) {
+            customObjectRotationField.setText("0");
+        }
     }
 
     private void startPowerSourceSelectionFromMap() {
@@ -1121,6 +1139,9 @@ public class PancakePlannerApp extends Application {
             }
         } else if (selectedObject instanceof CustomObject customObject) {
             if (!applyCustomObjectSize(customObject)) {
+                return;
+            }
+            if (!applyCustomObjectRotation(customObject)) {
                 return;
             }
             CustomObjectShape selectedShape = customObjectShapeComboBox.getSelectionModel().getSelectedItem();
@@ -1263,6 +1284,21 @@ public class PancakePlannerApp extends Application {
             return false;
         } catch (IllegalArgumentException exception) {
             showError("Mõõte ei muudetud", exception.getMessage());
+            return false;
+        }
+    }
+
+    private boolean applyCustomObjectRotation(CustomObject object) {
+        if (customObjectShapeComboBox.getSelectionModel().getSelectedItem() == CustomObjectShape.CIRCLE) {
+            object.setRotationDegrees(0);
+            return true;
+        }
+        try {
+            double rotationDegrees = Double.parseDouble(customObjectRotationField.getText().trim().replace(',', '.'));
+            object.setRotationDegrees(rotationDegrees);
+            return true;
+        } catch (NumberFormatException exception) {
+            showError("Pööret ei muudetud", "Sisesta objekti pööre arvuna kraadides.");
             return false;
         }
     }
