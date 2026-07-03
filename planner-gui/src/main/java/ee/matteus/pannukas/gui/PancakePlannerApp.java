@@ -38,6 +38,7 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.image.Image;
@@ -91,6 +92,9 @@ public class PancakePlannerApp extends Application {
     private final Set<String> visibleGroups = new HashSet<>();
     private Set<String> knownGroups = new HashSet<>();
     private ListView<String> summaryList;
+    private CheckBox showPowerSummaryCheckBox;
+    private CheckBox showCableSummaryCheckBox;
+    private CheckBox showGroupSummaryCheckBox;
     private VBox groupFilterPanel;
     private TextField planNameField;
     private Label selectedTypeLabel;
@@ -440,6 +444,16 @@ public class PancakePlannerApp extends Application {
         deleteObjectButton.setOnAction(event -> deleteSelectedObject());
 
         Label summaryTitle = new Label("Voolu kokkuvõte");
+        showPowerSummaryCheckBox = new CheckBox("Vool");
+        showPowerSummaryCheckBox.setSelected(true);
+        showPowerSummaryCheckBox.setOnAction(event -> refreshSummary());
+        showCableSummaryCheckBox = new CheckBox("Kaablid");
+        showCableSummaryCheckBox.setSelected(true);
+        showCableSummaryCheckBox.setOnAction(event -> refreshSummary());
+        showGroupSummaryCheckBox = new CheckBox("Grupid");
+        showGroupSummaryCheckBox.setSelected(true);
+        showGroupSummaryCheckBox.setOnAction(event -> refreshSummary());
+        HBox summaryFilters = new HBox(10, showPowerSummaryCheckBox, showCableSummaryCheckBox, showGroupSummaryCheckBox);
 
         equipmentPanel = new VBox(
                 8,
@@ -473,7 +487,8 @@ public class PancakePlannerApp extends Application {
                 applyButton,
                 choosePowerSourceButton,
                 deleteObjectButton,
-                summaryTitle
+                summaryTitle,
+                summaryFilters
         );
         detailPanel.setPadding(new Insets(0, 0, 12, 0));
         return detailPanel;
@@ -1847,16 +1862,34 @@ public class PancakePlannerApp extends Application {
 
     private void refreshSummary() {
         summaryList.getItems().clear();
-        for (PowerSummary summary : powerSummaryService.summaries(plan)) {
-            summaryList.getItems().add("%s: %d W kasutusel, %s".formatted(
-                    summary.sourceName(),
-                    summary.usedWatts(),
-                    remainingWattsText(summary.remainingWatts())
-            ));
-            addConnectedConsumers(summary.sourceId());
+        if (showPowerSummary()) {
+            for (PowerSummary summary : powerSummaryService.summaries(plan)) {
+                summaryList.getItems().add("%s: %d W kasutusel, %s".formatted(
+                        summary.sourceName(),
+                        summary.usedWatts(),
+                        remainingWattsText(summary.remainingWatts())
+                ));
+                addConnectedConsumers(summary.sourceId());
+            }
         }
-        addCableSummary();
-        addGroupSummary();
+        if (showCableSummary()) {
+            addCableSummary();
+        }
+        if (showGroupSummary()) {
+            addGroupSummary();
+        }
+    }
+
+    private boolean showPowerSummary() {
+        return showPowerSummaryCheckBox == null || showPowerSummaryCheckBox.isSelected();
+    }
+
+    private boolean showCableSummary() {
+        return showCableSummaryCheckBox == null || showCableSummaryCheckBox.isSelected();
+    }
+
+    private boolean showGroupSummary() {
+        return showGroupSummaryCheckBox == null || showGroupSummaryCheckBox.isSelected();
     }
 
     private void addConnectedConsumers(String sourceId) {
@@ -1959,20 +1992,23 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        Map<String, List<PlannerObject>> objectsByGroup = new TreeMap<>();
-        for (PlannerObject object : plan.objects()) {
-            String groupName = object.groupName().isBlank() ? "Määramata" : object.groupName();
-            objectsByGroup.computeIfAbsent(groupName, ignored -> new ArrayList<>()).add(object);
-        }
-
         summaryList.getItems().add("");
         summaryList.getItems().add("Grupid");
-        for (Map.Entry<String, List<PlannerObject>> entry : objectsByGroup.entrySet()) {
+        for (Map.Entry<String, List<PlannerObject>> entry : objectsByGroup().entrySet()) {
             summaryList.getItems().add(entry.getKey());
             for (PlannerObject object : entry.getValue()) {
                 summaryList.getItems().add("  - %s (%s)".formatted(object.name(), objectTypeName(object)));
             }
         }
+    }
+
+    private Map<String, List<PlannerObject>> objectsByGroup() {
+        Map<String, List<PlannerObject>> objectsByGroup = new TreeMap<>();
+        for (PlannerObject object : plan.objects()) {
+            String groupName = object.groupName().isBlank() ? "Määramata" : object.groupName();
+            objectsByGroup.computeIfAbsent(groupName, ignored -> new ArrayList<>()).add(object);
+        }
+        return objectsByGroup;
     }
 
     private boolean savePlan() {
@@ -2035,35 +2071,44 @@ public class PancakePlannerApp extends Application {
         String lineSeparator = System.lineSeparator();
         StringBuilder builder = new StringBuilder();
         builder.append(plan.name()).append(lineSeparator);
-        builder.append("Voolu kokkuvõte pesade kaupa").append(lineSeparator);
         builder.append(lineSeparator);
 
-        for (PowerSource source : plan.powerSources()) {
-            int sourceUsedWatts = powerSummaryService.summaries(plan).stream()
-                    .filter(summary -> summary.sourceId().equals(source.id()))
-                    .findFirst()
-                    .map(PowerSummary::usedWatts)
-                    .orElse(0);
-            builder.append(source.name())
-                    .append(": ")
-                    .append(sourceUsedWatts)
-                    .append(" W kasutusel, ")
-                    .append(remainingWattsText(source.totalCapacityWatts() - sourceUsedWatts))
-                    .append(lineSeparator);
-
-            if (source.outlets().isEmpty()) {
-                builder.append("  Väljundeid pole").append(lineSeparator);
-            }
-
-            for (int index = 0; index < source.outlets().size(); index++) {
-                PowerOutlet outlet = source.outlets().get(index);
-                appendOutletReport(builder, source, outlet, index, lineSeparator);
-            }
+        if (showPowerSummary()) {
+            builder.append("Voolu kokkuvõte pesade kaupa").append(lineSeparator);
             builder.append(lineSeparator);
+            for (PowerSource source : plan.powerSources()) {
+                int sourceUsedWatts = powerSummaryService.summaries(plan).stream()
+                        .filter(summary -> summary.sourceId().equals(source.id()))
+                        .findFirst()
+                        .map(PowerSummary::usedWatts)
+                        .orElse(0);
+                builder.append(source.name())
+                        .append(": ")
+                        .append(sourceUsedWatts)
+                        .append(" W kasutusel, ")
+                        .append(remainingWattsText(source.totalCapacityWatts() - sourceUsedWatts))
+                        .append(lineSeparator);
+
+                if (source.outlets().isEmpty()) {
+                    builder.append("  Väljundeid pole").append(lineSeparator);
+                }
+
+                for (int index = 0; index < source.outlets().size(); index++) {
+                    PowerOutlet outlet = source.outlets().get(index);
+                    appendOutletReport(builder, source, outlet, index, lineSeparator);
+                }
+                builder.append(lineSeparator);
+            }
+            appendUnconnectedTentsReport(builder, lineSeparator);
         }
 
-        appendUnconnectedTentsReport(builder, lineSeparator);
-        appendCableReport(builder, lineSeparator);
+        if (showCableSummary()) {
+            appendCableReport(builder, lineSeparator);
+        }
+
+        if (showGroupSummary()) {
+            appendGroupReport(builder, lineSeparator);
+        }
         return builder.toString();
     }
 
@@ -2176,6 +2221,26 @@ public class PancakePlannerApp extends Application {
             builder.append(row).append(lineSeparator);
         }
         builder.append("Kokku: %.1f m".formatted(totalLengthMeters)).append(lineSeparator);
+    }
+
+    private void appendGroupReport(StringBuilder builder, String lineSeparator) {
+        if (plan.objects().isEmpty()) {
+            return;
+        }
+
+        builder.append("Grupid").append(lineSeparator);
+        for (Map.Entry<String, List<PlannerObject>> entry : objectsByGroup().entrySet()) {
+            builder.append(entry.getKey()).append(lineSeparator);
+            for (PlannerObject object : entry.getValue()) {
+                builder.append("  - ")
+                        .append(object.name())
+                        .append(" (")
+                        .append(objectTypeName(object))
+                        .append(")")
+                        .append(lineSeparator);
+            }
+        }
+        builder.append(lineSeparator);
     }
 
     private void loadMapImage() {
