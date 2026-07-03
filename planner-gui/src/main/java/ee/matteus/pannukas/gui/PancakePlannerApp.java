@@ -313,9 +313,6 @@ public class PancakePlannerApp extends Application {
             }
         });
         sidebar.getChildren().add(collapsibleSection("Voolu kokkuvõte", new VBox(8, summaryFilters, summaryList), true));
-        equipmentSection = collapsibleSection("Telgi seadmed", equipmentPanel, false);
-        outletSection = collapsibleSection("Kapi väljundid", outletPanel, false);
-        sidebar.getChildren().addAll(equipmentSection, outletSection);
         groupFilterPanel = new VBox(6);
         groupFilterPanel.setPadding(new Insets(12, 0, 0, 0));
         groupFilterSection = collapsibleSection("Grupi filtrid", groupFilterPanel, false);
@@ -469,6 +466,7 @@ public class PancakePlannerApp extends Application {
                 addEquipmentButton,
                 removeEquipmentButton
         );
+        equipmentSection = collapsibleSection("Telgi seadmed", equipmentPanel, false);
         outletPanel = new VBox(
                 8,
                 outletList,
@@ -479,6 +477,7 @@ public class PancakePlannerApp extends Application {
                 updateOutletButton,
                 removeOutletButton
         );
+        outletSection = collapsibleSection("Kapi väljundid", outletPanel, false);
         VBox detailPanel = new VBox(
                 10,
                 planForm,
@@ -486,6 +485,8 @@ public class PancakePlannerApp extends Application {
                 customObjectPanel,
                 tentPanel,
                 powerConnectionPanel,
+                equipmentSection,
+                outletSection,
                 new VBox(8, sectionLabel("Märkmed"), notesForm),
                 applyButton,
                 choosePowerSourceButton,
