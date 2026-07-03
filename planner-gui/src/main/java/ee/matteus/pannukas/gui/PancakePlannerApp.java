@@ -263,7 +263,7 @@ public class PancakePlannerApp extends Application {
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty ? null : item);
-                setStyle(!empty && item != null && item.contains("ULEKOORMUS")
+                setStyle(!empty && item != null && item.contains("ÜLEKOORMUS")
                         ? "-fx-text-fill: #b91c1c; -fx-font-weight: bold;"
                         : "");
             }
@@ -348,7 +348,7 @@ public class PancakePlannerApp extends Application {
         outletList.getSelectionModel().selectedIndexProperty()
                 .addListener((observable, oldValue, newValue) -> loadSelectedOutletDetails());
         outletNameField = new TextField();
-        outletNameField.setPromptText("Valjundi nimi");
+        outletNameField.setPromptText("Väljundi nimi");
         outletTypeComboBox = new ComboBox<>();
         outletTypeComboBox.getItems().addAll(ConnectorType.values());
         outletTypeComboBox.setConverter(connectorTypeConverter());
@@ -376,8 +376,8 @@ public class PancakePlannerApp extends Application {
         form.addRow(6, new Label("Pööre °"), tentRotationField);
         form.addRow(7, new Label("Telgi värv"), tentColorPicker);
         form.addRow(8, new Label("Vooluallikas"), powerSourceComboBox);
-        form.addRow(9, new Label("Yhenduse tyyp"), connectionTypeComboBox);
-        form.addRow(11, new Label("Valjund"), connectionOutletComboBox);
+        form.addRow(9, new Label("Ühenduse tüüp"), connectionTypeComboBox);
+        form.addRow(11, new Label("Väljund"), connectionOutletComboBox);
         form.addRow(10, new Label("Märkmed"), notesArea);
 
         Button applyButton = new Button("Rakenda muudatused");
@@ -528,7 +528,7 @@ public class PancakePlannerApp extends Application {
         alert.setHeaderText("Plaanis on salvestamata muudatusi");
         alert.setContentText("Kas soovid enne jätkamist plaani salvestada?");
         ButtonType saveButton = new ButtonType("Salvesta");
-        ButtonType discardButton = new ButtonType("Ara salvesta");
+        ButtonType discardButton = new ButtonType("Ära salvesta");
         alert.getButtonTypes().setAll(saveButton, discardButton, ButtonType.CANCEL);
 
         ButtonType choice = alert.showAndWait().orElse(ButtonType.CANCEL);
@@ -1214,7 +1214,7 @@ public class PancakePlannerApp extends Application {
 
     private String remainingWattsText(int remainingWatts) {
         if (remainingWatts < 0) {
-            return "ULEKOORMUS %d W".formatted(Math.abs(remainingWatts));
+            return "ÜLEKOORMUS %d W".formatted(Math.abs(remainingWatts));
         }
         return "%d W alles".formatted(remainingWatts);
     }
@@ -1448,12 +1448,12 @@ public class PancakePlannerApp extends Application {
 
     private boolean confirmRemoveConnectedOutlet(PowerOutlet outlet, List<Tent> connectedTents) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Eemalda valjund");
-        alert.setHeaderText("See valjund on kasutusel");
+        alert.setTitle("Eemalda väljund");
+        alert.setHeaderText("See väljund on kasutusel");
         String tentRows = connectedTents.stream()
                 .map(tent -> "- " + tent.name())
                 .reduce("", (rows, row) -> rows + row + System.lineSeparator());
-        alert.setContentText("%s kustutamisel eemaldatakse nende telkide vooluyhendused:%n%n%s".formatted(
+        alert.setContentText("%s kustutamisel eemaldatakse nende telkide vooluühendused:%n%n%s".formatted(
                 outlet.name().isBlank() ? outlet.type().displayName() : outlet.name(),
                 tentRows
         ));
@@ -1462,12 +1462,12 @@ public class PancakePlannerApp extends Application {
 
     private boolean confirmOutletTypeChange(PowerOutlet outlet, ConnectorType selectedType, List<Tent> connectedTents) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Muuda valjundi tyypi");
-        alert.setHeaderText("See valjund on kasutusel");
+        alert.setTitle("Muuda väljundi tüüpi");
+        alert.setHeaderText("See väljund on kasutusel");
         String tentRows = connectedTents.stream()
                 .map(tent -> "- " + tent.name())
                 .reduce("", (rows, row) -> rows + row + System.lineSeparator());
-        alert.setContentText("%s tyyp muutub: %s -> %s.%n%nNende telkide yhenduse tyyp muutub samuti:%n%n%s".formatted(
+        alert.setContentText("%s tüüp muutub: %s -> %s.%n%nNende telkide ühenduse tüüp muutub samuti:%n%n%s".formatted(
                 outlet.name().isBlank() ? outlet.type().displayName() : outlet.name(),
                 outlet.type().displayName(),
                 selectedType.displayName(),
@@ -1756,7 +1756,7 @@ public class PancakePlannerApp extends Application {
         String lineSeparator = System.lineSeparator();
         StringBuilder builder = new StringBuilder();
         builder.append(plan.name()).append(lineSeparator);
-        builder.append("Voolu kokkuvote pesade kaupa").append(lineSeparator);
+        builder.append("Voolu kokkuvõte pesade kaupa").append(lineSeparator);
         builder.append(lineSeparator);
 
         for (PowerSource source : plan.powerSources()) {
@@ -1773,7 +1773,7 @@ public class PancakePlannerApp extends Application {
                     .append(lineSeparator);
 
             if (source.outlets().isEmpty()) {
-                builder.append("  Valjundeid pole").append(lineSeparator);
+                builder.append("  Väljundeid pole").append(lineSeparator);
             }
 
             for (int index = 0; index < source.outlets().size(); index++) {
@@ -1846,7 +1846,7 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        builder.append("Yhendamata telgid").append(lineSeparator);
+        builder.append("Ühendamata telgid").append(lineSeparator);
         for (Tent tent : unconnectedTents) {
             builder.append("  - ")
                     .append(tent.name())
@@ -1973,9 +1973,9 @@ public class PancakePlannerApp extends Application {
                 .replaceAll("\\s+", "-")
                 .toLowerCase();
         if (safeName.isBlank()) {
-            safeName = "pannkoogihommiku-kokkuvote";
+            safeName = "pannkoogihommiku-kokkuvõte";
         }
-        return safeName + "-kokkuvote.txt";
+        return safeName + "-kokkuvõte.txt";
     }
 
     private void showError(String title, String message) {
