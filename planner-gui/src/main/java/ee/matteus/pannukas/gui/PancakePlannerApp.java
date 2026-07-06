@@ -416,8 +416,19 @@ public class PancakePlannerApp extends Application {
         connectionOutletComboBox = new ComboBox<>();
         cableNotesField = new TextField();
         cableNotesField.setPromptText("nt 20m + 10m");
+        cableNotesField.setOnAction(event -> autoApplyCableNotes());
+        cableNotesField.focusedProperty().addListener((observable, wasFocused, isFocused) -> {
+            if (wasFocused && !isFocused) {
+                autoApplyCableNotes();
+            }
+        });
         notesArea = new TextArea();
         notesArea.setPrefRowCount(3);
+        notesArea.focusedProperty().addListener((observable, wasFocused, isFocused) -> {
+            if (wasFocused && !isFocused) {
+                autoApplyNotes();
+            }
+        });
         equipmentList = new ListView<>();
         equipmentList.setPrefHeight(120);
         equipmentNameField = new TextField();
@@ -1325,6 +1336,36 @@ public class PancakePlannerApp extends Application {
         }
         selectedObject.setLocked(lockedCheckBox.isSelected());
         redrawMap();
+        markDirty();
+    }
+
+    private void autoApplyNotes() {
+        if (selectedObject == null) {
+            return;
+        }
+        String notes = notesArea.getText();
+        if (selectedObject.notes().equals(notes)) {
+            return;
+        }
+        selectedObject.setNotes(notes);
+        markDirty();
+    }
+
+    private void autoApplyCableNotes() {
+        if (!(selectedObject instanceof Tent tent)) {
+            return;
+        }
+        String cableNotes = cableNotesField.getText();
+        PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
+        if (connection == null || connection.cableNotes().equals(cableNotes.trim())) {
+            return;
+        }
+        plan.updateCableNotes(tent.id(), cableNotes);
+        cableNotesField.setText(plan.findPowerConnectionForConsumer(tent.id())
+                .map(PowerConnection::cableNotes)
+                .orElse(""));
+        redrawMap();
+        refreshSummary();
         markDirty();
     }
 
