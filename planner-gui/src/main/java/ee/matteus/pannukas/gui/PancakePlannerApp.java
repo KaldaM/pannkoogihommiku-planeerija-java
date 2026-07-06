@@ -759,8 +759,8 @@ public class PancakePlannerApp extends Application {
 
         mapPane.getChildren().add(line);
         if (showCableLabels()) {
-            Label distanceLabel = new Label("%s: %.1f m".formatted(
-                    cable.connection().connectorType().displayName(),
+            Label distanceLabel = new Label("%s · %.1f m".formatted(
+                    shortCableTypeName(cable.connection().connectorType()),
                     distanceMeters(tentCenter, sourceCenter)
             ));
             distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,0.88); -fx-padding: 2 5 2 5; -fx-border-color: %s;".formatted(toHex(cableColor)));
@@ -776,6 +776,14 @@ public class PancakePlannerApp extends Application {
             case SCHUKO_230V -> Color.web("#2563eb");
             case INDUSTRIAL_16A -> Color.web("#16a34a");
             case INDUSTRIAL_32A -> Color.web("#ea580c");
+        };
+    }
+
+    private String shortCableTypeName(ConnectorType connectorType) {
+        return switch (connectorType) {
+            case SCHUKO_230V -> "230V";
+            case INDUSTRIAL_16A -> "16A";
+            case INDUSTRIAL_32A -> "32A";
         };
     }
 
