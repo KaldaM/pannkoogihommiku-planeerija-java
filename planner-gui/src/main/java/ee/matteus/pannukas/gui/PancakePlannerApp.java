@@ -767,28 +767,43 @@ public class PancakePlannerApp extends Application {
         Position tentCenter = objectCenter(cable.tent());
         Position sourceCenter = objectCenter(cable.source());
         Color cableColor = cableColor(cable.connection().connectorType());
+        boolean selectedCable = isSelected(cable.tent());
+        double strokeWidth = cableWidth(cable.connection().connectorType()) + (selectedCable ? 2.0 : 0.0);
 
         Line line = new Line(tentCenter.x(), tentCenter.y(), sourceCenter.x(), sourceCenter.y());
         line.setStroke(cableColor);
-        line.setStrokeWidth(cableWidth(cable.connection().connectorType()));
-        line.setOpacity(0.85);
+        line.setStrokeWidth(strokeWidth);
+        line.setOpacity(selectedCable ? 1.0 : 0.85);
         line.setMouseTransparent(true);
         if (cable.connection().connectorType() == ConnectorType.SCHUKO_230V) {
             line.getStrokeDashArray().addAll(8.0, 6.0);
         }
 
+        Line highlightLine = new Line(tentCenter.x(), tentCenter.y(), sourceCenter.x(), sourceCenter.y());
+        highlightLine.setStroke(Color.web("#111827"));
+        highlightLine.setStrokeWidth(strokeWidth + 4.0);
+        highlightLine.setOpacity(selectedCable ? 0.28 : 0);
+        highlightLine.setMouseTransparent(true);
+        if (cable.connection().connectorType() == ConnectorType.SCHUKO_230V) {
+            highlightLine.getStrokeDashArray().addAll(8.0, 6.0);
+        }
+
         Line hitLine = new Line(tentCenter.x(), tentCenter.y(), sourceCenter.x(), sourceCenter.y());
         hitLine.setStroke(Color.TRANSPARENT);
-        hitLine.setStrokeWidth(Math.max(12.0, line.getStrokeWidth() + 8.0));
+        hitLine.setStrokeWidth(Math.max(12.0, strokeWidth + 8.0));
         makeCableSelectable(hitLine, cable.tent());
 
-        mapPane.getChildren().addAll(line, hitLine);
+        mapPane.getChildren().addAll(highlightLine, line, hitLine);
         if (showCableLabels()) {
             Label distanceLabel = new Label("%s · %.1f m".formatted(
                     shortCableTypeName(cable.connection().connectorType()),
                     distanceMeters(tentCenter, sourceCenter)
             ));
-            distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,0.88); -fx-padding: 2 5 2 5; -fx-border-color: %s;".formatted(toHex(cableColor)));
+            distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,%s); -fx-padding: 2 5 2 5; -fx-border-color: %s; -fx-font-weight: %s;".formatted(
+                    selectedCable ? "0.96" : "0.88",
+                    toHex(selectedCable ? Color.web("#111827") : cableColor),
+                    selectedCable ? "bold" : "normal"
+            ));
             distanceLabel.setLayoutX((tentCenter.x() + sourceCenter.x()) / 2 + 6);
             distanceLabel.setLayoutY((tentCenter.y() + sourceCenter.y()) / 2 + 6);
             makeCableSelectable(distanceLabel, cable.tent());
