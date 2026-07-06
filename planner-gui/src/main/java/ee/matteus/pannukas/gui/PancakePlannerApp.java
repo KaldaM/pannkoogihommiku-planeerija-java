@@ -31,6 +31,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Separator;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -251,16 +252,19 @@ public class PancakePlannerApp extends Application {
 
         return new ToolBar(
                 newPlanButton,
+                saveButton,
+                saveAsButton,
+                openButton,
+                exportSummaryButton,
+                new Separator(),
                 addTentButton,
                 addPowerSourceButton,
                 addCustomObjectButton,
-                saveButton,
-                saveAsButton,
-                exportSummaryButton,
-                openButton,
+                new Separator(),
                 loadMapButton,
                 defaultMapButton,
                 orthophotoButton,
+                new Separator(),
                 zoomInButton,
                 zoomOutButton,
                 resetZoomButton,
@@ -268,6 +272,7 @@ public class PancakePlannerApp extends Application {
                 showCableLabelsButton,
                 measureButton,
                 clearMeasurementsButton,
+                new Separator(),
                 saveStatusLabel
         );
     }
