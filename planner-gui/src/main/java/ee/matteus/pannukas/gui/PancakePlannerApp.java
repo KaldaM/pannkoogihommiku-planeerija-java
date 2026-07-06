@@ -2508,6 +2508,9 @@ public class PancakePlannerApp extends Application {
 
     private List<String> cableTypeSummaryRows(Map<ConnectorType, CableTypeSummary> summariesByType) {
         List<String> rows = new ArrayList<>();
+        if (!summariesByType.isEmpty()) {
+            rows.add("Tüübi kaupa:");
+        }
         for (ConnectorType connectorType : ConnectorType.values()) {
             CableTypeSummary summary = summariesByType.get(connectorType);
             if (summary == null) {
