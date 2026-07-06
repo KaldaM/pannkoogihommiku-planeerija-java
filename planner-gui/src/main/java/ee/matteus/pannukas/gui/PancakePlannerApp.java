@@ -64,6 +64,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
@@ -81,6 +82,10 @@ public class PancakePlannerApp extends Application {
     private static final String OUTLET_SECTION = "outlet";
     private static final String GROUP_FILTER_SECTION = "groupFilter";
     private static final Pattern CABLE_LENGTH_PATTERN = Pattern.compile("\\d+(?:[,.]\\d+)?");
+    private static final Comparator<CableSummaryRow> CABLE_SUMMARY_ROW_COMPARATOR = Comparator
+            .comparing((CableSummaryRow row) -> row.connection().connectorType())
+            .thenComparing(row -> row.tent().name(), String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(row -> row.source().name(), String.CASE_INSENSITIVE_ORDER);
     private static final double PIXELS_PER_METER = 24.0;
     private static final double MIN_MAP_WIDTH = 760.0;
     private static final double MIN_MAP_HEIGHT = 560.0;
@@ -2189,7 +2194,7 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        List<String> cableRows = new ArrayList<>();
+        List<CableSummaryRow> cableRows = new ArrayList<>();
         double totalLengthMeters = 0.0;
         double totalNotedLengthMeters = 0.0;
         boolean hasNotedLength = false;
@@ -2222,7 +2227,7 @@ public class PancakePlannerApp extends Application {
                 typeSummary.addNotedLength(notedLengthMeters.getAsDouble());
                 hasNotedLength = true;
             }
-            cableRows.add(cableSummaryRow(tent, source, connection, lengthMeters, notedLengthMeters));
+            cableRows.add(new CableSummaryRow(tent, source, connection, lengthMeters, notedLengthMeters));
         }
 
         if (cableRows.isEmpty()) {
@@ -2231,7 +2236,10 @@ public class PancakePlannerApp extends Application {
 
         addSummarySpacerIfNeeded();
         summaryList.getItems().add("Kaablid");
-        summaryList.getItems().addAll(cableRows);
+        summaryList.getItems().addAll(cableRows.stream()
+                .sorted(CABLE_SUMMARY_ROW_COMPARATOR)
+                .map(this::cableSummaryRow)
+                .toList());
         if (hasNotedLength) {
             summaryList.getItems().add("Kokku: %.1f m märgitud, %.1f m kaardil".formatted(totalNotedLengthMeters, totalLengthMeters));
         } else {
@@ -2449,7 +2457,7 @@ public class PancakePlannerApp extends Application {
         double totalLengthMeters = 0.0;
         double totalNotedLengthMeters = 0.0;
         boolean hasNotedLength = false;
-        List<String> cableRows = new ArrayList<>();
+        List<CableSummaryRow> cableRows = new ArrayList<>();
         Map<ConnectorType, CableTypeSummary> summariesByType = new EnumMap<>(ConnectorType.class);
         for (Tent tent : plan.tents()) {
             PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
@@ -2477,7 +2485,7 @@ public class PancakePlannerApp extends Application {
                 typeSummary.addNotedLength(notedLengthMeters.getAsDouble());
                 hasNotedLength = true;
             }
-            cableRows.add(cableSummaryRow(tent, source, connection, lengthMeters, notedLengthMeters));
+            cableRows.add(new CableSummaryRow(tent, source, connection, lengthMeters, notedLengthMeters));
         }
 
         if (cableRows.isEmpty()) {
@@ -2485,9 +2493,10 @@ public class PancakePlannerApp extends Application {
         }
 
         builder.append("Kaablid").append(lineSeparator);
-        for (String row : cableRows) {
-            builder.append(row).append(lineSeparator);
-        }
+        cableRows.stream()
+                .sorted(CABLE_SUMMARY_ROW_COMPARATOR)
+                .map(this::cableSummaryRow)
+                .forEach(row -> builder.append(row).append(lineSeparator));
         if (hasNotedLength) {
             builder.append("Kokku: %.1f m märgitud, %.1f m kaardil".formatted(totalNotedLengthMeters, totalLengthMeters)).append(lineSeparator);
         } else {
@@ -2532,23 +2541,26 @@ public class PancakePlannerApp extends Application {
         return "  %s: %.1f m kaardil".formatted(shortCableTypeName(connectorType), summary.mapLengthMeters());
     }
 
-    private String cableSummaryRow(
+    private String cableSummaryRow(CableSummaryRow row) {
+        String lengthText = row.notedLengthMeters().isPresent()
+                ? "%.1f m kaardil, %.1f m märgitud".formatted(row.mapLengthMeters(), row.notedLengthMeters().getAsDouble())
+                : "%.1f m".formatted(row.mapLengthMeters());
+        return "  - %s -> %s (%s): %s%s".formatted(
+                row.tent().name(),
+                row.source().name(),
+                row.connection().connectorType().displayName(),
+                lengthText,
+                cableNotesText(row.connection()) + cableNoteWarningText(row.connection())
+        );
+    }
+
+    private record CableSummaryRow(
             Tent tent,
             PowerSource source,
             PowerConnection connection,
             double mapLengthMeters,
             OptionalDouble notedLengthMeters
     ) {
-        String lengthText = notedLengthMeters.isPresent()
-                ? "%.1f m kaardil, %.1f m märgitud".formatted(mapLengthMeters, notedLengthMeters.getAsDouble())
-                : "%.1f m".formatted(mapLengthMeters);
-        return "  - %s -> %s (%s): %s%s".formatted(
-                tent.name(),
-                source.name(),
-                connection.connectorType().displayName(),
-                lengthText,
-                cableNotesText(connection) + cableNoteWarningText(connection)
-        );
     }
 
     private String cableNoteWarningText(PowerConnection connection) {
