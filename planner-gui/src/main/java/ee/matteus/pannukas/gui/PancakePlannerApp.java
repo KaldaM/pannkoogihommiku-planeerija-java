@@ -65,8 +65,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class PancakePlannerApp extends Application {
     private static final String DEFAULT_MAP_PATH = "classpath:/maps/tavakaart.png";
@@ -76,6 +79,7 @@ public class PancakePlannerApp extends Application {
     private static final String EQUIPMENT_SECTION = "equipment";
     private static final String OUTLET_SECTION = "outlet";
     private static final String GROUP_FILTER_SECTION = "groupFilter";
+    private static final Pattern CABLE_LENGTH_PATTERN = Pattern.compile("\\d+(?:[,.]\\d+)?");
     private static final double PIXELS_PER_METER = 24.0;
     private static final double MIN_MAP_WIDTH = 760.0;
     private static final double MIN_MAP_HEIGHT = 560.0;
@@ -2186,6 +2190,8 @@ public class PancakePlannerApp extends Application {
 
         List<String> cableRows = new ArrayList<>();
         double totalLengthMeters = 0.0;
+        double totalNotedLengthMeters = 0.0;
+        boolean hasNotedLength = false;
 
         for (Tent tent : plan.tents()) {
             PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
@@ -2203,6 +2209,11 @@ public class PancakePlannerApp extends Application {
 
             double lengthMeters = distanceMeters(objectCenter(tent), objectCenter(source));
             totalLengthMeters += lengthMeters;
+            OptionalDouble notedLengthMeters = notedCableLengthMeters(connection);
+            if (notedLengthMeters.isPresent()) {
+                totalNotedLengthMeters += notedLengthMeters.getAsDouble();
+                hasNotedLength = true;
+            }
             cableRows.add("  - %s -> %s (%s): %.1f m%s".formatted(
                     tent.name(),
                     source.name(),
@@ -2219,7 +2230,11 @@ public class PancakePlannerApp extends Application {
         addSummarySpacerIfNeeded();
         summaryList.getItems().add("Kaablid");
         summaryList.getItems().addAll(cableRows);
-        summaryList.getItems().add("Kokku: %.1f m".formatted(totalLengthMeters));
+        if (hasNotedLength) {
+            summaryList.getItems().add("Kokku: %.1f m märgitud, %.1f m kaardil".formatted(totalNotedLengthMeters, totalLengthMeters));
+        } else {
+            summaryList.getItems().add("Kokku: %.1f m".formatted(totalLengthMeters));
+        }
     }
 
     private void addGroupSummary() {
@@ -2429,6 +2444,8 @@ public class PancakePlannerApp extends Application {
         }
 
         double totalLengthMeters = 0.0;
+        double totalNotedLengthMeters = 0.0;
+        boolean hasNotedLength = false;
         List<String> cableRows = new ArrayList<>();
         for (Tent tent : plan.tents()) {
             PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
@@ -2445,6 +2462,11 @@ public class PancakePlannerApp extends Application {
 
             double lengthMeters = distanceMeters(objectCenter(tent), objectCenter(source));
             totalLengthMeters += lengthMeters;
+            OptionalDouble notedLengthMeters = notedCableLengthMeters(connection);
+            if (notedLengthMeters.isPresent()) {
+                totalNotedLengthMeters += notedLengthMeters.getAsDouble();
+                hasNotedLength = true;
+            }
             cableRows.add("  - %s -> %s (%s): %.1f m%s".formatted(
                     tent.name(),
                     source.name(),
@@ -2462,11 +2484,26 @@ public class PancakePlannerApp extends Application {
         for (String row : cableRows) {
             builder.append(row).append(lineSeparator);
         }
-        builder.append("Kokku: %.1f m".formatted(totalLengthMeters)).append(lineSeparator);
+        if (hasNotedLength) {
+            builder.append("Kokku: %.1f m märgitud, %.1f m kaardil".formatted(totalNotedLengthMeters, totalLengthMeters)).append(lineSeparator);
+        } else {
+            builder.append("Kokku: %.1f m".formatted(totalLengthMeters)).append(lineSeparator);
+        }
     }
 
     private String cableNotesText(PowerConnection connection) {
         return connection.cableNotes().isBlank() ? "" : " [%s]".formatted(connection.cableNotes());
+    }
+
+    private OptionalDouble notedCableLengthMeters(PowerConnection connection) {
+        Matcher matcher = CABLE_LENGTH_PATTERN.matcher(connection.cableNotes());
+        double totalLengthMeters = 0.0;
+        boolean foundLength = false;
+        while (matcher.find()) {
+            totalLengthMeters += Double.parseDouble(matcher.group().replace(',', '.'));
+            foundLength = true;
+        }
+        return foundLength ? OptionalDouble.of(totalLengthMeters) : OptionalDouble.empty();
     }
 
     private void appendGroupReport(StringBuilder builder, String lineSeparator) {
