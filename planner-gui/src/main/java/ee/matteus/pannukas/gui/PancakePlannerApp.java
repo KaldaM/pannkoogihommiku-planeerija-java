@@ -2498,8 +2498,26 @@ public class PancakePlannerApp extends Application {
                 source.name(),
                 connection.connectorType().displayName(),
                 lengthText,
-                cableNotesText(connection)
+                cableNotesText(connection) + cableNoteWarningText(connection)
         );
+    }
+
+    private String cableNoteWarningText(PowerConnection connection) {
+        return cableNoteNeedsReview(connection) ? " (märkus kontrollida)" : "";
+    }
+
+    private boolean cableNoteNeedsReview(PowerConnection connection) {
+        String notes = connection.cableNotes();
+        if (notes.isBlank() || !notes.contains("+")) {
+            return false;
+        }
+
+        for (String part : notes.split("\\+")) {
+            if (!part.isBlank() && !CABLE_LENGTH_PATTERN.matcher(part).find()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private OptionalDouble notedCableLengthMeters(PowerConnection connection) {
