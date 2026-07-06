@@ -777,7 +777,12 @@ public class PancakePlannerApp extends Application {
             line.getStrokeDashArray().addAll(8.0, 6.0);
         }
 
-        mapPane.getChildren().add(line);
+        Line hitLine = new Line(tentCenter.x(), tentCenter.y(), sourceCenter.x(), sourceCenter.y());
+        hitLine.setStroke(Color.TRANSPARENT);
+        hitLine.setStrokeWidth(Math.max(12.0, line.getStrokeWidth() + 8.0));
+        makeCableSelectable(hitLine, cable.tent());
+
+        mapPane.getChildren().addAll(line, hitLine);
         if (showCableLabels()) {
             Label distanceLabel = new Label("%s · %.1f m".formatted(
                     shortCableTypeName(cable.connection().connectorType()),
@@ -786,9 +791,40 @@ public class PancakePlannerApp extends Application {
             distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,0.88); -fx-padding: 2 5 2 5; -fx-border-color: %s;".formatted(toHex(cableColor)));
             distanceLabel.setLayoutX((tentCenter.x() + sourceCenter.x()) / 2 + 6);
             distanceLabel.setLayoutY((tentCenter.y() + sourceCenter.y()) / 2 + 6);
-            distanceLabel.setMouseTransparent(true);
+            makeCableSelectable(distanceLabel, cable.tent());
             mapPane.getChildren().add(distanceLabel);
         }
+    }
+
+    private void makeCableSelectable(Node node, Tent tent) {
+        node.setOnMouseClicked(event -> {
+            if (pendingTentPlacement) {
+                Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                placeTent(new Position(mapPoint.getX(), mapPoint.getY()));
+                event.consume();
+                return;
+            }
+            if (pendingPowerSourcePlacement) {
+                Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                placePowerSource(new Position(mapPoint.getX(), mapPoint.getY()));
+                event.consume();
+                return;
+            }
+            if (pendingCustomObjectPlacement) {
+                Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                placeCustomObject(new Position(mapPoint.getX(), mapPoint.getY()));
+                event.consume();
+                return;
+            }
+            if (measuringActive) {
+                Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                handleMeasureClick(new Position(mapPoint.getX(), mapPoint.getY()));
+                event.consume();
+                return;
+            }
+            selectObject(tent);
+            event.consume();
+        });
     }
 
     private Color cableColor(ConnectorType connectorType) {
