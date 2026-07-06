@@ -317,6 +317,12 @@ public class PancakePlannerApp extends Application {
         showGroupSummaryCheckBox.setSelected(true);
         showGroupSummaryCheckBox.setOnAction(event -> refreshSummary());
         HBox summaryFilters = new HBox(10, showPowerSummaryCheckBox, showCableSummaryCheckBox, showGroupSummaryCheckBox);
+        VBox cableLegend = new VBox(
+                4,
+                cableLegendRow(ConnectorType.SCHUKO_230V),
+                cableLegendRow(ConnectorType.INDUSTRIAL_16A),
+                cableLegendRow(ConnectorType.INDUSTRIAL_32A)
+        );
 
         summaryList = new ListView<>();
         summaryList.setMinHeight(180);
@@ -331,7 +337,7 @@ public class PancakePlannerApp extends Application {
                         : "");
             }
         });
-        sidebar.getChildren().add(collapsibleSection(SUMMARY_SECTION, "Voolu kokkuvõte", new VBox(8, summaryFilters, summaryList), true));
+        sidebar.getChildren().add(collapsibleSection(SUMMARY_SECTION, "Voolu kokkuvõte", new VBox(8, summaryFilters, cableLegend, summaryList), true));
         groupFilterPanel = new VBox(6);
         groupFilterPanel.setPadding(new Insets(12, 0, 0, 0));
         groupFilterSection = collapsibleSection(GROUP_FILTER_SECTION, "Grupi filtrid", groupFilterPanel, false);
@@ -726,6 +732,20 @@ public class PancakePlannerApp extends Application {
 
     private boolean showCableLabels() {
         return showCableLabelsButton == null || showCableLabelsButton.isSelected();
+    }
+
+    private HBox cableLegendRow(ConnectorType connectorType) {
+        Line sample = new Line(0, 0, 34, 0);
+        sample.setStroke(cableColor(connectorType));
+        sample.setStrokeWidth(cableWidth(connectorType));
+        if (connectorType == ConnectorType.SCHUKO_230V) {
+            sample.getStrokeDashArray().addAll(8.0, 6.0);
+        }
+
+        Label label = new Label(shortCableTypeName(connectorType));
+        HBox row = new HBox(8, sample, label);
+        row.setStyle("-fx-alignment: center-left;");
+        return row;
     }
 
     private void drawPowerConnections() {
