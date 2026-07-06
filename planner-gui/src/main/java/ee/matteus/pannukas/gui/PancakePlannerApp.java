@@ -149,6 +149,7 @@ public class PancakePlannerApp extends Application {
     private Button choosePowerSourceButton;
     private ToggleButton measureButton;
     private ToggleButton showCablesButton;
+    private ToggleButton showCableLabelsButton;
     private Button addTentButton;
     private Button addPowerSourceButton;
     private Button addCustomObjectButton;
@@ -233,6 +234,10 @@ public class PancakePlannerApp extends Application {
         showCablesButton.setSelected(true);
         showCablesButton.setOnAction(event -> redrawMap());
 
+        showCableLabelsButton = new ToggleButton("Kaabli sildid");
+        showCableLabelsButton.setSelected(true);
+        showCableLabelsButton.setOnAction(event -> redrawMap());
+
         measureButton = new ToggleButton("Mõõdulint");
         measureButton.setOnAction(event -> setMeasuringActive(measureButton.isSelected()));
 
@@ -255,6 +260,7 @@ public class PancakePlannerApp extends Application {
                 zoomOutButton,
                 resetZoomButton,
                 showCablesButton,
+                showCableLabelsButton,
                 measureButton,
                 clearMeasurementsButton
         );
@@ -718,6 +724,10 @@ public class PancakePlannerApp extends Application {
         return showCablesButton == null || showCablesButton.isSelected();
     }
 
+    private boolean showCableLabels() {
+        return showCableLabelsButton == null || showCableLabelsButton.isSelected();
+    }
+
     private void drawPowerConnections() {
         for (Tent tent : plan.tents()) {
             if (!isGroupVisible(tent)) {
@@ -747,16 +757,18 @@ public class PancakePlannerApp extends Application {
             line.getStrokeDashArray().addAll(8.0, 6.0);
         }
 
-        Label distanceLabel = new Label("%s: %.1f m".formatted(
-                cable.connection().connectorType().displayName(),
-                distanceMeters(tentCenter, sourceCenter)
-        ));
-        distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,0.88); -fx-padding: 2 5 2 5; -fx-border-color: %s;".formatted(toHex(cableColor)));
-        distanceLabel.setLayoutX((tentCenter.x() + sourceCenter.x()) / 2 + 6);
-        distanceLabel.setLayoutY((tentCenter.y() + sourceCenter.y()) / 2 + 6);
-        distanceLabel.setMouseTransparent(true);
-
-        mapPane.getChildren().addAll(line, distanceLabel);
+        mapPane.getChildren().add(line);
+        if (showCableLabels()) {
+            Label distanceLabel = new Label("%s: %.1f m".formatted(
+                    cable.connection().connectorType().displayName(),
+                    distanceMeters(tentCenter, sourceCenter)
+            ));
+            distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,0.88); -fx-padding: 2 5 2 5; -fx-border-color: %s;".formatted(toHex(cableColor)));
+            distanceLabel.setLayoutX((tentCenter.x() + sourceCenter.x()) / 2 + 6);
+            distanceLabel.setLayoutY((tentCenter.y() + sourceCenter.y()) / 2 + 6);
+            distanceLabel.setMouseTransparent(true);
+            mapPane.getChildren().add(distanceLabel);
+        }
     }
 
     private Color cableColor(ConnectorType connectorType) {
