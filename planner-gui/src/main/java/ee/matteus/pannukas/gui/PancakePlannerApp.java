@@ -206,10 +206,10 @@ public class PancakePlannerApp extends Application {
         Button saveButton = new Button("Salvesta");
         saveButton.setOnAction(event -> savePlan());
 
-        Button saveAsButton = new Button("Salvesta kui...");
+        Button saveAsButton = new Button("Salvesta kui");
         saveAsButton.setOnAction(event -> savePlanAs());
 
-        Button exportSummaryButton = new Button("Ekspordi kokkuvõte");
+        Button exportSummaryButton = new Button("Ekspordi");
         exportSummaryButton.setOnAction(event -> exportSummary());
 
         Button openButton = new Button("Ava");
@@ -233,18 +233,18 @@ public class PancakePlannerApp extends Application {
         Button resetZoomButton = new Button("100%");
         resetZoomButton.setOnAction(event -> setZoom(1.0));
 
-        showCablesButton = new ToggleButton("Näita kaableid");
+        showCablesButton = new ToggleButton("Kaablid");
         showCablesButton.setSelected(true);
         showCablesButton.setOnAction(event -> redrawMap());
 
-        showCableLabelsButton = new ToggleButton("Kaabli sildid");
+        showCableLabelsButton = new ToggleButton("Sildid");
         showCableLabelsButton.setSelected(true);
         showCableLabelsButton.setOnAction(event -> redrawMap());
 
         measureButton = new ToggleButton("Mõõdulint");
         measureButton.setOnAction(event -> setMeasuringActive(measureButton.isSelected()));
 
-        Button clearMeasurementsButton = new Button("Tühjenda mõõdud");
+        Button clearMeasurementsButton = new Button("Puhasta mõõdulint");
         clearMeasurementsButton.setOnAction(event -> clearMeasurements());
 
         saveStatusLabel = new Label("Salvestatud");
