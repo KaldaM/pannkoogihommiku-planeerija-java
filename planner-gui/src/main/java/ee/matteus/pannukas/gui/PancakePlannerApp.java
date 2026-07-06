@@ -38,6 +38,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToolBar;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -235,16 +236,20 @@ public class PancakePlannerApp extends Application {
 
         showCablesButton = new ToggleButton("Kaablid");
         showCablesButton.setSelected(true);
+        showCablesButton.setTooltip(new Tooltip("Näitab või peidab kaardil voolukaablid"));
         showCablesButton.setOnAction(event -> redrawMap());
 
         showCableLabelsButton = new ToggleButton("Sildid");
         showCableLabelsButton.setSelected(true);
+        showCableLabelsButton.setTooltip(new Tooltip("Näitab või peidab kaablite tekstisildid"));
         showCableLabelsButton.setOnAction(event -> redrawMap());
 
         measureButton = new ToggleButton("Mõõdulint");
+        measureButton.setTooltip(new Tooltip("Mõõda kaardil vahemaid"));
         measureButton.setOnAction(event -> setMeasuringActive(measureButton.isSelected()));
 
         Button clearMeasurementsButton = new Button("Puhasta mõõdulint");
+        clearMeasurementsButton.setTooltip(new Tooltip("Eemaldab mõõdulindi jooned kaardilt"));
         clearMeasurementsButton.setOnAction(event -> clearMeasurements());
 
         saveStatusLabel = new Label("Salvestatud");
