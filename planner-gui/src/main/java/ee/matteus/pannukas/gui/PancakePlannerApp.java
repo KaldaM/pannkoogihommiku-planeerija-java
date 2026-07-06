@@ -103,6 +103,7 @@ public class PancakePlannerApp extends Application {
     private CheckBox showPowerSummaryCheckBox;
     private CheckBox showCableSummaryCheckBox;
     private CheckBox showGroupSummaryCheckBox;
+    private Label saveStatusLabel;
     private VBox groupFilterPanel;
     private TitledPane equipmentSection;
     private TitledPane outletSection;
@@ -245,6 +246,9 @@ public class PancakePlannerApp extends Application {
         Button clearMeasurementsButton = new Button("Tühjenda mõõdud");
         clearMeasurementsButton.setOnAction(event -> clearMeasurements());
 
+        saveStatusLabel = new Label("Salvestatud");
+        saveStatusLabel.setStyle("-fx-text-fill: #166534; -fx-font-weight: bold;");
+
         return new ToolBar(
                 newPlanButton,
                 addTentButton,
@@ -263,7 +267,8 @@ public class PancakePlannerApp extends Application {
                 showCablesButton,
                 showCableLabelsButton,
                 measureButton,
-                clearMeasurementsButton
+                clearMeasurementsButton,
+                saveStatusLabel
         );
     }
 
@@ -685,6 +690,17 @@ public class PancakePlannerApp extends Application {
         }
         String fileName = currentPlanFile == null ? "" : " - " + currentPlanFile.getName();
         stage.setTitle("%sPannkoogihommiku planeerija%s".formatted(unsavedChanges ? "* " : "", fileName));
+        updateSaveStatusLabel();
+    }
+
+    private void updateSaveStatusLabel() {
+        if (saveStatusLabel == null) {
+            return;
+        }
+        saveStatusLabel.setText(unsavedChanges ? "Salvestamata muudatused" : "Salvestatud");
+        saveStatusLabel.setStyle(unsavedChanges
+                ? "-fx-text-fill: #b45309; -fx-font-weight: bold;"
+                : "-fx-text-fill: #166534; -fx-font-weight: bold;");
     }
 
     private boolean confirmDiscardUnsavedChanges() {
