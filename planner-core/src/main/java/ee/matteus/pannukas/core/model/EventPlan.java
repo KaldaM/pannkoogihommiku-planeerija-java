@@ -72,6 +72,10 @@ public class EventPlan {
     }
 
     public Optional<PowerConnection> connectToPower(String sourceId, String consumerId, ConnectorType connectorType, String outletId) {
+        return connectToPower(sourceId, consumerId, connectorType, outletId, existingCableNotes(consumerId));
+    }
+
+    public Optional<PowerConnection> connectToPower(String sourceId, String consumerId, ConnectorType connectorType, String outletId, String cableNotes) {
         PowerSource source = findObject(sourceId)
                 .filter(PowerSource.class::isInstance)
                 .map(PowerSource.class::cast)
@@ -87,9 +91,31 @@ public class EventPlan {
         }
 
         powerConnections.removeIf(connection -> connection.consumerId().equals(consumerId));
-        PowerConnection connection = new PowerConnection(sourceId, consumerId, selectedType, selectedOutlet.get().id());
+        PowerConnection connection = new PowerConnection(sourceId, consumerId, selectedType, selectedOutlet.get().id(), cableNotes);
         powerConnections.add(connection);
         return Optional.of(connection);
+    }
+
+    public void updateCableNotes(String consumerId, String cableNotes) {
+        for (int index = 0; index < powerConnections.size(); index++) {
+            PowerConnection connection = powerConnections.get(index);
+            if (connection.consumerId().equals(consumerId)) {
+                powerConnections.set(index, new PowerConnection(
+                        connection.sourceId(),
+                        connection.consumerId(),
+                        connection.connectorType(),
+                        connection.outletId(),
+                        cableNotes
+                ));
+                return;
+            }
+        }
+    }
+
+    private String existingCableNotes(String consumerId) {
+        return findPowerConnectionForConsumer(consumerId)
+                .map(PowerConnection::cableNotes)
+                .orElse("");
     }
 
     private Optional<PowerOutlet> selectOutlet(PowerSource source, String consumerId, ConnectorType connectorType, String outletId) {
@@ -151,7 +177,8 @@ public class EventPlan {
                         connection.sourceId(),
                         connection.consumerId(),
                         selectedType,
-                        connection.outletId()
+                        connection.outletId(),
+                        connection.cableNotes()
                 ));
             }
         }
