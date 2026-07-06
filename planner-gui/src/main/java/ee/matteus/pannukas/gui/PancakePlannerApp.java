@@ -148,6 +148,7 @@ public class PancakePlannerApp extends Application {
     private Button deleteObjectButton;
     private Button choosePowerSourceButton;
     private ToggleButton measureButton;
+    private ToggleButton showCablesButton;
     private Button addTentButton;
     private Button addPowerSourceButton;
     private Button addCustomObjectButton;
@@ -228,6 +229,10 @@ public class PancakePlannerApp extends Application {
         Button resetZoomButton = new Button("100%");
         resetZoomButton.setOnAction(event -> setZoom(1.0));
 
+        showCablesButton = new ToggleButton("Näita kaableid");
+        showCablesButton.setSelected(true);
+        showCablesButton.setOnAction(event -> redrawMap());
+
         measureButton = new ToggleButton("Mõõdulint");
         measureButton.setOnAction(event -> setMeasuringActive(measureButton.isSelected()));
 
@@ -249,6 +254,7 @@ public class PancakePlannerApp extends Application {
                 zoomInButton,
                 zoomOutButton,
                 resetZoomButton,
+                showCablesButton,
                 measureButton,
                 clearMeasurementsButton
         );
@@ -676,7 +682,9 @@ public class PancakePlannerApp extends Application {
     private void redrawMap() {
         mapPane.getChildren().clear();
         addMapImage();
-        drawPowerConnections();
+        if (showCables()) {
+            drawPowerConnections();
+        }
         for (PlannerObject object : plan.objects()) {
             if (!isGroupVisible(object)) {
                 continue;
@@ -704,6 +712,10 @@ public class PancakePlannerApp extends Application {
         mapHeight = Math.max(MIN_MAP_HEIGHT, image.getHeight());
         updateZoomContentSize();
         mapPane.getChildren().add(mapImageView);
+    }
+
+    private boolean showCables() {
+        return showCablesButton == null || showCablesButton.isSelected();
     }
 
     private void drawPowerConnections() {
