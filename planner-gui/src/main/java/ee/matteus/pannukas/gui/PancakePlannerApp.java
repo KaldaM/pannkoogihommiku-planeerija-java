@@ -799,10 +799,7 @@ public class PancakePlannerApp extends Application {
 
         mapPane.getChildren().addAll(highlightLine, line, hitLine);
         if (showCableLabels()) {
-            Label distanceLabel = new Label("%s · %.1f m".formatted(
-                    shortCableTypeName(cable.connection().connectorType()),
-                    distanceMeters(tentCenter, sourceCenter)
-            ));
+            Label distanceLabel = new Label(cableMapLabel(cable.connection(), distanceMeters(tentCenter, sourceCenter)));
             distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,%s); -fx-padding: 2 5 2 5; -fx-border-color: %s; -fx-font-weight: %s;".formatted(
                     selectedCable ? "0.96" : "0.88",
                     toHex(selectedCable ? Color.web("#111827") : cableColor),
@@ -860,6 +857,13 @@ public class PancakePlannerApp extends Application {
             case INDUSTRIAL_16A -> "16A";
             case INDUSTRIAL_32A -> "32A";
         };
+    }
+
+    private String cableMapLabel(PowerConnection connection, double lengthMeters) {
+        String baseLabel = "%s · %.1f m".formatted(shortCableTypeName(connection.connectorType()), lengthMeters);
+        return connection.cableNotes().isBlank()
+                ? baseLabel
+                : "%s · %s".formatted(baseLabel, connection.cableNotes());
     }
 
     private double cableWidth(ConnectorType connectorType) {
