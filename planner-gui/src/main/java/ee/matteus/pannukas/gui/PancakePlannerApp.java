@@ -2214,13 +2214,7 @@ public class PancakePlannerApp extends Application {
                 totalNotedLengthMeters += notedLengthMeters.getAsDouble();
                 hasNotedLength = true;
             }
-            cableRows.add("  - %s -> %s (%s): %.1f m%s".formatted(
-                    tent.name(),
-                    source.name(),
-                    connection.connectorType().displayName(),
-                    lengthMeters,
-                    cableNotesText(connection)
-            ));
+            cableRows.add(cableSummaryRow(tent, source, connection, lengthMeters, notedLengthMeters));
         }
 
         if (cableRows.isEmpty()) {
@@ -2467,13 +2461,7 @@ public class PancakePlannerApp extends Application {
                 totalNotedLengthMeters += notedLengthMeters.getAsDouble();
                 hasNotedLength = true;
             }
-            cableRows.add("  - %s -> %s (%s): %.1f m%s".formatted(
-                    tent.name(),
-                    source.name(),
-                    connection.connectorType().displayName(),
-                    lengthMeters,
-                    cableNotesText(connection)
-            ));
+            cableRows.add(cableSummaryRow(tent, source, connection, lengthMeters, notedLengthMeters));
         }
 
         if (cableRows.isEmpty()) {
@@ -2493,6 +2481,25 @@ public class PancakePlannerApp extends Application {
 
     private String cableNotesText(PowerConnection connection) {
         return connection.cableNotes().isBlank() ? "" : " [%s]".formatted(connection.cableNotes());
+    }
+
+    private String cableSummaryRow(
+            Tent tent,
+            PowerSource source,
+            PowerConnection connection,
+            double mapLengthMeters,
+            OptionalDouble notedLengthMeters
+    ) {
+        String lengthText = notedLengthMeters.isPresent()
+                ? "%.1f m kaardil, %.1f m märgitud".formatted(mapLengthMeters, notedLengthMeters.getAsDouble())
+                : "%.1f m".formatted(mapLengthMeters);
+        return "  - %s -> %s (%s): %s%s".formatted(
+                tent.name(),
+                source.name(),
+                connection.connectorType().displayName(),
+                lengthText,
+                cableNotesText(connection)
+        );
     }
 
     private OptionalDouble notedCableLengthMeters(PowerConnection connection) {
