@@ -712,31 +712,58 @@ public class PancakePlannerApp extends Application {
                 continue;
             }
             plan.findPowerConnectionForConsumer(tent.id())
-                    .flatMap(connection -> plan.findObject(connection.sourceId()))
-                    .filter(PowerSource.class::isInstance)
-                    .map(PowerSource.class::cast)
-                    .filter(this::isGroupVisible)
-                    .ifPresent(source -> drawPowerConnection(tent, source));
+                    .flatMap(connection -> plan.findObject(connection.sourceId())
+                            .filter(PowerSource.class::isInstance)
+                            .map(PowerSource.class::cast)
+                            .filter(this::isGroupVisible)
+                            .map(source -> new PowerCableView(tent, source, connection)))
+                    .ifPresent(this::drawPowerConnection);
         }
     }
 
-    private void drawPowerConnection(Tent tent, PowerSource source) {
-        Position tentCenter = objectCenter(tent);
-        Position sourceCenter = objectCenter(source);
+    private void drawPowerConnection(PowerCableView cable) {
+        Position tentCenter = objectCenter(cable.tent());
+        Position sourceCenter = objectCenter(cable.source());
+        Color cableColor = cableColor(cable.connection().connectorType());
 
         Line line = new Line(tentCenter.x(), tentCenter.y(), sourceCenter.x(), sourceCenter.y());
-        line.setStroke(Color.web("#0f766e"));
-        line.setStrokeWidth(2.5);
+        line.setStroke(cableColor);
+        line.setStrokeWidth(cableWidth(cable.connection().connectorType()));
         line.setOpacity(0.85);
         line.setMouseTransparent(true);
+        if (cable.connection().connectorType() == ConnectorType.SCHUKO_230V) {
+            line.getStrokeDashArray().addAll(8.0, 6.0);
+        }
 
-        Label distanceLabel = new Label("%.1f m".formatted(distanceMeters(tentCenter, sourceCenter)));
-        distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,0.88); -fx-padding: 2 5 2 5; -fx-border-color: #0f766e;");
+        Label distanceLabel = new Label("%s: %.1f m".formatted(
+                cable.connection().connectorType().displayName(),
+                distanceMeters(tentCenter, sourceCenter)
+        ));
+        distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,0.88); -fx-padding: 2 5 2 5; -fx-border-color: %s;".formatted(toHex(cableColor)));
         distanceLabel.setLayoutX((tentCenter.x() + sourceCenter.x()) / 2 + 6);
         distanceLabel.setLayoutY((tentCenter.y() + sourceCenter.y()) / 2 + 6);
         distanceLabel.setMouseTransparent(true);
 
         mapPane.getChildren().addAll(line, distanceLabel);
+    }
+
+    private Color cableColor(ConnectorType connectorType) {
+        return switch (connectorType) {
+            case SCHUKO_230V -> Color.web("#2563eb");
+            case INDUSTRIAL_16A -> Color.web("#16a34a");
+            case INDUSTRIAL_32A -> Color.web("#ea580c");
+        };
+    }
+
+    private double cableWidth(ConnectorType connectorType) {
+        return switch (connectorType) {
+            case SCHUKO_230V -> 2.0;
+            case INDUSTRIAL_16A -> 2.8;
+            case INDUSTRIAL_32A -> 3.6;
+        };
+    }
+
+    private record PowerCableView(Tent tent, PowerSource source, PowerConnection connection) {
     }
 
     private Position objectCenter(PlannerObject object) {
