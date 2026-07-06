@@ -61,6 +61,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -2192,6 +2193,7 @@ public class PancakePlannerApp extends Application {
         double totalLengthMeters = 0.0;
         double totalNotedLengthMeters = 0.0;
         boolean hasNotedLength = false;
+        Map<ConnectorType, CableTypeSummary> summariesByType = new EnumMap<>(ConnectorType.class);
 
         for (Tent tent : plan.tents()) {
             PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
@@ -2210,8 +2212,14 @@ public class PancakePlannerApp extends Application {
             double lengthMeters = distanceMeters(objectCenter(tent), objectCenter(source));
             totalLengthMeters += lengthMeters;
             OptionalDouble notedLengthMeters = notedCableLengthMeters(connection);
+            CableTypeSummary typeSummary = summariesByType.computeIfAbsent(
+                    connection.connectorType(),
+                    ignored -> new CableTypeSummary()
+            );
+            typeSummary.addMapLength(lengthMeters);
             if (notedLengthMeters.isPresent()) {
                 totalNotedLengthMeters += notedLengthMeters.getAsDouble();
+                typeSummary.addNotedLength(notedLengthMeters.getAsDouble());
                 hasNotedLength = true;
             }
             cableRows.add(cableSummaryRow(tent, source, connection, lengthMeters, notedLengthMeters));
@@ -2229,6 +2237,7 @@ public class PancakePlannerApp extends Application {
         } else {
             summaryList.getItems().add("Kokku: %.1f m".formatted(totalLengthMeters));
         }
+        addCableTypeSummaryRows(summaryList.getItems(), summariesByType);
     }
 
     private void addGroupSummary() {
@@ -2441,6 +2450,7 @@ public class PancakePlannerApp extends Application {
         double totalNotedLengthMeters = 0.0;
         boolean hasNotedLength = false;
         List<String> cableRows = new ArrayList<>();
+        Map<ConnectorType, CableTypeSummary> summariesByType = new EnumMap<>(ConnectorType.class);
         for (Tent tent : plan.tents()) {
             PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
             if (connection == null) {
@@ -2457,8 +2467,14 @@ public class PancakePlannerApp extends Application {
             double lengthMeters = distanceMeters(objectCenter(tent), objectCenter(source));
             totalLengthMeters += lengthMeters;
             OptionalDouble notedLengthMeters = notedCableLengthMeters(connection);
+            CableTypeSummary typeSummary = summariesByType.computeIfAbsent(
+                    connection.connectorType(),
+                    ignored -> new CableTypeSummary()
+            );
+            typeSummary.addMapLength(lengthMeters);
             if (notedLengthMeters.isPresent()) {
                 totalNotedLengthMeters += notedLengthMeters.getAsDouble();
+                typeSummary.addNotedLength(notedLengthMeters.getAsDouble());
                 hasNotedLength = true;
             }
             cableRows.add(cableSummaryRow(tent, source, connection, lengthMeters, notedLengthMeters));
@@ -2477,10 +2493,40 @@ public class PancakePlannerApp extends Application {
         } else {
             builder.append("Kokku: %.1f m".formatted(totalLengthMeters)).append(lineSeparator);
         }
+        for (String row : cableTypeSummaryRows(summariesByType)) {
+            builder.append(row).append(lineSeparator);
+        }
     }
 
     private String cableNotesText(PowerConnection connection) {
         return connection.cableNotes().isBlank() ? "" : " [%s]".formatted(connection.cableNotes());
+    }
+
+    private void addCableTypeSummaryRows(List<String> targetRows, Map<ConnectorType, CableTypeSummary> summariesByType) {
+        targetRows.addAll(cableTypeSummaryRows(summariesByType));
+    }
+
+    private List<String> cableTypeSummaryRows(Map<ConnectorType, CableTypeSummary> summariesByType) {
+        List<String> rows = new ArrayList<>();
+        for (ConnectorType connectorType : ConnectorType.values()) {
+            CableTypeSummary summary = summariesByType.get(connectorType);
+            if (summary == null) {
+                continue;
+            }
+            rows.add(cableTypeSummaryRow(connectorType, summary));
+        }
+        return rows;
+    }
+
+    private String cableTypeSummaryRow(ConnectorType connectorType, CableTypeSummary summary) {
+        if (summary.hasNotedLength()) {
+            return "  %s: %.1f m märgitud, %.1f m kaardil".formatted(
+                    shortCableTypeName(connectorType),
+                    summary.notedLengthMeters(),
+                    summary.mapLengthMeters()
+            );
+        }
+        return "  %s: %.1f m kaardil".formatted(shortCableTypeName(connectorType), summary.mapLengthMeters());
     }
 
     private String cableSummaryRow(
@@ -2529,6 +2575,33 @@ public class PancakePlannerApp extends Application {
             foundLength = true;
         }
         return foundLength ? OptionalDouble.of(totalLengthMeters) : OptionalDouble.empty();
+    }
+
+    private static class CableTypeSummary {
+        private double mapLengthMeters;
+        private double notedLengthMeters;
+        private boolean hasNotedLength;
+
+        void addMapLength(double lengthMeters) {
+            mapLengthMeters += lengthMeters;
+        }
+
+        void addNotedLength(double lengthMeters) {
+            notedLengthMeters += lengthMeters;
+            hasNotedLength = true;
+        }
+
+        double mapLengthMeters() {
+            return mapLengthMeters;
+        }
+
+        double notedLengthMeters() {
+            return notedLengthMeters;
+        }
+
+        boolean hasNotedLength() {
+            return hasNotedLength;
+        }
     }
 
     private void appendGroupReport(StringBuilder builder, String lineSeparator) {
