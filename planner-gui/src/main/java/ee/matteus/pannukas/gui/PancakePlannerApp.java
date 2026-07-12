@@ -899,12 +899,14 @@ public class PancakePlannerApp extends Application {
 
         mapPane.getChildren().addAll(highlightLine, line, hitLine);
         if (selectedCable) {
-            for (Position routePoint : cable.connection().routePoints()) {
+            for (int index = 0; index < cable.connection().routePoints().size(); index++) {
+                Position routePoint = cable.connection().routePoints().get(index);
                 Circle marker = new Circle(routePoint.x(), routePoint.y(), 4);
                 marker.setFill(Color.WHITE);
                 marker.setStroke(cableColor);
                 marker.setStrokeWidth(2);
                 makeCableSelectable(marker, cable.tent());
+                makeCableRoutePointDraggable(marker, cable.tent(), index);
                 mapPane.getChildren().add(marker);
             }
         }
@@ -976,6 +978,46 @@ public class PancakePlannerApp extends Application {
                 return;
             }
             selectObject(tent);
+            event.consume();
+        });
+    }
+
+    private void makeCableRoutePointDraggable(Circle marker, Tent tent, int routePointIndex) {
+        final boolean[] dragged = {false};
+        marker.setOnMousePressed(event -> {
+            if (measuringActive || addingCablePoint) {
+                event.consume();
+                return;
+            }
+            dragged[0] = false;
+            event.consume();
+        });
+        marker.setOnMouseDragged(event -> {
+            if (measuringActive || addingCablePoint) {
+                event.consume();
+                return;
+            }
+            PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
+            if (connection == null || routePointIndex < 0 || routePointIndex >= connection.routePoints().size()) {
+                event.consume();
+                return;
+            }
+
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            List<Position> routePoints = new ArrayList<>(connection.routePoints());
+            routePoints.set(routePointIndex, new Position(mapPoint.getX(), mapPoint.getY()));
+            plan.updateCableRoutePoints(tent.id(), routePoints);
+            marker.setCenterX(mapPoint.getX());
+            marker.setCenterY(mapPoint.getY());
+            dragged[0] = true;
+            event.consume();
+        });
+        marker.setOnMouseReleased(event -> {
+            if (dragged[0]) {
+                redrawMap();
+                refreshSummary();
+                markDirty();
+            }
             event.consume();
         });
     }
