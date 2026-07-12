@@ -90,8 +90,16 @@ public class EventPlan {
             return Optional.empty();
         }
 
+        List<Position> existingRoutePoints = existingCableRoutePoints(consumerId);
         powerConnections.removeIf(connection -> connection.consumerId().equals(consumerId));
-        PowerConnection connection = new PowerConnection(sourceId, consumerId, selectedType, selectedOutlet.get().id(), cableNotes);
+        PowerConnection connection = new PowerConnection(
+                sourceId,
+                consumerId,
+                selectedType,
+                selectedOutlet.get().id(),
+                cableNotes,
+                existingRoutePoints
+        );
         powerConnections.add(connection);
         return Optional.of(connection);
     }
@@ -105,7 +113,8 @@ public class EventPlan {
                         connection.consumerId(),
                         connection.connectorType(),
                         connection.outletId(),
-                        cableNotes
+                        cableNotes,
+                        connection.routePoints()
                 ));
                 return;
             }
@@ -116,6 +125,12 @@ public class EventPlan {
         return findPowerConnectionForConsumer(consumerId)
                 .map(PowerConnection::cableNotes)
                 .orElse("");
+    }
+
+    private List<Position> existingCableRoutePoints(String consumerId) {
+        return findPowerConnectionForConsumer(consumerId)
+                .map(PowerConnection::routePoints)
+                .orElse(List.of());
     }
 
     private Optional<PowerOutlet> selectOutlet(PowerSource source, String consumerId, ConnectorType connectorType, String outletId) {
@@ -178,10 +193,54 @@ public class EventPlan {
                         connection.consumerId(),
                         selectedType,
                         connection.outletId(),
-                        connection.cableNotes()
+                        connection.cableNotes(),
+                        connection.routePoints()
                 ));
             }
         }
+    }
+
+    public void addCableRoutePoint(String consumerId, Position point) {
+        if (point == null) {
+            return;
+        }
+        for (int index = 0; index < powerConnections.size(); index++) {
+            PowerConnection connection = powerConnections.get(index);
+            if (connection.consumerId().equals(consumerId)) {
+                List<Position> routePoints = new ArrayList<>(connection.routePoints());
+                routePoints.add(point);
+                powerConnections.set(index, new PowerConnection(
+                        connection.sourceId(),
+                        connection.consumerId(),
+                        connection.connectorType(),
+                        connection.outletId(),
+                        connection.cableNotes(),
+                        routePoints
+                ));
+                return;
+            }
+        }
+    }
+
+    public void updateCableRoutePoints(String consumerId, List<Position> routePoints) {
+        for (int index = 0; index < powerConnections.size(); index++) {
+            PowerConnection connection = powerConnections.get(index);
+            if (connection.consumerId().equals(consumerId)) {
+                powerConnections.set(index, new PowerConnection(
+                        connection.sourceId(),
+                        connection.consumerId(),
+                        connection.connectorType(),
+                        connection.outletId(),
+                        connection.cableNotes(),
+                        routePoints
+                ));
+                return;
+            }
+        }
+    }
+
+    public void clearCableRoutePoints(String consumerId) {
+        updateCableRoutePoints(consumerId, List.of());
     }
 
     public Optional<PowerConnection> findPowerConnectionForConsumer(String consumerId) {

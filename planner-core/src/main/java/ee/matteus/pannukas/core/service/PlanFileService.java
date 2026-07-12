@@ -50,6 +50,13 @@ public class PlanFileService {
             properties.setProperty(prefix + "connectorType", connection.connectorType().name());
             properties.setProperty(prefix + "outletId", connection.outletId());
             properties.setProperty(prefix + "cableNotes", connection.cableNotes());
+            properties.setProperty(prefix + "routePoints.count", Integer.toString(connection.routePoints().size()));
+            for (int pointIndex = 0; pointIndex < connection.routePoints().size(); pointIndex++) {
+                Position point = connection.routePoints().get(pointIndex);
+                String pointPrefix = prefix + "routePoint." + pointIndex + ".";
+                properties.setProperty(pointPrefix + "x", Double.toString(point.x()));
+                properties.setProperty(pointPrefix + "y", Double.toString(point.y()));
+            }
         }
 
         try (OutputStream output = Files.newOutputStream(file)) {
@@ -80,7 +87,10 @@ public class PlanFileService {
                     ConnectorType.valueOf(properties.getProperty(prefix + "connectorType", ConnectorType.SCHUKO_230V.name())),
                     properties.getProperty(prefix + "outletId", ""),
                     properties.getProperty(prefix + "cableNotes", "")
-            );
+            ).ifPresent(connection -> plan.updateCableRoutePoints(
+                    connection.consumerId(),
+                    readRoutePoints(properties, prefix)
+            ));
         }
 
         int hiddenGroupCount = intValue(properties, "hiddenGroups.count", 0);
@@ -228,6 +238,15 @@ public class PlanFileService {
                 doubleValue(properties, prefix + "x", 0),
                 doubleValue(properties, prefix + "y", 0)
         );
+    }
+
+    private List<Position> readRoutePoints(Properties properties, String prefix) {
+        List<Position> routePoints = new java.util.ArrayList<>();
+        int routePointCount = intValue(properties, prefix + "routePoints.count", 0);
+        for (int index = 0; index < routePointCount; index++) {
+            routePoints.add(readPosition(properties, prefix + "routePoint." + index + "."));
+        }
+        return routePoints;
     }
 
     private int intValue(Properties properties, String key, int fallback) {
