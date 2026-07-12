@@ -238,14 +238,8 @@ public class PancakePlannerApp extends Application {
         Button openButton = new Button("Ava");
         openButton.setOnAction(event -> openPlan());
 
-        Button loadMapButton = new Button("Laadi kaart");
-        loadMapButton.setOnAction(event -> loadMapImage());
-
-        Button defaultMapButton = new Button("Tavakaart");
-        defaultMapButton.setOnAction(event -> setMapImage(DEFAULT_MAP_PATH));
-
-        Button orthophotoButton = new Button("Ortofoto");
-        orthophotoButton.setOnAction(event -> setMapImage(ORTHOPHOTO_MAP_PATH));
+        Button planSettingsButton = new Button("Plaani andmed");
+        planSettingsButton.setOnAction(event -> showPlanSettingsDialog());
 
         Button zoomInButton = new Button("+");
         zoomInButton.setOnAction(event -> changeZoom(1.2));
@@ -300,14 +294,11 @@ public class PancakePlannerApp extends Application {
                 saveAsButton,
                 openButton,
                 exportSummaryButton,
+                planSettingsButton,
                 new Separator(),
                 addTentButton,
                 addPowerSourceButton,
                 addCustomObjectButton,
-                new Separator(),
-                loadMapButton,
-                defaultMapButton,
-                orthophotoButton,
                 new Separator(),
                 zoomInButton,
                 zoomOutButton,
@@ -609,7 +600,6 @@ public class PancakePlannerApp extends Application {
         outletSection = collapsibleSection(OUTLET_SECTION, "Kapi väljundid", outletPanel, false);
         VBox detailPanel = new VBox(
                 10,
-                planForm,
                 baseForm,
                 customObjectPanel,
                 tentPanel,
@@ -743,6 +733,84 @@ public class PancakePlannerApp extends Application {
         }
     }
 
+    private void showPlanSettingsDialog() {
+        TextField dialogPlanNameField = new TextField(plan.name());
+        TextField dialogPixelsPerMeterField = new TextField(formatMeters(plan.pixelsPerMeter()));
+        dialogPixelsPerMeterField.setPromptText("px/m");
+        Label mapLabel = new Label(plan.mapImagePath().isBlank() ? "Kaarti pole valitud" : plan.mapImagePath());
+
+        final String[] selectedMapPath = {plan.mapImagePath()};
+        Button defaultMapButton = new Button("Tavakaart");
+        defaultMapButton.setOnAction(event -> {
+            selectedMapPath[0] = DEFAULT_MAP_PATH;
+            mapLabel.setText(selectedMapPath[0]);
+        });
+        Button orthophotoButton = new Button("Ortofoto");
+        orthophotoButton.setOnAction(event -> {
+            selectedMapPath[0] = ORTHOPHOTO_MAP_PATH;
+            mapLabel.setText(selectedMapPath[0]);
+        });
+        Button loadMapButton = new Button("Laadi kaart");
+        loadMapButton.setOnAction(event -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Vali kaart");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Pildifailid", "*.png", "*.jpg", "*.jpeg"));
+            applyInitialDirectory(fileChooser);
+            File file = fileChooser.showOpenDialog(stage);
+            if (file != null) {
+                selectedMapPath[0] = file.getAbsolutePath();
+                mapLabel.setText(selectedMapPath[0]);
+                rememberDirectory(file);
+            }
+        });
+
+        GridPane form = detailGrid();
+        form.addRow(0, new Label("Plaani nimi"), dialogPlanNameField);
+        form.addRow(1, new Label("Piksleid meetri kohta"), dialogPixelsPerMeterField);
+        form.addRow(2, new Label("Kaart"), new HBox(8, defaultMapButton, orthophotoButton, loadMapButton));
+        form.addRow(3, new Label("Valitud kaart"), mapLabel);
+
+        Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
+        dialog.setTitle("Plaani andmed");
+        dialog.setHeaderText("Muuda plaani andmeid");
+        dialog.getDialogPane().setContent(form);
+        dialog.showAndWait().ifPresent(buttonType -> {
+            if (buttonType != ButtonType.OK) {
+                return;
+            }
+            applyPlanSettings(dialogPlanNameField.getText(), dialogPixelsPerMeterField.getText(), selectedMapPath[0]);
+        });
+    }
+
+    private void applyPlanSettings(String planName, String pixelsPerMeterText, String mapImagePath) {
+        String trimmedPlanName = planName == null ? "" : planName.trim();
+        if (trimmedPlanName.isBlank()) {
+            showError("Plaani andmeid ei muudetud", "Sisesta plaani nimi.");
+            return;
+        }
+
+        try {
+            double pixelsPerMeter = Double.parseDouble(pixelsPerMeterText.trim().replace(',', '.'));
+            plan.rename(trimmedPlanName);
+            plan.setPixelsPerMeter(pixelsPerMeter);
+            plan.setMapImagePath(mapImagePath);
+            if (planNameField != null) {
+                planNameField.setText(plan.name());
+            }
+            if (pixelsPerMeterField != null) {
+                pixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
+            }
+            refreshMeasurementLabels();
+            redrawMap();
+            refreshSummary();
+            markDirty();
+        } catch (NumberFormatException exception) {
+            showError("Plaani andmeid ei muudetud", "Sisesta pikslite arv meetri kohta arvuna.");
+        } catch (IllegalArgumentException exception) {
+            showError("Plaani andmeid ei muudetud", exception.getMessage());
+        }
+    }
+
     private void newPlan() {
         if (!confirmDiscardUnsavedChanges()) {
             return;
@@ -772,8 +840,12 @@ public class PancakePlannerApp extends Application {
         measurements.clear();
         visibleGroups.clear();
         knownGroups.clear();
-        planNameField.setText(plan.name());
-        pixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
+        if (planNameField != null) {
+            planNameField.setText(plan.name());
+        }
+        if (pixelsPerMeterField != null) {
+            pixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
+        }
         refreshPlacementButtons();
         refreshGroupFilters();
         redrawMap();
@@ -2007,7 +2079,9 @@ public class PancakePlannerApp extends Application {
                 return;
             }
             plan.setPixelsPerMeter(pixelLength / realLengthMeters);
-            pixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
+            if (pixelsPerMeterField != null) {
+                pixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
+            }
             refreshMeasurementLabels();
             redrawMap();
             refreshSummary();
