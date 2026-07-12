@@ -8,8 +8,11 @@ import java.util.Optional;
 import java.util.Set;
 
 public class EventPlan {
+    public static final double DEFAULT_PIXELS_PER_METER = 24.0;
+
     private String name;
     private String mapImagePath;
+    private double pixelsPerMeter = DEFAULT_PIXELS_PER_METER;
     private final List<PlannerObject> objects = new ArrayList<>();
     private final List<PowerConnection> powerConnections = new ArrayList<>();
     private final Set<String> hiddenGroups = new HashSet<>();
@@ -33,6 +36,17 @@ public class EventPlan {
 
     public void setMapImagePath(String mapImagePath) {
         this.mapImagePath = mapImagePath == null ? "" : mapImagePath;
+    }
+
+    public double pixelsPerMeter() {
+        return pixelsPerMeter;
+    }
+
+    public void setPixelsPerMeter(double pixelsPerMeter) {
+        if (pixelsPerMeter <= 0) {
+            throw new IllegalArgumentException("Pikslit meetri kohta peab olema positiivne.");
+        }
+        this.pixelsPerMeter = pixelsPerMeter;
     }
 
     public void addObject(PlannerObject object) {

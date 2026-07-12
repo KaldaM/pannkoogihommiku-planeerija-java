@@ -26,6 +26,7 @@ public class PlanFileService {
         properties.setProperty("format", "pannukas-plan-v1");
         properties.setProperty("plan.name", plan.name());
         properties.setProperty("plan.mapImagePath", plan.mapImagePath());
+        properties.setProperty("plan.pixelsPerMeter", Double.toString(plan.pixelsPerMeter()));
         properties.setProperty("hiddenGroups.count", Integer.toString(plan.hiddenGroups().size()));
 
         int hiddenGroupIndex = 0;
@@ -73,6 +74,7 @@ public class PlanFileService {
 
         EventPlan plan = new EventPlan(properties.getProperty("plan.name", "Pannkoogihommik"));
         plan.setMapImagePath(properties.getProperty("plan.mapImagePath", ""));
+        plan.setPixelsPerMeter(doubleValue(properties, "plan.pixelsPerMeter", EventPlan.DEFAULT_PIXELS_PER_METER));
 
         int objectCount = intValue(properties, "objects.count", 0);
         for (int index = 0; index < objectCount; index++) {

@@ -88,7 +88,6 @@ public class PancakePlannerApp extends Application {
             .comparing((CableSummaryRow row) -> row.connection().connectorType())
             .thenComparing(row -> row.tent().name(), String.CASE_INSENSITIVE_ORDER)
             .thenComparing(row -> row.source().name(), String.CASE_INSENSITIVE_ORDER);
-    private static final double PIXELS_PER_METER = 24.0;
     private static final double MIN_MAP_WIDTH = 760.0;
     private static final double MIN_MAP_HEIGHT = 560.0;
 
@@ -124,6 +123,7 @@ public class PancakePlannerApp extends Application {
     private TitledPane outletSection;
     private TitledPane groupFilterSection;
     private TextField planNameField;
+    private TextField pixelsPerMeterField;
     private Label selectedTypeLabel;
     private TextField nameField;
     private TextField groupField;
@@ -447,12 +447,18 @@ public class PancakePlannerApp extends Application {
         planNameField = new TextField(plan.name());
         Button applyPlanNameButton = new Button("Rakenda nimi");
         applyPlanNameButton.setOnAction(event -> applyPlanName());
+        pixelsPerMeterField = new TextField(formatMeters(plan.pixelsPerMeter()));
+        pixelsPerMeterField.setPromptText("px/m");
+        Button applyScaleButton = new Button("Rakenda mõõtkava");
+        applyScaleButton.setOnAction(event -> applyPixelsPerMeter());
 
         GridPane planForm = new GridPane();
         planForm.setHgap(8);
         planForm.setVgap(8);
         planForm.addRow(0, new Label("Plaani nimi"), planNameField);
         planForm.addRow(1, new Label(""), applyPlanNameButton);
+        planForm.addRow(2, new Label("Piksleid meetri kohta"), pixelsPerMeterField);
+        planForm.addRow(3, new Label(""), applyScaleButton);
 
         selectedTypeLabel = new Label("Vali kaardilt objekt");
         nameField = new TextField();
@@ -712,6 +718,23 @@ public class PancakePlannerApp extends Application {
         markDirty();
     }
 
+    private void applyPixelsPerMeter() {
+        try {
+            double pixelsPerMeter = Double.parseDouble(pixelsPerMeterField.getText().trim().replace(',', '.'));
+            plan.setPixelsPerMeter(pixelsPerMeter);
+            pixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
+            redrawMap();
+            refreshSummary();
+            markDirty();
+        } catch (NumberFormatException exception) {
+            showError("Mõõtkava ei muudetud", "Sisesta pikslite arv meetri kohta arvuna.");
+            pixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
+        } catch (IllegalArgumentException exception) {
+            showError("Mõõtkava ei muudetud", exception.getMessage());
+            pixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
+        }
+    }
+
     private void newPlan() {
         if (!confirmDiscardUnsavedChanges()) {
             return;
@@ -741,6 +764,7 @@ public class PancakePlannerApp extends Application {
         visibleGroups.clear();
         knownGroups.clear();
         planNameField.setText(plan.name());
+        pixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
         refreshPlacementButtons();
         refreshGroupFilters();
         redrawMap();
@@ -1152,8 +1176,8 @@ public class PancakePlannerApp extends Application {
 
     private Position objectCenter(PlannerObject object) {
         if (object instanceof Tent tent) {
-            double widthPixels = tent.widthMeters() * PIXELS_PER_METER;
-            double heightPixels = tent.heightMeters() * PIXELS_PER_METER;
+            double widthPixels = metersToPixels(tent.widthMeters());
+            double heightPixels = metersToPixels(tent.heightMeters());
             return new Position(
                     tent.position().x() + widthPixels / 2,
                     tent.position().y() + heightPixels / 2
@@ -1183,8 +1207,8 @@ public class PancakePlannerApp extends Application {
     }
 
     private void drawTent(Tent tent) {
-        double widthPixels = tent.widthMeters() * PIXELS_PER_METER;
-        double heightPixels = tent.heightMeters() * PIXELS_PER_METER;
+        double widthPixels = metersToPixels(tent.widthMeters());
+        double heightPixels = metersToPixels(tent.heightMeters());
         Position rotationOffset = rotationOffset(widthPixels, heightPixels, tent.rotationDegrees());
         Rectangle rectangle = new Rectangle(
                 tent.position().x(),
@@ -1231,8 +1255,8 @@ public class PancakePlannerApp extends Application {
 
     private void drawCustomObject(CustomObject object) {
         javafx.scene.shape.Shape shape;
-        double widthPixels = object.widthMeters() * PIXELS_PER_METER;
-        double heightPixels = object.heightMeters() * PIXELS_PER_METER;
+        double widthPixels = metersToPixels(object.widthMeters());
+        double heightPixels = metersToPixels(object.heightMeters());
         if (object.shape() == CustomObjectShape.CIRCLE) {
             shape = new Circle(object.position().x(), object.position().y(), widthPixels / 2);
         } else {
@@ -1950,7 +1974,15 @@ public class PancakePlannerApp extends Application {
     private double distanceMeters(Position start, Position end) {
         double deltaX = end.x() - start.x();
         double deltaY = end.y() - start.y();
-        return Math.sqrt(deltaX * deltaX + deltaY * deltaY) / PIXELS_PER_METER;
+        return Math.sqrt(deltaX * deltaX + deltaY * deltaY) / pixelsPerMeter();
+    }
+
+    private double metersToPixels(double meters) {
+        return meters * pixelsPerMeter();
+    }
+
+    private double pixelsPerMeter() {
+        return plan == null ? EventPlan.DEFAULT_PIXELS_PER_METER : plan.pixelsPerMeter();
     }
 
     private double cableLengthMeters(List<Position> path) {
