@@ -3,7 +3,8 @@ package ee.matteus.pannukas.core.model;
 public enum ConnectorType {
     SCHUKO_230V("230V tavapesa", 3500),
     INDUSTRIAL_16A("16A tööstusvool", 11000),
-    INDUSTRIAL_32A("32A tööstusvool", 22000);
+    INDUSTRIAL_32A("32A tööstusvool", 22000),
+    INDUSTRIAL_63A("63A tööstusvool", 43500);
 
     private final String displayName;
     private final int defaultCapacityWatts;

@@ -167,6 +167,7 @@ public class PancakePlannerApp extends Application {
     private ToggleButton show230VCablesButton;
     private ToggleButton show16ACablesButton;
     private ToggleButton show32ACablesButton;
+    private ToggleButton show63ACablesButton;
     private Button addTentButton;
     private Button addPowerSourceButton;
     private Button addCustomObjectButton;
@@ -260,6 +261,7 @@ public class PancakePlannerApp extends Application {
         show230VCablesButton = cableTypeToggle("230V", ConnectorType.SCHUKO_230V);
         show16ACablesButton = cableTypeToggle("16A", ConnectorType.INDUSTRIAL_16A);
         show32ACablesButton = cableTypeToggle("32A", ConnectorType.INDUSTRIAL_32A);
+        show63ACablesButton = cableTypeToggle("63A", ConnectorType.INDUSTRIAL_63A);
 
         measureButton = new ToggleButton("Mõõdulint");
         measureButton.setTooltip(new Tooltip("Mõõda kaardil vahemaid"));
@@ -295,6 +297,7 @@ public class PancakePlannerApp extends Application {
                 show230VCablesButton,
                 show16ACablesButton,
                 show32ACablesButton,
+                show63ACablesButton,
                 measureButton,
                 clearMeasurementsButton,
                 new Separator(),
@@ -365,7 +368,8 @@ public class PancakePlannerApp extends Application {
                 4,
                 cableLegendRow(ConnectorType.SCHUKO_230V),
                 cableLegendRow(ConnectorType.INDUSTRIAL_16A),
-                cableLegendRow(ConnectorType.INDUSTRIAL_32A)
+                cableLegendRow(ConnectorType.INDUSTRIAL_32A),
+                cableLegendRow(ConnectorType.INDUSTRIAL_63A)
         );
 
         summaryList = new ListView<>();
@@ -808,6 +812,7 @@ public class PancakePlannerApp extends Application {
             case SCHUKO_230V -> show230VCablesButton == null || show230VCablesButton.isSelected();
             case INDUSTRIAL_16A -> show16ACablesButton == null || show16ACablesButton.isSelected();
             case INDUSTRIAL_32A -> show32ACablesButton == null || show32ACablesButton.isSelected();
+            case INDUSTRIAL_63A -> show63ACablesButton == null || show63ACablesButton.isSelected();
         };
     }
 
@@ -922,6 +927,7 @@ public class PancakePlannerApp extends Application {
             case SCHUKO_230V -> Color.web("#2563eb");
             case INDUSTRIAL_16A -> Color.web("#16a34a");
             case INDUSTRIAL_32A -> Color.web("#ea580c");
+            case INDUSTRIAL_63A -> Color.web("#7c3aed");
         };
     }
 
@@ -930,6 +936,7 @@ public class PancakePlannerApp extends Application {
             case SCHUKO_230V -> "230V";
             case INDUSTRIAL_16A -> "16A";
             case INDUSTRIAL_32A -> "32A";
+            case INDUSTRIAL_63A -> "63A";
         };
     }
 
@@ -945,6 +952,7 @@ public class PancakePlannerApp extends Application {
             case SCHUKO_230V -> 2.0;
             case INDUSTRIAL_16A -> 2.8;
             case INDUSTRIAL_32A -> 3.6;
+            case INDUSTRIAL_63A -> 4.4;
         };
     }
 
