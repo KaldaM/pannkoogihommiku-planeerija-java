@@ -3023,7 +3023,7 @@ public class PancakePlannerApp extends Application {
     private String cablePieceCountText(Map<Double, Integer> pieceCounts) {
         List<String> rows = new ArrayList<>();
         for (Map.Entry<Double, Integer> entry : pieceCounts.entrySet()) {
-            rows.add("%s m: %d tk".formatted(formatCablePieceLength(entry.getKey()), entry.getValue()));
+            rows.add("%s m x %d".formatted(formatCablePieceLength(entry.getKey()), entry.getValue()));
         }
         return String.join(", ", rows);
     }
