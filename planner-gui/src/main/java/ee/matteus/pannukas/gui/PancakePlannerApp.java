@@ -46,6 +46,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
@@ -919,6 +920,7 @@ public class PancakePlannerApp extends Application {
                 marker.setFill(Color.WHITE);
                 marker.setStroke(cableColor);
                 marker.setStrokeWidth(2);
+                Tooltip.install(marker, new Tooltip("Lohista punkti muutmiseks, paremklõps eemaldab punkti"));
                 makeCableSelectable(marker, cable.tent());
                 makeCableRoutePointDraggable(marker, cable, index, line, highlightLine, hitLine, distanceLabel);
                 mapPane.getChildren().add(marker);
@@ -1033,6 +1035,31 @@ public class PancakePlannerApp extends Application {
             }
             event.consume();
         });
+        marker.setOnMouseClicked(event -> {
+            if (event.getButton() == MouseButton.SECONDARY) {
+                removeCableRoutePoint(cable, routePointIndex);
+                event.consume();
+                return;
+            }
+            if (!dragged[0]) {
+                selectObject(cable.tent());
+            }
+            event.consume();
+        });
+    }
+
+    private void removeCableRoutePoint(PowerCableView cable, int routePointIndex) {
+        PowerConnection connection = plan.findPowerConnectionForConsumer(cable.tent().id()).orElse(null);
+        if (connection == null || routePointIndex < 0 || routePointIndex >= connection.routePoints().size()) {
+            return;
+        }
+
+        List<Position> routePoints = new ArrayList<>(connection.routePoints());
+        routePoints.remove(routePointIndex);
+        plan.updateCableRoutePoints(cable.tent().id(), routePoints);
+        redrawMap();
+        refreshSummary();
+        markDirty();
     }
 
     private void updateCablePolylineRoutePoint(Polyline polyline, int routePointIndex, Point2D mapPoint) {
