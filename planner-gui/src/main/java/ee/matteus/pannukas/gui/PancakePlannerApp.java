@@ -1561,6 +1561,10 @@ public class PancakePlannerApp extends Application {
             customObject.setShape(selectedShape);
             customObject.setColorHex(toHex(customObjectColorPicker.getValue()));
         }
+        setAddingCablePoint(false);
+        if (addCablePointButton != null) {
+            addCablePointButton.setSelected(false);
+        }
         refreshGroupFilters();
         redrawMap();
         refreshSummary();
