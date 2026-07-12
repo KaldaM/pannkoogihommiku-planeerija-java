@@ -1733,6 +1733,9 @@ public class PancakePlannerApp extends Application {
         if (selectedObject == null) {
             return;
         }
+        if (!confirmDeleteSelectedObject()) {
+            return;
+        }
 
         plan.removeObject(selectedObject.id());
         selectedObject = null;
@@ -1742,6 +1745,38 @@ public class PancakePlannerApp extends Application {
         refreshSummary();
         refreshDetails();
         markDirty();
+    }
+
+    private boolean confirmDeleteSelectedObject() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Kustuta objekt");
+        alert.setHeaderText("Kas kustutada \"%s\"?".formatted(selectedObject.name()));
+        alert.setContentText(deleteConfirmationText(selectedObject));
+        return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
+    }
+
+    private String deleteConfirmationText(PlannerObject object) {
+        List<String> warnings = new ArrayList<>();
+        if (object instanceof Tent tent) {
+            if (!tent.equipment().isEmpty()) {
+                warnings.add("Telgi seadmed kustutatakse samuti.");
+            }
+            if (plan.findPowerConnectionForConsumer(tent.id()).isPresent()) {
+                warnings.add("Telgi vooluühendus ja kaabli trajektoor kustutatakse samuti.");
+            }
+        }
+        if (object instanceof PowerSource source) {
+            int connectionCount = (int) plan.powerConnections().stream()
+                    .filter(connection -> connection.sourceId().equals(source.id()))
+                    .count();
+            if (connectionCount > 0) {
+                warnings.add("%d selle kapiga seotud vooluühendus(t) kustutatakse samuti.".formatted(connectionCount));
+            }
+        }
+        if (warnings.isEmpty()) {
+            return "Seda tegevust ei saa tagasi võtta.";
+        }
+        return "%s%n%nSeda tegevust ei saa tagasi võtta.".formatted(String.join(System.lineSeparator(), warnings));
     }
 
     private void setMeasuringActive(boolean measuringActive) {
