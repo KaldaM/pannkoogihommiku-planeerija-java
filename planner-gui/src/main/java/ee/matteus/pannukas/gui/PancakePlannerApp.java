@@ -1431,7 +1431,11 @@ public class PancakePlannerApp extends Application {
         groupField.setDisable(!hasSelection);
         notesArea.setDisable(!hasSelection);
         lockedCheckBox.setDisable(!hasSelection);
-        deleteObjectButton.setDisable(!hasSelection);
+        boolean lockedSelection = selectedObject != null && selectedObject.locked();
+        deleteObjectButton.setDisable(!hasSelection || lockedSelection);
+        deleteObjectButton.setTooltip(lockedSelection
+                ? new Tooltip("Lukustatud objekti kustutamiseks eemalda enne lukustus")
+                : null);
         customObjectShapeComboBox.setDisable(!customObjectSelected);
         customObjectColorPicker.setDisable(!customObjectSelected);
         tentWidthField.setDisable(!tentSelected);
@@ -1731,6 +1735,10 @@ public class PancakePlannerApp extends Application {
 
     private void deleteSelectedObject() {
         if (selectedObject == null) {
+            return;
+        }
+        if (selectedObject.locked()) {
+            showError("Objekti ei kustutatud", "Eemalda enne lukustus ja proovi uuesti.");
             return;
         }
         if (!confirmDeleteSelectedObject()) {
