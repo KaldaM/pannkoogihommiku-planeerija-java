@@ -898,21 +898,10 @@ public class PancakePlannerApp extends Application {
         makeCableSelectable(hitLine, cable.tent());
 
         mapPane.getChildren().addAll(highlightLine, line, hitLine);
-        if (selectedCable) {
-            for (int index = 0; index < cable.connection().routePoints().size(); index++) {
-                Position routePoint = cable.connection().routePoints().get(index);
-                Circle marker = new Circle(routePoint.x(), routePoint.y(), 4);
-                marker.setFill(Color.WHITE);
-                marker.setStroke(cableColor);
-                marker.setStrokeWidth(2);
-                makeCableSelectable(marker, cable.tent());
-                makeCableRoutePointDraggable(marker, cable.tent(), index);
-                mapPane.getChildren().add(marker);
-            }
-        }
+        Label distanceLabel = null;
         if (showCableLabels()) {
             Position labelPosition = pathMidpoint(path);
-            Label distanceLabel = new Label(cableMapLabel(cable.connection(), cableLengthMeters(path)));
+            distanceLabel = new Label(cableMapLabel(cable.connection(), cableLengthMeters(path)));
             distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,%s); -fx-padding: 2 5 2 5; -fx-border-color: %s; -fx-font-weight: %s;".formatted(
                     selectedCable ? "0.96" : "0.88",
                     toHex(selectedCable ? Color.web("#111827") : cableColor),
@@ -922,6 +911,18 @@ public class PancakePlannerApp extends Application {
             distanceLabel.setLayoutY(labelPosition.y() + 6);
             makeCableSelectable(distanceLabel, cable.tent());
             mapPane.getChildren().add(distanceLabel);
+        }
+        if (selectedCable) {
+            for (int index = 0; index < cable.connection().routePoints().size(); index++) {
+                Position routePoint = cable.connection().routePoints().get(index);
+                Circle marker = new Circle(routePoint.x(), routePoint.y(), 4);
+                marker.setFill(Color.WHITE);
+                marker.setStroke(cableColor);
+                marker.setStrokeWidth(2);
+                makeCableSelectable(marker, cable.tent());
+                makeCableRoutePointDraggable(marker, cable, index, line, highlightLine, hitLine, distanceLabel);
+                mapPane.getChildren().add(marker);
+            }
         }
     }
 
@@ -982,7 +983,15 @@ public class PancakePlannerApp extends Application {
         });
     }
 
-    private void makeCableRoutePointDraggable(Circle marker, Tent tent, int routePointIndex) {
+    private void makeCableRoutePointDraggable(
+            Circle marker,
+            PowerCableView cable,
+            int routePointIndex,
+            Polyline line,
+            Polyline highlightLine,
+            Polyline hitLine,
+            Label distanceLabel
+    ) {
         final boolean[] dragged = {false};
         marker.setOnMousePressed(event -> {
             if (measuringActive || addingCablePoint) {
@@ -997,7 +1006,7 @@ public class PancakePlannerApp extends Application {
                 event.consume();
                 return;
             }
-            PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
+            PowerConnection connection = plan.findPowerConnectionForConsumer(cable.tent().id()).orElse(null);
             if (connection == null || routePointIndex < 0 || routePointIndex >= connection.routePoints().size()) {
                 event.consume();
                 return;
@@ -1006,9 +1015,13 @@ public class PancakePlannerApp extends Application {
             Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
             List<Position> routePoints = new ArrayList<>(connection.routePoints());
             routePoints.set(routePointIndex, new Position(mapPoint.getX(), mapPoint.getY()));
-            plan.updateCableRoutePoints(tent.id(), routePoints);
+            plan.updateCableRoutePoints(cable.tent().id(), routePoints);
             marker.setCenterX(mapPoint.getX());
             marker.setCenterY(mapPoint.getY());
+            updateCablePolylineRoutePoint(line, routePointIndex, mapPoint);
+            updateCablePolylineRoutePoint(highlightLine, routePointIndex, mapPoint);
+            updateCablePolylineRoutePoint(hitLine, routePointIndex, mapPoint);
+            updateCableLabel(distanceLabel, cable, routePoints);
             dragged[0] = true;
             event.consume();
         });
@@ -1020,6 +1033,32 @@ public class PancakePlannerApp extends Application {
             }
             event.consume();
         });
+    }
+
+    private void updateCablePolylineRoutePoint(Polyline polyline, int routePointIndex, Point2D mapPoint) {
+        int pointIndex = routePointIndex + 1;
+        int xCoordinateIndex = pointIndex * 2;
+        int yCoordinateIndex = xCoordinateIndex + 1;
+        if (yCoordinateIndex >= polyline.getPoints().size()) {
+            return;
+        }
+        polyline.getPoints().set(xCoordinateIndex, mapPoint.getX());
+        polyline.getPoints().set(yCoordinateIndex, mapPoint.getY());
+    }
+
+    private void updateCableLabel(Label distanceLabel, PowerCableView cable, List<Position> routePoints) {
+        if (distanceLabel == null) {
+            return;
+        }
+        List<Position> path = new ArrayList<>();
+        path.add(objectCenter(cable.source()));
+        path.addAll(routePoints);
+        path.add(objectCenter(cable.tent()));
+
+        Position labelPosition = pathMidpoint(path);
+        distanceLabel.setText(cableMapLabel(cable.connection(), cableLengthMeters(path)));
+        distanceLabel.setLayoutX(labelPosition.x() + 6);
+        distanceLabel.setLayoutY(labelPosition.y() + 6);
     }
 
     private Color cableColor(ConnectorType connectorType) {
