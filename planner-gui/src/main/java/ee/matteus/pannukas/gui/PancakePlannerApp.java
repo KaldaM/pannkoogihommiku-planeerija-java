@@ -35,6 +35,7 @@ import javafx.scene.control.Separator;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToolBar;
@@ -278,6 +279,10 @@ public class PancakePlannerApp extends Application {
         clearMeasurementsButton.setTooltip(new Tooltip("Eemaldab mõõdulindi jooned kaardilt"));
         clearMeasurementsButton.setOnAction(event -> clearMeasurements());
 
+        Button setScaleFromMeasurementButton = new Button("Määra mõõtkava");
+        setScaleFromMeasurementButton.setTooltip(new Tooltip("Arvutab piksleid meetri kohta viimase mõõdulindi joone põhjal"));
+        setScaleFromMeasurementButton.setOnAction(event -> setScaleFromLastMeasurement());
+
         addCablePointButton = new ToggleButton("Kaabli punkt");
         addCablePointButton.setTooltip(new Tooltip("Lisa valitud telgi voolukaablile vahepunkt"));
         addCablePointButton.setOnAction(event -> setAddingCablePoint(addCablePointButton.isSelected()));
@@ -315,6 +320,7 @@ public class PancakePlannerApp extends Application {
                 show63ACablesButton,
                 measureButton,
                 clearMeasurementsButton,
+                setScaleFromMeasurementButton,
                 addCablePointButton,
                 clearCableRouteButton,
                 new Separator(),
@@ -1974,6 +1980,45 @@ public class PancakePlannerApp extends Application {
         }
     }
 
+    private void setScaleFromLastMeasurement() {
+        if (measurements.isEmpty()) {
+            showError("Mõõtkava ei muudetud", "Tee enne mõõdulindiga üks mõõtmine.");
+            return;
+        }
+
+        MeasurementView measurement = measurements.getLast();
+        TextInputDialog dialog = new TextInputDialog("%.2f".formatted(distanceMeters(measurement.start(), measurement.end())));
+        dialog.setTitle("Määra mõõtkava");
+        dialog.setHeaderText("Sisesta viimase mõõdulindi joone tegelik pikkus meetrites");
+        dialog.setContentText("Tegelik pikkus m:");
+        String value = dialog.showAndWait().orElse(null);
+        if (value == null) {
+            return;
+        }
+
+        try {
+            double realLengthMeters = Double.parseDouble(value.trim().replace(',', '.'));
+            if (realLengthMeters <= 0) {
+                throw new IllegalArgumentException("Tegelik pikkus peab olema positiivne.");
+            }
+            double pixelLength = distancePixels(measurement.start(), measurement.end());
+            if (pixelLength <= 0) {
+                showError("Mõõtkava ei muudetud", "Mõõdulindi pikkus peab olema suurem kui 0.");
+                return;
+            }
+            plan.setPixelsPerMeter(pixelLength / realLengthMeters);
+            pixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
+            refreshMeasurementLabels();
+            redrawMap();
+            refreshSummary();
+            markDirty();
+        } catch (NumberFormatException exception) {
+            showError("Mõõtkava ei muudetud", "Sisesta tegelik pikkus arvuna meetrites.");
+        } catch (IllegalArgumentException exception) {
+            showError("Mõõtkava ei muudetud", exception.getMessage());
+        }
+    }
+
     private Circle createMeasurementMarker(Position point) {
         Circle marker = new Circle(point.x(), point.y(), 4);
         marker.setFill(Color.web("#111827"));
@@ -1982,9 +2027,13 @@ public class PancakePlannerApp extends Application {
     }
 
     private double distanceMeters(Position start, Position end) {
+        return distancePixels(start, end) / pixelsPerMeter();
+    }
+
+    private double distancePixels(Position start, Position end) {
         double deltaX = end.x() - start.x();
         double deltaY = end.y() - start.y();
-        return Math.sqrt(deltaX * deltaX + deltaY * deltaY) / pixelsPerMeter();
+        return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     }
 
     private double metersToPixels(double meters) {
