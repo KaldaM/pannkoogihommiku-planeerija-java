@@ -896,7 +896,7 @@ public class PancakePlannerApp extends Application {
         Polyline hitLine = createCablePolyline(path);
         hitLine.setStroke(Color.TRANSPARENT);
         hitLine.setStrokeWidth(Math.max(12.0, strokeWidth + 8.0));
-        makeCableSelectable(hitLine, cable.tent());
+        makeCableSelectable(hitLine, cable);
 
         mapPane.getChildren().addAll(highlightLine, line, hitLine);
         Label distanceLabel = null;
@@ -949,7 +949,12 @@ public class PancakePlannerApp extends Application {
     }
 
     private void makeCableSelectable(Node node, Tent tent) {
+        makeCableSelectable(node, new PowerCableView(tent, null, null));
+    }
+
+    private void makeCableSelectable(Node node, PowerCableView cable) {
         node.setOnMouseClicked(event -> {
+            Tent tent = cable.tent();
             if (pendingTentPlacement) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
                 placeTent(new Position(mapPoint.getX(), mapPoint.getY()));
@@ -970,7 +975,17 @@ public class PancakePlannerApp extends Application {
             }
             if (addingCablePoint) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
-                addCableRoutePoint(new Position(mapPoint.getX(), mapPoint.getY()));
+                Position point = new Position(mapPoint.getX(), mapPoint.getY());
+                if (cable.source() == null || cable.connection() == null) {
+                    addCableRoutePoint(point);
+                } else {
+                    if (!isSelected(tent)) {
+                        selectObject(tent);
+                        event.consume();
+                        return;
+                    }
+                    insertCableRoutePoint(cable, point);
+                }
                 event.consume();
                 return;
             }
@@ -1747,6 +1762,52 @@ public class PancakePlannerApp extends Application {
         redrawMap();
         refreshSummary();
         markDirty();
+    }
+
+    private void insertCableRoutePoint(PowerCableView cable, Position point) {
+        PowerConnection connection = plan.findPowerConnectionForConsumer(cable.tent().id()).orElse(null);
+        if (connection == null) {
+            return;
+        }
+
+        int insertionIndex = closestCableSegmentIndex(cablePath(cable.tent(), cable.source(), connection), point);
+        plan.insertCableRoutePoint(cable.tent().id(), insertionIndex, point);
+        selectedObject = cable.tent();
+        redrawMap();
+        refreshSummary();
+        markDirty();
+    }
+
+    private int closestCableSegmentIndex(List<Position> path, Position point) {
+        int closestSegmentIndex = 0;
+        double closestDistance = Double.MAX_VALUE;
+        for (int index = 1; index < path.size(); index++) {
+            double distance = distanceToSegmentSquared(point, path.get(index - 1), path.get(index));
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestSegmentIndex = index - 1;
+            }
+        }
+        return closestSegmentIndex;
+    }
+
+    private double distanceToSegmentSquared(Position point, Position segmentStart, Position segmentEnd) {
+        double segmentX = segmentEnd.x() - segmentStart.x();
+        double segmentY = segmentEnd.y() - segmentStart.y();
+        double lengthSquared = segmentX * segmentX + segmentY * segmentY;
+        if (lengthSquared == 0) {
+            double deltaX = point.x() - segmentStart.x();
+            double deltaY = point.y() - segmentStart.y();
+            return deltaX * deltaX + deltaY * deltaY;
+        }
+
+        double ratio = ((point.x() - segmentStart.x()) * segmentX + (point.y() - segmentStart.y()) * segmentY) / lengthSquared;
+        double clampedRatio = Math.max(0, Math.min(1, ratio));
+        double projectionX = segmentStart.x() + clampedRatio * segmentX;
+        double projectionY = segmentStart.y() + clampedRatio * segmentY;
+        double deltaX = point.x() - projectionX;
+        double deltaY = point.y() - projectionY;
+        return deltaX * deltaX + deltaY * deltaY;
     }
 
     private void clearSelectedCableRoute() {

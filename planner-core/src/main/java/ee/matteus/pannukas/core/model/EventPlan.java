@@ -201,6 +201,10 @@ public class EventPlan {
     }
 
     public void addCableRoutePoint(String consumerId, Position point) {
+        insertCableRoutePoint(consumerId, -1, point);
+    }
+
+    public void insertCableRoutePoint(String consumerId, int routePointIndex, Position point) {
         if (point == null) {
             return;
         }
@@ -208,7 +212,11 @@ public class EventPlan {
             PowerConnection connection = powerConnections.get(index);
             if (connection.consumerId().equals(consumerId)) {
                 List<Position> routePoints = new ArrayList<>(connection.routePoints());
-                routePoints.add(point);
+                if (routePointIndex < 0 || routePointIndex > routePoints.size()) {
+                    routePoints.add(point);
+                } else {
+                    routePoints.add(routePointIndex, point);
+                }
                 powerConnections.set(index, new PowerConnection(
                         connection.sourceId(),
                         connection.consumerId(),
