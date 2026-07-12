@@ -119,6 +119,7 @@ public class PancakePlannerApp extends Application {
     private CheckBox showPowerSummaryCheckBox;
     private CheckBox showCableSummaryCheckBox;
     private CheckBox showGroupSummaryCheckBox;
+    private Label planTitleLabel;
     private Label saveStatusLabel;
     private VBox groupFilterPanel;
     private TitledPane equipmentSection;
@@ -273,10 +274,6 @@ public class PancakePlannerApp extends Application {
         clearMeasurementsButton.setTooltip(new Tooltip("Eemaldab mõõdulindi jooned kaardilt"));
         clearMeasurementsButton.setOnAction(event -> clearMeasurements());
 
-        Button setScaleFromMeasurementButton = new Button("Määra mõõtkava");
-        setScaleFromMeasurementButton.setTooltip(new Tooltip("Arvutab piksleid meetri kohta viimase mõõdulindi joone põhjal"));
-        setScaleFromMeasurementButton.setOnAction(event -> setScaleFromLastMeasurement());
-
         addCablePointButton = new ToggleButton("Kaabli punkt");
         addCablePointButton.setTooltip(new Tooltip("Lisa valitud telgi voolukaablile vahepunkt"));
         addCablePointButton.setOnAction(event -> setAddingCablePoint(addCablePointButton.isSelected()));
@@ -287,6 +284,9 @@ public class PancakePlannerApp extends Application {
 
         saveStatusLabel = new Label("Salvestatud");
         saveStatusLabel.setStyle("-fx-text-fill: #166534; -fx-font-weight: bold;");
+        planTitleLabel = new Label();
+        planTitleLabel.setStyle("-fx-font-weight: bold;");
+        updatePlanTitleLabel();
 
         return new ToolBar(
                 newPlanButton,
@@ -311,10 +311,10 @@ public class PancakePlannerApp extends Application {
                 show63ACablesButton,
                 measureButton,
                 clearMeasurementsButton,
-                setScaleFromMeasurementButton,
                 addCablePointButton,
                 clearCableRouteButton,
                 new Separator(),
+                planTitleLabel,
                 saveStatusLabel
         );
     }
@@ -763,10 +763,17 @@ public class PancakePlannerApp extends Application {
                 rememberDirectory(file);
             }
         });
+        Button setScaleFromMeasurementButton = new Button("Määra mõõdulindi järgi");
+        setScaleFromMeasurementButton.setTooltip(new Tooltip("Arvutab piksleid meetri kohta viimase mõõdulindi joone põhjal"));
+        setScaleFromMeasurementButton.setOnAction(event -> {
+            if (setScaleFromLastMeasurement()) {
+                dialogPixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
+            }
+        });
 
         GridPane form = detailGrid();
         form.addRow(0, new Label("Plaani nimi"), dialogPlanNameField);
-        form.addRow(1, new Label("Piksleid meetri kohta"), dialogPixelsPerMeterField);
+        form.addRow(1, new Label("Piksleid meetri kohta"), new HBox(8, dialogPixelsPerMeterField, setScaleFromMeasurementButton));
         form.addRow(2, new Label("Kaart"), new HBox(8, defaultMapButton, orthophotoButton, loadMapButton));
         form.addRow(3, new Label("Valitud kaart"), mapLabel);
 
@@ -870,7 +877,15 @@ public class PancakePlannerApp extends Application {
         }
         String fileName = currentPlanFile == null ? "" : " - " + currentPlanFile.getName();
         stage.setTitle("%sPannkoogihommiku planeerija%s".formatted(unsavedChanges ? "* " : "", fileName));
+        updatePlanTitleLabel();
         updateSaveStatusLabel();
+    }
+
+    private void updatePlanTitleLabel() {
+        if (planTitleLabel == null || plan == null) {
+            return;
+        }
+        planTitleLabel.setText(plan.name());
     }
 
     private void updateSaveStatusLabel() {
@@ -2052,10 +2067,10 @@ public class PancakePlannerApp extends Application {
         }
     }
 
-    private void setScaleFromLastMeasurement() {
+    private boolean setScaleFromLastMeasurement() {
         if (measurements.isEmpty()) {
             showError("Mõõtkava ei muudetud", "Tee enne mõõdulindiga üks mõõtmine.");
-            return;
+            return false;
         }
 
         MeasurementView measurement = measurements.getLast();
@@ -2065,7 +2080,7 @@ public class PancakePlannerApp extends Application {
         dialog.setContentText("Tegelik pikkus m:");
         String value = dialog.showAndWait().orElse(null);
         if (value == null) {
-            return;
+            return false;
         }
 
         try {
@@ -2076,7 +2091,7 @@ public class PancakePlannerApp extends Application {
             double pixelLength = distancePixels(measurement.start(), measurement.end());
             if (pixelLength <= 0) {
                 showError("Mõõtkava ei muudetud", "Mõõdulindi pikkus peab olema suurem kui 0.");
-                return;
+                return false;
             }
             plan.setPixelsPerMeter(pixelLength / realLengthMeters);
             if (pixelsPerMeterField != null) {
@@ -2086,11 +2101,13 @@ public class PancakePlannerApp extends Application {
             redrawMap();
             refreshSummary();
             markDirty();
+            return true;
         } catch (NumberFormatException exception) {
             showError("Mõõtkava ei muudetud", "Sisesta tegelik pikkus arvuna meetrites.");
         } catch (IllegalArgumentException exception) {
             showError("Mõõtkava ei muudetud", exception.getMessage());
         }
+        return false;
     }
 
     private Circle createMeasurementMarker(Position point) {
