@@ -76,6 +76,17 @@ public class EventPlan {
     }
 
     public Optional<PowerConnection> connectToPower(String sourceId, String consumerId, ConnectorType connectorType, String outletId, String cableNotes) {
+        return connectToPower(sourceId, consumerId, connectorType, outletId, cableNotes, existingCableLengthNotes(consumerId));
+    }
+
+    public Optional<PowerConnection> connectToPower(
+            String sourceId,
+            String consumerId,
+            ConnectorType connectorType,
+            String outletId,
+            String cableNotes,
+            String cableLengthNotes
+    ) {
         PowerSource source = findObject(sourceId)
                 .filter(PowerSource.class::isInstance)
                 .map(PowerSource.class::cast)
@@ -98,6 +109,7 @@ public class EventPlan {
                 selectedType,
                 selectedOutlet.get().id(),
                 cableNotes,
+                cableLengthNotes,
                 existingRoutePoints
         );
         powerConnections.add(connection);
@@ -114,6 +126,25 @@ public class EventPlan {
                         connection.connectorType(),
                         connection.outletId(),
                         cableNotes,
+                        connection.cableLengthNotes(),
+                        connection.routePoints()
+                ));
+                return;
+            }
+        }
+    }
+
+    public void updateCableLengthNotes(String consumerId, String cableLengthNotes) {
+        for (int index = 0; index < powerConnections.size(); index++) {
+            PowerConnection connection = powerConnections.get(index);
+            if (connection.consumerId().equals(consumerId)) {
+                powerConnections.set(index, new PowerConnection(
+                        connection.sourceId(),
+                        connection.consumerId(),
+                        connection.connectorType(),
+                        connection.outletId(),
+                        connection.cableNotes(),
+                        cableLengthNotes,
                         connection.routePoints()
                 ));
                 return;
@@ -124,6 +155,12 @@ public class EventPlan {
     private String existingCableNotes(String consumerId) {
         return findPowerConnectionForConsumer(consumerId)
                 .map(PowerConnection::cableNotes)
+                .orElse("");
+    }
+
+    private String existingCableLengthNotes(String consumerId) {
+        return findPowerConnectionForConsumer(consumerId)
+                .map(PowerConnection::cableLengthNotes)
                 .orElse("");
     }
 
@@ -194,6 +231,7 @@ public class EventPlan {
                         selectedType,
                         connection.outletId(),
                         connection.cableNotes(),
+                        connection.cableLengthNotes(),
                         connection.routePoints()
                 ));
             }
@@ -223,6 +261,7 @@ public class EventPlan {
                         connection.connectorType(),
                         connection.outletId(),
                         connection.cableNotes(),
+                        connection.cableLengthNotes(),
                         routePoints
                 ));
                 return;
@@ -240,6 +279,7 @@ public class EventPlan {
                         connection.connectorType(),
                         connection.outletId(),
                         connection.cableNotes(),
+                        connection.cableLengthNotes(),
                         routePoints
                 ));
                 return;

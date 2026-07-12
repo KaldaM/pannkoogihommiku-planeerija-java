@@ -50,6 +50,7 @@ public class PlanFileService {
             properties.setProperty(prefix + "connectorType", connection.connectorType().name());
             properties.setProperty(prefix + "outletId", connection.outletId());
             properties.setProperty(prefix + "cableNotes", connection.cableNotes());
+            properties.setProperty(prefix + "cableLengthNotes", connection.cableLengthNotes());
             properties.setProperty(prefix + "routePoints.count", Integer.toString(connection.routePoints().size()));
             for (int pointIndex = 0; pointIndex < connection.routePoints().size(); pointIndex++) {
                 Position point = connection.routePoints().get(pointIndex);
@@ -86,7 +87,8 @@ public class PlanFileService {
                     properties.getProperty(prefix + "consumerId", ""),
                     ConnectorType.valueOf(properties.getProperty(prefix + "connectorType", ConnectorType.SCHUKO_230V.name())),
                     properties.getProperty(prefix + "outletId", ""),
-                    properties.getProperty(prefix + "cableNotes", "")
+                    properties.getProperty(prefix + "cableNotes", ""),
+                    properties.getProperty(prefix + "cableLengthNotes", properties.getProperty(prefix + "cableNotes", ""))
             ).ifPresent(connection -> plan.updateCableRoutePoints(
                     connection.consumerId(),
                     readRoutePoints(properties, prefix)

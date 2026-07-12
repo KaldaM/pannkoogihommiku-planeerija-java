@@ -8,6 +8,7 @@ public record PowerConnection(
         ConnectorType connectorType,
         String outletId,
         String cableNotes,
+        String cableLengthNotes,
         List<Position> routePoints
 ) {
     public PowerConnection(String sourceId, String consumerId, ConnectorType connectorType) {
@@ -19,11 +20,23 @@ public record PowerConnection(
     }
 
     public PowerConnection(String sourceId, String consumerId, ConnectorType connectorType, String outletId, String cableNotes) {
-        this(sourceId, consumerId, connectorType, outletId, cableNotes, List.of());
+        this(sourceId, consumerId, connectorType, outletId, cableNotes, "");
+    }
+
+    public PowerConnection(
+            String sourceId,
+            String consumerId,
+            ConnectorType connectorType,
+            String outletId,
+            String cableNotes,
+            String cableLengthNotes
+    ) {
+        this(sourceId, consumerId, connectorType, outletId, cableNotes, cableLengthNotes, List.of());
     }
 
     public PowerConnection {
         cableNotes = cableNotes == null ? "" : cableNotes.trim();
+        cableLengthNotes = cableLengthNotes == null ? "" : cableLengthNotes.trim();
         routePoints = routePoints == null ? List.of() : List.copyOf(routePoints);
     }
 }

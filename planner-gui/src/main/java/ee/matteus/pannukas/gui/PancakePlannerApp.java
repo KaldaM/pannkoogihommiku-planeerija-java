@@ -143,6 +143,7 @@ public class PancakePlannerApp extends Application {
     private ComboBox<PowerSourceChoice> powerSourceComboBox;
     private ComboBox<ConnectorType> connectionTypeComboBox;
     private ComboBox<OutletChoice> connectionOutletComboBox;
+    private TextField cableLengthNotesField;
     private TextField cableNotesField;
     private TextArea notesArea;
     private ListView<String> equipmentList;
@@ -480,8 +481,16 @@ public class PancakePlannerApp extends Application {
         connectionTypeComboBox.setConverter(connectorTypeConverter());
         connectionTypeComboBox.setOnAction(event -> refreshConnectionOutletChoices(null));
         connectionOutletComboBox = new ComboBox<>();
+        cableLengthNotesField = new TextField();
+        cableLengthNotesField.setPromptText("nt 20 + 10 + 10");
+        cableLengthNotesField.setOnAction(event -> autoApplyCableLengthNotes());
+        cableLengthNotesField.focusedProperty().addListener((observable, wasFocused, isFocused) -> {
+            if (wasFocused && !isFocused) {
+                autoApplyCableLengthNotes();
+            }
+        });
         cableNotesField = new TextField();
-        cableNotesField.setPromptText("nt 20m + 10m");
+        cableNotesField.setPromptText("Kaabli märkmed");
         cableNotesField.setOnAction(event -> autoApplyCableNotes());
         cableNotesField.focusedProperty().addListener((observable, wasFocused, isFocused) -> {
             if (wasFocused && !isFocused) {
@@ -551,7 +560,8 @@ public class PancakePlannerApp extends Application {
         powerConnectionForm.addRow(0, new Label("Vooluallikas"), powerSourceComboBox);
         powerConnectionForm.addRow(1, new Label("Ühenduse tüüp"), connectionTypeComboBox);
         powerConnectionForm.addRow(2, new Label("Väljund"), connectionOutletComboBox);
-        powerConnectionForm.addRow(3, new Label("Kaabli pikkus / märkmed"), cableNotesField);
+        powerConnectionForm.addRow(3, new Label("Kaabli tükid"), cableLengthNotesField);
+        powerConnectionForm.addRow(4, new Label("Kaabli märkmed"), cableNotesField);
         powerConnectionPanel = new VBox(8, sectionLabel("Vool"), powerConnectionForm);
 
         GridPane notesForm = detailGrid();
@@ -1123,9 +1133,9 @@ public class PancakePlannerApp extends Application {
 
     private String cableMapLabel(PowerConnection connection, double lengthMeters) {
         String baseLabel = "%s · %.1f m".formatted(shortCableTypeName(connection.connectorType()), lengthMeters);
-        return connection.cableNotes().isBlank()
+        return connection.cableLengthNotes().isBlank()
                 ? baseLabel
-                : "%s · %s".formatted(baseLabel, connection.cableNotes());
+                : "%s · %s".formatted(baseLabel, connection.cableLengthNotes());
     }
 
     private double cableWidth(ConnectorType connectorType) {
@@ -1431,6 +1441,7 @@ public class PancakePlannerApp extends Application {
         powerSourceComboBox.setDisable(!tentSelected);
         connectionTypeComboBox.setDisable(!tentSelected);
         connectionOutletComboBox.setDisable(!tentSelected);
+        cableLengthNotesField.setDisable(!tentSelected);
         cableNotesField.setDisable(!tentSelected);
         equipmentList.setDisable(!tentSelected);
         equipmentNameField.setDisable(!tentSelected);
@@ -1488,6 +1499,7 @@ public class PancakePlannerApp extends Application {
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
+            cableLengthNotesField.clear();
             cableNotesField.clear();
             refreshPowerSourceChoices();
             refreshEquipmentList();
@@ -1510,6 +1522,9 @@ public class PancakePlannerApp extends Application {
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
+            cableLengthNotesField.setText(plan.findPowerConnectionForConsumer(tent.id())
+                    .map(PowerConnection::cableLengthNotes)
+                    .orElse(""));
             cableNotesField.setText(plan.findPowerConnectionForConsumer(tent.id())
                     .map(PowerConnection::cableNotes)
                     .orElse(""));
@@ -1523,6 +1538,7 @@ public class PancakePlannerApp extends Application {
             customObjectWidthField.setText(formatMeters(customObject.widthMeters()));
             customObjectHeightField.setText(formatMeters(customObject.heightMeters()));
             customObjectRotationField.setText(formatDegrees(customObject.rotationDegrees()));
+            cableLengthNotesField.clear();
             cableNotesField.clear();
         } else {
             tentWidthField.clear();
@@ -1534,6 +1550,7 @@ public class PancakePlannerApp extends Application {
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
+            cableLengthNotesField.clear();
             cableNotesField.clear();
         }
         refreshPowerSourceChoices();
@@ -1634,6 +1651,24 @@ public class PancakePlannerApp extends Application {
         plan.updateCableNotes(tent.id(), cableNotes);
         cableNotesField.setText(plan.findPowerConnectionForConsumer(tent.id())
                 .map(PowerConnection::cableNotes)
+                .orElse(""));
+        redrawMap();
+        refreshSummary();
+        markDirty();
+    }
+
+    private void autoApplyCableLengthNotes() {
+        if (!(selectedObject instanceof Tent tent)) {
+            return;
+        }
+        String cableLengthNotes = cableLengthNotesField.getText();
+        PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
+        if (connection == null || connection.cableLengthNotes().equals(cableLengthNotes.trim())) {
+            return;
+        }
+        plan.updateCableLengthNotes(tent.id(), cableLengthNotes);
+        cableLengthNotesField.setText(plan.findPowerConnectionForConsumer(tent.id())
+                .map(PowerConnection::cableLengthNotes)
                 .orElse(""));
         redrawMap();
         refreshSummary();
@@ -2147,7 +2182,8 @@ public class PancakePlannerApp extends Application {
                 tent.id(),
                 selectedConnectionType(),
                 selectedConnectionOutletId(),
-                cableNotesField.getText()
+                cableNotesField.getText(),
+                cableLengthNotesField.getText()
         ).isEmpty()) {
             showError("Vooluallikat ei rakendatud", "Valitud kapis ei ole selle ühenduse jaoks sobivat väljundit.");
             return false;
@@ -2940,11 +2976,11 @@ public class PancakePlannerApp extends Application {
     }
 
     private String cableNoteWarningText(PowerConnection connection) {
-        return cableNoteNeedsReview(connection) ? " (märkus kontrollida)" : "";
+        return cableNoteNeedsReview(connection) ? " (tükid kontrollida)" : "";
     }
 
     private boolean cableNoteNeedsReview(PowerConnection connection) {
-        String notes = connection.cableNotes();
+        String notes = connection.cableLengthNotes();
         if (notes.isBlank() || !notes.contains("+")) {
             return false;
         }
@@ -2958,7 +2994,7 @@ public class PancakePlannerApp extends Application {
     }
 
     private OptionalDouble notedCableLengthMeters(PowerConnection connection) {
-        Matcher matcher = CABLE_LENGTH_PATTERN.matcher(connection.cableNotes());
+        Matcher matcher = CABLE_LENGTH_PATTERN.matcher(connection.cableLengthNotes());
         double totalLengthMeters = 0.0;
         boolean foundLength = false;
         while (matcher.find()) {
