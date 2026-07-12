@@ -2637,6 +2637,7 @@ public class PancakePlannerApp extends Application {
             if (notedLengthMeters.isPresent()) {
                 totalNotedLengthMeters += notedLengthMeters.getAsDouble();
                 typeSummary.addNotedLength(notedLengthMeters.getAsDouble());
+                typeSummary.addPieces(cableLengthPieces(connection));
                 hasNotedLength = true;
             }
             cableRows.add(new CableSummaryRow(tent, source, connection, lengthMeters, notedLengthMeters));
@@ -2895,6 +2896,7 @@ public class PancakePlannerApp extends Application {
             if (notedLengthMeters.isPresent()) {
                 totalNotedLengthMeters += notedLengthMeters.getAsDouble();
                 typeSummary.addNotedLength(notedLengthMeters.getAsDouble());
+                typeSummary.addPieces(cableLengthPieces(connection));
                 hasNotedLength = true;
             }
             cableRows.add(new CableSummaryRow(tent, source, connection, lengthMeters, notedLengthMeters));
@@ -2938,6 +2940,9 @@ public class PancakePlannerApp extends Application {
                 continue;
             }
             rows.add(cableTypeSummaryRow(connectorType, summary));
+            if (summary.hasPieces()) {
+                rows.add("    tükid: %s".formatted(cablePieceCountText(summary.pieceCounts())));
+            }
         }
         return rows;
     }
@@ -2994,20 +2999,47 @@ public class PancakePlannerApp extends Application {
     }
 
     private OptionalDouble notedCableLengthMeters(PowerConnection connection) {
-        Matcher matcher = CABLE_LENGTH_PATTERN.matcher(connection.cableLengthNotes());
-        double totalLengthMeters = 0.0;
-        boolean foundLength = false;
-        while (matcher.find()) {
-            totalLengthMeters += Double.parseDouble(matcher.group().replace(',', '.'));
-            foundLength = true;
+        List<Double> pieces = cableLengthPieces(connection);
+        if (pieces.isEmpty()) {
+            return OptionalDouble.empty();
         }
-        return foundLength ? OptionalDouble.of(totalLengthMeters) : OptionalDouble.empty();
+
+        double totalLengthMeters = 0.0;
+        for (double piece : pieces) {
+            totalLengthMeters += piece;
+        }
+        return OptionalDouble.of(totalLengthMeters);
+    }
+
+    private List<Double> cableLengthPieces(PowerConnection connection) {
+        List<Double> pieces = new ArrayList<>();
+        Matcher matcher = CABLE_LENGTH_PATTERN.matcher(connection.cableLengthNotes());
+        while (matcher.find()) {
+            pieces.add(Double.parseDouble(matcher.group().replace(',', '.')));
+        }
+        return pieces;
+    }
+
+    private String cablePieceCountText(Map<Double, Integer> pieceCounts) {
+        List<String> rows = new ArrayList<>();
+        for (Map.Entry<Double, Integer> entry : pieceCounts.entrySet()) {
+            rows.add("%s m: %d tk".formatted(formatCablePieceLength(entry.getKey()), entry.getValue()));
+        }
+        return String.join(", ", rows);
+    }
+
+    private String formatCablePieceLength(double lengthMeters) {
+        if (Math.abs(lengthMeters - Math.rint(lengthMeters)) < 0.0001) {
+            return Integer.toString((int) Math.rint(lengthMeters));
+        }
+        return "%.1f".formatted(lengthMeters);
     }
 
     private static class CableTypeSummary {
         private double mapLengthMeters;
         private double notedLengthMeters;
         private boolean hasNotedLength;
+        private final Map<Double, Integer> pieceCounts = new TreeMap<>();
 
         void addMapLength(double lengthMeters) {
             mapLengthMeters += lengthMeters;
@@ -3016,6 +3048,12 @@ public class PancakePlannerApp extends Application {
         void addNotedLength(double lengthMeters) {
             notedLengthMeters += lengthMeters;
             hasNotedLength = true;
+        }
+
+        void addPieces(List<Double> pieces) {
+            for (double piece : pieces) {
+                pieceCounts.merge(piece, 1, Integer::sum);
+            }
         }
 
         double mapLengthMeters() {
@@ -3028,6 +3066,14 @@ public class PancakePlannerApp extends Application {
 
         boolean hasNotedLength() {
             return hasNotedLength;
+        }
+
+        boolean hasPieces() {
+            return !pieceCounts.isEmpty();
+        }
+
+        Map<Double, Integer> pieceCounts() {
+            return pieceCounts;
         }
     }
 
