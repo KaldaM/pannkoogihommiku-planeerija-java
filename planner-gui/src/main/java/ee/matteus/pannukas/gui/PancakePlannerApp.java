@@ -164,6 +164,9 @@ public class PancakePlannerApp extends Application {
     private ToggleButton measureButton;
     private ToggleButton showCablesButton;
     private ToggleButton showCableLabelsButton;
+    private ToggleButton show230VCablesButton;
+    private ToggleButton show16ACablesButton;
+    private ToggleButton show32ACablesButton;
     private Button addTentButton;
     private Button addPowerSourceButton;
     private Button addCustomObjectButton;
@@ -254,6 +257,10 @@ public class PancakePlannerApp extends Application {
         showCableLabelsButton.setTooltip(new Tooltip("Näitab või peidab kaablite tekstisildid"));
         showCableLabelsButton.setOnAction(event -> redrawMap());
 
+        show230VCablesButton = cableTypeToggle("230V", ConnectorType.SCHUKO_230V);
+        show16ACablesButton = cableTypeToggle("16A", ConnectorType.INDUSTRIAL_16A);
+        show32ACablesButton = cableTypeToggle("32A", ConnectorType.INDUSTRIAL_32A);
+
         measureButton = new ToggleButton("Mõõdulint");
         measureButton.setTooltip(new Tooltip("Mõõda kaardil vahemaid"));
         measureButton.setOnAction(event -> setMeasuringActive(measureButton.isSelected()));
@@ -285,11 +292,22 @@ public class PancakePlannerApp extends Application {
                 resetZoomButton,
                 showCablesButton,
                 showCableLabelsButton,
+                show230VCablesButton,
+                show16ACablesButton,
+                show32ACablesButton,
                 measureButton,
                 clearMeasurementsButton,
                 new Separator(),
                 saveStatusLabel
         );
+    }
+
+    private ToggleButton cableTypeToggle(String text, ConnectorType connectorType) {
+        ToggleButton button = new ToggleButton(text);
+        button.setSelected(true);
+        button.setTooltip(new Tooltip("Näitab või peidab kaardil %s kaablid".formatted(shortCableTypeName(connectorType))));
+        button.setOnAction(event -> redrawMap());
+        return button;
     }
 
     private SplitPane createContent() {
@@ -785,6 +803,14 @@ public class PancakePlannerApp extends Application {
         return showCableLabelsButton == null || showCableLabelsButton.isSelected();
     }
 
+    private boolean showCableType(ConnectorType connectorType) {
+        return switch (connectorType) {
+            case SCHUKO_230V -> show230VCablesButton == null || show230VCablesButton.isSelected();
+            case INDUSTRIAL_16A -> show16ACablesButton == null || show16ACablesButton.isSelected();
+            case INDUSTRIAL_32A -> show32ACablesButton == null || show32ACablesButton.isSelected();
+        };
+    }
+
     private HBox cableLegendRow(ConnectorType connectorType) {
         Line sample = new Line(0, 0, 34, 0);
         sample.setStroke(cableColor(connectorType));
@@ -805,6 +831,7 @@ public class PancakePlannerApp extends Application {
                 continue;
             }
             plan.findPowerConnectionForConsumer(tent.id())
+                    .filter(connection -> showCableType(connection.connectorType()))
                     .flatMap(connection -> plan.findObject(connection.sourceId())
                             .filter(PowerSource.class::isInstance)
                             .map(PowerSource.class::cast)
