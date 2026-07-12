@@ -110,6 +110,7 @@ public class PancakePlannerApp extends Application {
     private boolean mapDraggedSincePress;
     private Position measurementStart;
     private final List<Node> measurementNodes = new ArrayList<>();
+    private final List<MeasurementView> measurements = new ArrayList<>();
     private final Set<String> visibleGroups = new HashSet<>();
     private final Map<String, Boolean> sidebarSectionStates = new HashMap<>();
     private Set<String> knownGroups = new HashSet<>();
@@ -723,6 +724,7 @@ public class PancakePlannerApp extends Application {
             double pixelsPerMeter = Double.parseDouble(pixelsPerMeterField.getText().trim().replace(',', '.'));
             plan.setPixelsPerMeter(pixelsPerMeter);
             pixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
+            refreshMeasurementLabels();
             redrawMap();
             refreshSummary();
             markDirty();
@@ -761,6 +763,7 @@ public class PancakePlannerApp extends Application {
         }
         measurementStart = null;
         measurementNodes.clear();
+        measurements.clear();
         visibleGroups.clear();
         knownGroups.clear();
         planNameField.setText(plan.name());
@@ -1960,8 +1963,15 @@ public class PancakePlannerApp extends Application {
         measurementNodes.add(line);
         measurementNodes.add(endMarker);
         measurementNodes.add(distanceLabel);
+        measurements.add(new MeasurementView(measurementStart, end, distanceLabel));
         mapPane.getChildren().addAll(line, endMarker, distanceLabel);
         measurementStart = null;
+    }
+
+    private void refreshMeasurementLabels() {
+        for (MeasurementView measurement : measurements) {
+            measurement.distanceLabel().setText("%.2f m".formatted(distanceMeters(measurement.start(), measurement.end())));
+        }
     }
 
     private Circle createMeasurementMarker(Position point) {
@@ -2021,6 +2031,7 @@ public class PancakePlannerApp extends Application {
 
     private void clearMeasurements() {
         measurementNodes.clear();
+        measurements.clear();
         measurementStart = null;
         redrawMap();
     }
@@ -3053,6 +3064,9 @@ public class PancakePlannerApp extends Application {
             double mapLengthMeters,
             OptionalDouble notedLengthMeters
     ) {
+    }
+
+    private record MeasurementView(Position start, Position end, Label distanceLabel) {
     }
 
     private String cableNoteWarningText(PowerConnection connection) {
