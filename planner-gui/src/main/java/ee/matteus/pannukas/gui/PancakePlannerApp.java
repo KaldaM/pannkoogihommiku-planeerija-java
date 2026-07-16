@@ -91,6 +91,7 @@ public class PancakePlannerApp extends Application {
             .thenComparing(row -> row.source().name(), String.CASE_INSENSITIVE_ORDER);
     private static final double MIN_MAP_WIDTH = 760.0;
     private static final double MIN_MAP_HEIGHT = 560.0;
+    private static final double MAP_CLICK_DRAG_TOLERANCE_PX = 6.0;
 
     private final PlanFactory planFactory = new PlanFactory();
     private final PowerSummaryService powerSummaryService = new PowerSummaryService();
@@ -109,6 +110,8 @@ public class PancakePlannerApp extends Application {
     private boolean measuringActive;
     private boolean addingCablePoint;
     private boolean mapDraggedSincePress;
+    private double mapPressSceneX;
+    private double mapPressSceneY;
     private Position measurementStart;
     private final List<Node> measurementNodes = new ArrayList<>();
     private final List<MeasurementView> measurements = new ArrayList<>();
@@ -339,6 +342,16 @@ public class PancakePlannerApp extends Application {
         return button;
     }
 
+    private void updateMapDragState(double sceneX, double sceneY) {
+        if (mapDraggedSincePress) {
+            return;
+        }
+        double deltaX = sceneX - mapPressSceneX;
+        double deltaY = sceneY - mapPressSceneY;
+        mapDraggedSincePress = deltaX * deltaX + deltaY * deltaY
+                > MAP_CLICK_DRAG_TOLERANCE_PX * MAP_CLICK_DRAG_TOLERANCE_PX;
+    }
+
     private SplitPane createContent() {
         mapPane = new Pane();
         mapPane.setMinSize(MIN_MAP_WIDTH, MIN_MAP_HEIGHT);
@@ -348,8 +361,12 @@ public class PancakePlannerApp extends Application {
         mapPane.getTransforms().add(mapScale);
         mapImageView = new ImageView();
         mapImageView.setPreserveRatio(true);
-        mapPane.setOnMousePressed(event -> mapDraggedSincePress = false);
-        mapPane.setOnMouseDragged(event -> mapDraggedSincePress = true);
+        mapPane.setOnMousePressed(event -> {
+            mapDraggedSincePress = false;
+            mapPressSceneX = event.getSceneX();
+            mapPressSceneY = event.getSceneY();
+        });
+        mapPane.setOnMouseDragged(event -> updateMapDragState(event.getSceneX(), event.getSceneY()));
         mapPane.setOnMouseClicked(event -> {
             if (pendingTentPlacement && !mapDraggedSincePress) {
                 placeTent(new Position(event.getX(), event.getY()));
