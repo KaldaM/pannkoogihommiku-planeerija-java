@@ -184,6 +184,7 @@ public class PancakePlannerApp extends Application {
     private Tent pendingPowerSourceTent;
     private String pendingPlacementName;
     private String pendingPlacementGroupName;
+    private String pendingPlacementColorHex;
     private boolean pendingTentPlacement;
     private boolean pendingPowerSourcePlacement;
     private boolean pendingCustomObjectPlacement;
@@ -663,6 +664,7 @@ public class PancakePlannerApp extends Application {
         }
         pendingPlacementName = placementDetails.name();
         pendingPlacementGroupName = placementDetails.groupName();
+        pendingPlacementColorHex = placementDetails.colorHex();
 
         switch (selectedType) {
             case TENT -> addTent();
@@ -677,9 +679,13 @@ public class PancakePlannerApp extends Application {
         groupComboBox.setEditable(true);
         groupComboBox.getItems().addAll(existingGroupNames());
         groupComboBox.getSelectionModel().select("Määramata");
+        ColorPicker colorPicker = new ColorPicker(Color.web(placementType.defaultColorHex()));
         GridPane form = detailGrid();
         form.addRow(0, new Label("Nimi"), nameField);
         form.addRow(1, new Label("Grupp"), groupComboBox);
+        if (placementType.hasConfigurableColor()) {
+            form.addRow(2, new Label("Värv"), colorPicker);
+        }
 
         Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
         dialog.setTitle("Lisa objekt");
@@ -698,7 +704,7 @@ public class PancakePlannerApp extends Application {
         if (groupName.isBlank()) {
             groupName = "Määramata";
         }
-        return new PlacementDetails(name, groupName);
+        return new PlacementDetails(name, groupName, toHex(colorPicker.getValue()));
     }
 
     private List<String> existingGroupNames() {
@@ -726,6 +732,7 @@ public class PancakePlannerApp extends Application {
     private void placeTent(Position position) {
         Tent tent = new Tent(planFactory.newId(), placementNameOrDefault(PlacementType.TENT), position);
         tent.setGroupName(placementGroupNameOrDefault());
+        tent.setColorHex(placementColorHexOrDefault(PlacementType.TENT));
         plan.addObject(tent);
         clearPendingPlacementDetails();
         pendingTentPlacement = false;
@@ -777,6 +784,7 @@ public class PancakePlannerApp extends Application {
     private void placeCustomObject(Position position) {
         CustomObject object = new CustomObject(planFactory.newId(), placementNameOrDefault(PlacementType.CUSTOM_OBJECT), position);
         object.setGroupName(placementGroupNameOrDefault());
+        object.setColorHex(placementColorHexOrDefault(PlacementType.CUSTOM_OBJECT));
         plan.addObject(object);
         clearPendingPlacementDetails();
         pendingCustomObjectPlacement = false;
@@ -802,9 +810,17 @@ public class PancakePlannerApp extends Application {
         return pendingPlacementGroupName;
     }
 
+    private String placementColorHexOrDefault(PlacementType placementType) {
+        if (pendingPlacementColorHex == null || pendingPlacementColorHex.isBlank()) {
+            return placementType.defaultColorHex();
+        }
+        return pendingPlacementColorHex;
+    }
+
     private void clearPendingPlacementDetails() {
         pendingPlacementName = null;
         pendingPlacementGroupName = null;
+        pendingPlacementColorHex = null;
     }
 
     private void applyPlanName() {
@@ -3606,24 +3622,36 @@ public class PancakePlannerApp extends Application {
         }
     }
 
-    private record PlacementDetails(String name, String groupName) {
+    private record PlacementDetails(String name, String groupName, String colorHex) {
     }
 
     private enum PlacementType {
-        TENT("Telk", "Uus telk"),
-        POWER_SOURCE("Elektrikapp", "Uus kapp"),
-        CUSTOM_OBJECT("Objekt", "Uus objekt");
+        TENT("Telk", "Uus telk", "#e74c3c", true),
+        POWER_SOURCE("Elektrikapp", "Uus kapp", "#2563eb", false),
+        CUSTOM_OBJECT("Objekt", "Uus objekt", "#9ca3af", true);
 
         private final String label;
         private final String defaultName;
+        private final String defaultColorHex;
+        private final boolean configurableColor;
 
-        PlacementType(String label, String defaultName) {
+        PlacementType(String label, String defaultName, String defaultColorHex, boolean configurableColor) {
             this.label = label;
             this.defaultName = defaultName;
+            this.defaultColorHex = defaultColorHex;
+            this.configurableColor = configurableColor;
         }
 
         private String defaultName() {
             return defaultName;
+        }
+
+        private String defaultColorHex() {
+            return defaultColorHex;
+        }
+
+        private boolean hasConfigurableColor() {
+            return configurableColor;
         }
 
         @Override
