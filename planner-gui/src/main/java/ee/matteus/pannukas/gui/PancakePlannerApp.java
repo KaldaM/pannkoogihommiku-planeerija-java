@@ -119,6 +119,7 @@ public class PancakePlannerApp extends Application {
     private CheckBox showPowerSummaryCheckBox;
     private CheckBox showCableSummaryCheckBox;
     private CheckBox showGroupSummaryCheckBox;
+    private Label mapToolStatusLabel;
     private Label planTitleLabel;
     private Label saveStatusLabel;
     private VBox groupFilterPanel;
@@ -281,6 +282,10 @@ public class PancakePlannerApp extends Application {
         clearCableRouteButton.setTooltip(new Tooltip("Eemaldab valitud telgi voolukaabli vahepunktid"));
         clearCableRouteButton.setOnAction(event -> clearSelectedCableRoute());
 
+        mapToolStatusLabel = new Label();
+        mapToolStatusLabel.setStyle("-fx-text-fill: #374151;");
+        updateMapToolStatus();
+
         saveStatusLabel = new Label("Salvestatud");
         saveStatusLabel.setStyle("-fx-text-fill: #166534; -fx-font-weight: bold;");
         planTitleLabel = new Label();
@@ -312,6 +317,8 @@ public class PancakePlannerApp extends Application {
                 clearMeasurementsButton,
                 addCablePointButton,
                 clearCableRouteButton,
+                new Separator(),
+                mapToolStatusLabel,
                 new Separator(),
                 planTitleLabel,
                 saveStatusLabel
@@ -661,6 +668,7 @@ public class PancakePlannerApp extends Application {
         pendingCustomObjectPlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
+        updateMapToolStatus();
     }
 
     private void placeTent(Position position) {
@@ -669,6 +677,7 @@ public class PancakePlannerApp extends Application {
         plan.addObject(tent);
         pendingTentPlacement = false;
         refreshPlacementButtons();
+        updateMapToolStatus();
         refreshGroupFilters();
         selectObject(tent);
         refreshSummary();
@@ -681,6 +690,7 @@ public class PancakePlannerApp extends Application {
         pendingCustomObjectPlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
+        updateMapToolStatus();
     }
 
     private void placePowerSource(Position position) {
@@ -693,6 +703,7 @@ public class PancakePlannerApp extends Application {
         plan.addObject(source);
         pendingPowerSourcePlacement = false;
         refreshPlacementButtons();
+        updateMapToolStatus();
         refreshGroupFilters();
         selectObject(source);
         refreshSummary();
@@ -705,6 +716,7 @@ public class PancakePlannerApp extends Application {
         pendingPowerSourcePlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
+        updateMapToolStatus();
     }
 
     private void placeCustomObject(Position position) {
@@ -713,6 +725,7 @@ public class PancakePlannerApp extends Application {
         plan.addObject(object);
         pendingCustomObjectPlacement = false;
         refreshPlacementButtons();
+        updateMapToolStatus();
         refreshGroupFilters();
         selectObject(object);
         refreshSummary();
@@ -871,6 +884,7 @@ public class PancakePlannerApp extends Application {
             pixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
         }
         refreshPlacementButtons();
+        updateMapToolStatus();
         refreshGroupFilters();
         redrawMap();
         refreshSummary();
@@ -913,6 +927,37 @@ public class PancakePlannerApp extends Application {
         saveStatusLabel.setStyle(unsavedChanges
                 ? "-fx-text-fill: #b45309; -fx-font-weight: bold;"
                 : "-fx-text-fill: #166534; -fx-font-weight: bold;");
+    }
+
+    private void updateMapToolStatus() {
+        if (mapToolStatusLabel == null) {
+            return;
+        }
+        if (pendingPowerSourceTent != null) {
+            mapToolStatusLabel.setText("Vali kaardilt elektrikapp");
+            return;
+        }
+        if (pendingTentPlacement) {
+            mapToolStatusLabel.setText("Paiguta telk kaardile");
+            return;
+        }
+        if (pendingPowerSourcePlacement) {
+            mapToolStatusLabel.setText("Paiguta elektrikapp kaardile");
+            return;
+        }
+        if (pendingCustomObjectPlacement) {
+            mapToolStatusLabel.setText("Paiguta objekt kaardile");
+            return;
+        }
+        if (addingCablePoint) {
+            mapToolStatusLabel.setText("Lisa kaabli punkt kaardile");
+            return;
+        }
+        if (measuringActive) {
+            mapToolStatusLabel.setText("Mõõdulint aktiivne");
+            return;
+        }
+        mapToolStatusLabel.setText("Vali tööriist või objekt");
     }
 
     private boolean confirmDiscardUnsavedChanges() {
@@ -1606,6 +1651,7 @@ public class PancakePlannerApp extends Application {
             if (!tentHasPowerConnection) {
                 addCablePointButton.setSelected(false);
                 addingCablePoint = false;
+                updateMapToolStatus();
             }
         }
         if (clearCableRouteButton != null) {
@@ -1733,12 +1779,15 @@ public class PancakePlannerApp extends Application {
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
         refreshPlacementButtons();
+        updateMapToolStatus();
         if (pendingPowerSourceTent != null && pendingPowerSourceTent.id().equals(tent.id())) {
             pendingPowerSourceTent = null;
+            updateMapToolStatus();
             refreshDetails();
             return;
         }
         pendingPowerSourceTent = tent;
+        updateMapToolStatus();
         refreshDetails();
     }
 
@@ -1752,6 +1801,7 @@ public class PancakePlannerApp extends Application {
             return;
         }
         pendingPowerSourceTent = null;
+        updateMapToolStatus();
         selectedObject = tent;
         refreshDetails();
         redrawMap();
@@ -1937,6 +1987,7 @@ public class PancakePlannerApp extends Application {
             refreshPlacementButtons();
         }
         measurementStart = null;
+        updateMapToolStatus();
     }
 
     private void setAddingCablePoint(boolean addingCablePoint) {
@@ -1954,6 +2005,7 @@ public class PancakePlannerApp extends Application {
         }
         measurementStart = null;
         refreshDetails();
+        updateMapToolStatus();
     }
 
     private void addCableRoutePoint(Position point) {
@@ -2065,6 +2117,7 @@ public class PancakePlannerApp extends Application {
         pendingCustomObjectPlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
+        updateMapToolStatus();
     }
 
     private void handleMeasureClick(Position point) {
