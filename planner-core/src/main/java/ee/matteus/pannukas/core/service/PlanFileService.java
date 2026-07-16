@@ -5,6 +5,8 @@ import ee.matteus.pannukas.core.model.CustomObject;
 import ee.matteus.pannukas.core.model.CustomObjectShape;
 import ee.matteus.pannukas.core.model.Equipment;
 import ee.matteus.pannukas.core.model.EventPlan;
+import ee.matteus.pannukas.core.model.MarkerObject;
+import ee.matteus.pannukas.core.model.MarkerType;
 import ee.matteus.pannukas.core.model.PlannerObject;
 import ee.matteus.pannukas.core.model.Position;
 import ee.matteus.pannukas.core.model.PowerConnection;
@@ -119,6 +121,8 @@ public class PlanFileService {
             writeTent(properties, prefix, tent);
         } else if (object instanceof PowerSource source) {
             writePowerSource(properties, prefix, source);
+        } else if (object instanceof MarkerObject markerObject) {
+            writeMarkerObject(properties, prefix, markerObject);
         } else if (object instanceof TextObject textObject) {
             writeTextObject(properties, prefix, textObject);
         } else if (object instanceof CustomObject customObject) {
@@ -168,11 +172,19 @@ public class PlanFileService {
         properties.setProperty(prefix + "colorHex", object.colorHex());
     }
 
+    private void writeMarkerObject(Properties properties, String prefix, MarkerObject object) {
+        properties.setProperty(prefix + "type", "MARKER_OBJECT");
+        properties.setProperty(prefix + "markerType", object.markerType().name());
+        properties.setProperty(prefix + "colorHex", object.colorHex());
+    }
+
     private PlannerObject readObject(Properties properties, String prefix) {
         String type = properties.getProperty(prefix + "type", "TENT");
         PlannerObject object;
         if ("POWER_SOURCE".equals(type)) {
             object = readPowerSource(properties, prefix);
+        } else if ("MARKER_OBJECT".equals(type)) {
+            object = readMarkerObject(properties, prefix);
         } else if ("TEXT_OBJECT".equals(type)) {
             object = readTextObject(properties, prefix);
         } else if ("CUSTOM_OBJECT".equals(type)) {
@@ -258,6 +270,17 @@ public class PlanFileService {
                 readPosition(properties, prefix)
         );
         object.setColorHex(properties.getProperty(prefix + "colorHex", "#111827"));
+        return object;
+    }
+
+    private MarkerObject readMarkerObject(Properties properties, String prefix) {
+        MarkerObject object = new MarkerObject(
+                properties.getProperty(prefix + "id", ""),
+                properties.getProperty(prefix + "name", "Marker"),
+                readPosition(properties, prefix)
+        );
+        object.setMarkerType(MarkerType.valueOf(properties.getProperty(prefix + "markerType", MarkerType.WC.name())));
+        object.setColorHex(properties.getProperty(prefix + "colorHex", "#0f766e"));
         return object;
     }
 
