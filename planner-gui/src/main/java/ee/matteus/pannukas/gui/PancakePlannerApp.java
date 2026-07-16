@@ -177,9 +177,8 @@ public class PancakePlannerApp extends Application {
     private ToggleButton show16ACablesButton;
     private ToggleButton show32ACablesButton;
     private ToggleButton show63ACablesButton;
-    private Button addTentButton;
-    private Button addPowerSourceButton;
-    private Button addCustomObjectButton;
+    private ComboBox<PlacementType> placementTypeComboBox;
+    private Button addPlacementButton;
     private PlannerObject selectedObject;
     private Tent pendingPowerSourceTent;
     private boolean pendingTentPlacement;
@@ -218,14 +217,14 @@ public class PancakePlannerApp extends Application {
         Button newPlanButton = new Button("Uus plaan");
         newPlanButton.setOnAction(event -> newPlan());
 
-        addTentButton = new Button("Lisa telk");
-        addTentButton.setOnAction(event -> addTent());
+        placementTypeComboBox = new ComboBox<>();
+        placementTypeComboBox.getItems().addAll(PlacementType.values());
+        placementTypeComboBox.getSelectionModel().select(PlacementType.TENT);
+        placementTypeComboBox.setPrefWidth(120);
 
-        addPowerSourceButton = new Button("Lisa kapp");
-        addPowerSourceButton.setOnAction(event -> addPowerSource());
-
-        addCustomObjectButton = new Button("Lisa objekt");
-        addCustomObjectButton.setOnAction(event -> addCustomObject());
+        addPlacementButton = new Button("Lisa");
+        addPlacementButton.setTooltip(new Tooltip("Vali tüüp ja vajuta kaardile, kuhu objekt lisada"));
+        addPlacementButton.setOnAction(event -> toggleSelectedPlacement());
 
         Button saveButton = new Button("Salvesta");
         saveButton.setOnAction(event -> savePlan());
@@ -296,9 +295,9 @@ public class PancakePlannerApp extends Application {
                 exportSummaryButton,
                 planSettingsButton,
                 new Separator(),
-                addTentButton,
-                addPowerSourceButton,
-                addCustomObjectButton,
+                new Label("Lisa"),
+                placementTypeComboBox,
+                addPlacementButton,
                 new Separator(),
                 zoomInButton,
                 zoomOutButton,
@@ -636,6 +635,24 @@ public class PancakePlannerApp extends Application {
                 sidebarSectionStates.put(stateKey, newValue)
         );
         return pane;
+    }
+
+    private void toggleSelectedPlacement() {
+        if (isPlacementPending()) {
+            cancelPlacement();
+            return;
+        }
+
+        PlacementType selectedType = placementTypeComboBox.getSelectionModel().getSelectedItem();
+        if (selectedType == null) {
+            selectedType = PlacementType.TENT;
+        }
+
+        switch (selectedType) {
+            case TENT -> addTent();
+            case POWER_SOURCE -> addPowerSource();
+            case CUSTOM_OBJECT -> addCustomObject();
+        }
     }
 
     private void addTent() {
@@ -2022,15 +2039,32 @@ public class PancakePlannerApp extends Application {
     }
 
     private void refreshPlacementButtons() {
-        if (addTentButton != null) {
-            addTentButton.setText(pendingTentPlacement ? "Tühista telk" : "Lisa telk");
+        boolean placementPending = isPlacementPending();
+        if (placementTypeComboBox != null) {
+            placementTypeComboBox.setDisable(placementPending);
+            if (pendingTentPlacement) {
+                placementTypeComboBox.getSelectionModel().select(PlacementType.TENT);
+            } else if (pendingPowerSourcePlacement) {
+                placementTypeComboBox.getSelectionModel().select(PlacementType.POWER_SOURCE);
+            } else if (pendingCustomObjectPlacement) {
+                placementTypeComboBox.getSelectionModel().select(PlacementType.CUSTOM_OBJECT);
+            }
         }
-        if (addPowerSourceButton != null) {
-            addPowerSourceButton.setText(pendingPowerSourcePlacement ? "Tühista kapp" : "Lisa kapp");
+        if (addPlacementButton != null) {
+            addPlacementButton.setText(placementPending ? "Tühista" : "Lisa");
         }
-        if (addCustomObjectButton != null) {
-            addCustomObjectButton.setText(pendingCustomObjectPlacement ? "Tühista objekt" : "Lisa objekt");
-        }
+    }
+
+    private boolean isPlacementPending() {
+        return pendingTentPlacement || pendingPowerSourcePlacement || pendingCustomObjectPlacement;
+    }
+
+    private void cancelPlacement() {
+        pendingTentPlacement = false;
+        pendingPowerSourcePlacement = false;
+        pendingCustomObjectPlacement = false;
+        pendingPowerSourceTent = null;
+        refreshPlacementButtons();
     }
 
     private void handleMeasureClick(Position point) {
@@ -3436,6 +3470,23 @@ public class PancakePlannerApp extends Application {
         @Override
         public String toString() {
             return name;
+        }
+    }
+
+    private enum PlacementType {
+        TENT("Telk"),
+        POWER_SOURCE("Elektrikapp"),
+        CUSTOM_OBJECT("Objekt");
+
+        private final String label;
+
+        PlacementType(String label) {
+            this.label = label;
+        }
+
+        @Override
+        public String toString() {
+            return label;
         }
     }
 
