@@ -182,6 +182,7 @@ public class PancakePlannerApp extends Application {
     private Button addPlacementButton;
     private PlannerObject selectedObject;
     private Tent pendingPowerSourceTent;
+    private String pendingPlacementName;
     private boolean pendingTentPlacement;
     private boolean pendingPowerSourcePlacement;
     private boolean pendingCustomObjectPlacement;
@@ -655,11 +656,34 @@ public class PancakePlannerApp extends Application {
             selectedType = PlacementType.TENT;
         }
 
+        String placementName = askPlacementName(selectedType);
+        if (placementName == null) {
+            return;
+        }
+        pendingPlacementName = placementName;
+
         switch (selectedType) {
             case TENT -> addTent();
             case POWER_SOURCE -> addPowerSource();
             case CUSTOM_OBJECT -> addCustomObject();
         }
+    }
+
+    private String askPlacementName(PlacementType placementType) {
+        TextInputDialog dialog = new TextInputDialog(placementType.defaultName());
+        dialog.setTitle("Lisa objekt");
+        dialog.setHeaderText("Sisesta lisatava objekti nimi");
+        dialog.setContentText("Nimi:");
+
+        String name = dialog.showAndWait().orElse(null);
+        if (name == null) {
+            return null;
+        }
+        name = name.trim();
+        if (name.isBlank()) {
+            return placementType.defaultName();
+        }
+        return name;
     }
 
     private void addTent() {
@@ -672,9 +696,10 @@ public class PancakePlannerApp extends Application {
     }
 
     private void placeTent(Position position) {
-        Tent tent = new Tent(planFactory.newId(), "Uus telk", position);
+        Tent tent = new Tent(planFactory.newId(), placementNameOrDefault(PlacementType.TENT), position);
         tent.setGroupName("Määramata");
         plan.addObject(tent);
+        pendingPlacementName = null;
         pendingTentPlacement = false;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -694,13 +719,14 @@ public class PancakePlannerApp extends Application {
     }
 
     private void placePowerSource(Position position) {
-        PowerSource source = new PowerSource(planFactory.newId(), "Uus kapp", position);
+        PowerSource source = new PowerSource(planFactory.newId(), placementNameOrDefault(PlacementType.POWER_SOURCE), position);
         source.addOutlet(new PowerOutlet(
                 planFactory.newId(),
                 ConnectorType.SCHUKO_230V,
                 ConnectorType.SCHUKO_230V.defaultCapacityWatts()
         ));
         plan.addObject(source);
+        pendingPlacementName = null;
         pendingPowerSourcePlacement = false;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -720,9 +746,10 @@ public class PancakePlannerApp extends Application {
     }
 
     private void placeCustomObject(Position position) {
-        CustomObject object = new CustomObject(planFactory.newId(), "Uus objekt", position);
+        CustomObject object = new CustomObject(planFactory.newId(), placementNameOrDefault(PlacementType.CUSTOM_OBJECT), position);
         object.setGroupName("Määramata");
         plan.addObject(object);
+        pendingPlacementName = null;
         pendingCustomObjectPlacement = false;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -730,6 +757,13 @@ public class PancakePlannerApp extends Application {
         selectObject(object);
         refreshSummary();
         markDirty();
+    }
+
+    private String placementNameOrDefault(PlacementType placementType) {
+        if (pendingPlacementName == null || pendingPlacementName.isBlank()) {
+            return placementType.defaultName();
+        }
+        return pendingPlacementName;
     }
 
     private void applyPlanName() {
@@ -861,6 +895,7 @@ public class PancakePlannerApp extends Application {
     private void resetPlanViewState() {
         selectedObject = null;
         pendingPowerSourceTent = null;
+        pendingPlacementName = null;
         pendingTentPlacement = false;
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
@@ -1778,6 +1813,7 @@ public class PancakePlannerApp extends Application {
         pendingTentPlacement = false;
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
+        pendingPlacementName = null;
         refreshPlacementButtons();
         updateMapToolStatus();
         if (pendingPowerSourceTent != null && pendingPowerSourceTent.id().equals(tent.id())) {
@@ -1984,6 +2020,7 @@ public class PancakePlannerApp extends Application {
             pendingTentPlacement = false;
             pendingPowerSourcePlacement = false;
             pendingCustomObjectPlacement = false;
+            pendingPlacementName = null;
             refreshPlacementButtons();
         }
         measurementStart = null;
@@ -2000,6 +2037,7 @@ public class PancakePlannerApp extends Application {
             pendingTentPlacement = false;
             pendingPowerSourcePlacement = false;
             pendingCustomObjectPlacement = false;
+            pendingPlacementName = null;
             pendingPowerSourceTent = null;
             refreshPlacementButtons();
         }
@@ -2116,6 +2154,7 @@ public class PancakePlannerApp extends Application {
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
         pendingPowerSourceTent = null;
+        pendingPlacementName = null;
         refreshPlacementButtons();
         updateMapToolStatus();
     }
@@ -3527,14 +3566,20 @@ public class PancakePlannerApp extends Application {
     }
 
     private enum PlacementType {
-        TENT("Telk"),
-        POWER_SOURCE("Elektrikapp"),
-        CUSTOM_OBJECT("Objekt");
+        TENT("Telk", "Uus telk"),
+        POWER_SOURCE("Elektrikapp", "Uus kapp"),
+        CUSTOM_OBJECT("Objekt", "Uus objekt");
 
         private final String label;
+        private final String defaultName;
 
-        PlacementType(String label) {
+        PlacementType(String label, String defaultName) {
             this.label = label;
+            this.defaultName = defaultName;
+        }
+
+        private String defaultName() {
+            return defaultName;
         }
 
         @Override
