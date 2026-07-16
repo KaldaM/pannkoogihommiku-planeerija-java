@@ -185,6 +185,8 @@ public class PancakePlannerApp extends Application {
     private String pendingPlacementName;
     private String pendingPlacementGroupName;
     private String pendingPlacementColorHex;
+    private Double pendingPlacementWidthMeters;
+    private Double pendingPlacementHeightMeters;
     private boolean pendingTentPlacement;
     private boolean pendingPowerSourcePlacement;
     private boolean pendingCustomObjectPlacement;
@@ -665,6 +667,8 @@ public class PancakePlannerApp extends Application {
         pendingPlacementName = placementDetails.name();
         pendingPlacementGroupName = placementDetails.groupName();
         pendingPlacementColorHex = placementDetails.colorHex();
+        pendingPlacementWidthMeters = placementDetails.widthMeters();
+        pendingPlacementHeightMeters = placementDetails.heightMeters();
 
         switch (selectedType) {
             case TENT -> addTent();
@@ -680,11 +684,17 @@ public class PancakePlannerApp extends Application {
         groupComboBox.getItems().addAll(existingGroupNames());
         groupComboBox.getSelectionModel().select("Määramata");
         ColorPicker colorPicker = new ColorPicker(Color.web(placementType.defaultColorHex()));
+        TextField tentWidthField = new TextField("3");
+        TextField tentHeightField = new TextField("3");
         GridPane form = detailGrid();
         form.addRow(0, new Label("Nimi"), nameField);
         form.addRow(1, new Label("Grupp"), groupComboBox);
+        if (placementType == PlacementType.TENT) {
+            form.addRow(2, new Label("Laius m"), tentWidthField);
+            form.addRow(3, new Label("Pikkus m"), tentHeightField);
+        }
         if (placementType.hasConfigurableColor()) {
-            form.addRow(2, new Label("Värv"), colorPicker);
+            form.addRow(placementType == PlacementType.TENT ? 4 : 2, new Label("Värv"), colorPicker);
         }
 
         Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
@@ -704,7 +714,24 @@ public class PancakePlannerApp extends Application {
         if (groupName.isBlank()) {
             groupName = "Määramata";
         }
-        return new PlacementDetails(name, groupName, toHex(colorPicker.getValue()));
+        double widthMeters = 3.0;
+        double heightMeters = 3.0;
+        if (placementType == PlacementType.TENT) {
+            try {
+                widthMeters = Double.parseDouble(tentWidthField.getText().trim().replace(',', '.'));
+                heightMeters = Double.parseDouble(tentHeightField.getText().trim().replace(',', '.'));
+                if (widthMeters <= 0 || heightMeters <= 0) {
+                    throw new IllegalArgumentException("Telgi mõõdud peavad olema positiivsed.");
+                }
+            } catch (NumberFormatException exception) {
+                showError("Objekti ei lisatud", "Sisesta telgi laius ja pikkus arvuna meetrites.");
+                return null;
+            } catch (IllegalArgumentException exception) {
+                showError("Objekti ei lisatud", exception.getMessage());
+                return null;
+            }
+        }
+        return new PlacementDetails(name, groupName, toHex(colorPicker.getValue()), widthMeters, heightMeters);
     }
 
     private List<String> existingGroupNames() {
@@ -733,6 +760,7 @@ public class PancakePlannerApp extends Application {
         Tent tent = new Tent(planFactory.newId(), placementNameOrDefault(PlacementType.TENT), position);
         tent.setGroupName(placementGroupNameOrDefault());
         tent.setColorHex(placementColorHexOrDefault(PlacementType.TENT));
+        tent.setSizeMeters(pendingPlacementWidthMetersOrDefault(), pendingPlacementHeightMetersOrDefault());
         plan.addObject(tent);
         clearPendingPlacementDetails();
         pendingTentPlacement = false;
@@ -817,10 +845,20 @@ public class PancakePlannerApp extends Application {
         return pendingPlacementColorHex;
     }
 
+    private double pendingPlacementWidthMetersOrDefault() {
+        return pendingPlacementWidthMeters == null ? 3.0 : pendingPlacementWidthMeters;
+    }
+
+    private double pendingPlacementHeightMetersOrDefault() {
+        return pendingPlacementHeightMeters == null ? 3.0 : pendingPlacementHeightMeters;
+    }
+
     private void clearPendingPlacementDetails() {
         pendingPlacementName = null;
         pendingPlacementGroupName = null;
         pendingPlacementColorHex = null;
+        pendingPlacementWidthMeters = null;
+        pendingPlacementHeightMeters = null;
     }
 
     private void applyPlanName() {
@@ -3622,7 +3660,7 @@ public class PancakePlannerApp extends Application {
         }
     }
 
-    private record PlacementDetails(String name, String groupName, String colorHex) {
+    private record PlacementDetails(String name, String groupName, String colorHex, double widthMeters, double heightMeters) {
     }
 
     private enum PlacementType {
