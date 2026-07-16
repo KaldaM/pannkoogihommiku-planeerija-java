@@ -673,10 +673,13 @@ public class PancakePlannerApp extends Application {
 
     private PlacementDetails askPlacementDetails(PlacementType placementType) {
         TextField nameField = new TextField(placementType.defaultName());
-        TextField groupField = new TextField("Määramata");
+        ComboBox<String> groupComboBox = new ComboBox<>();
+        groupComboBox.setEditable(true);
+        groupComboBox.getItems().addAll(existingGroupNames());
+        groupComboBox.getSelectionModel().select("Määramata");
         GridPane form = detailGrid();
         form.addRow(0, new Label("Nimi"), nameField);
-        form.addRow(1, new Label("Grupp"), groupField);
+        form.addRow(1, new Label("Grupp"), groupComboBox);
 
         Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
         dialog.setTitle("Lisa objekt");
@@ -691,11 +694,24 @@ public class PancakePlannerApp extends Application {
         if (name.isBlank()) {
             name = placementType.defaultName();
         }
-        String groupName = groupField.getText().trim();
+        String groupName = groupComboBox.getEditor().getText().trim();
         if (groupName.isBlank()) {
             groupName = "Määramata";
         }
         return new PlacementDetails(name, groupName);
+    }
+
+    private List<String> existingGroupNames() {
+        Set<String> groupNames = new HashSet<>(knownGroups);
+        if (plan != null) {
+            for (PlannerObject object : plan.objects()) {
+                groupNames.add(groupNameForFilter(object));
+            }
+        }
+        groupNames.add("Määramata");
+        return groupNames.stream()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
     }
 
     private void addTent() {
