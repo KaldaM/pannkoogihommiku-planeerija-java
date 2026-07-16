@@ -11,6 +11,7 @@ import ee.matteus.pannukas.core.model.PowerConnection;
 import ee.matteus.pannukas.core.model.PowerConsumer;
 import ee.matteus.pannukas.core.model.PowerOutlet;
 import ee.matteus.pannukas.core.model.PowerSource;
+import ee.matteus.pannukas.core.model.TextObject;
 import ee.matteus.pannukas.core.model.Tent;
 import ee.matteus.pannukas.core.service.PlanFactory;
 import ee.matteus.pannukas.core.service.PlanFileService;
@@ -141,6 +142,7 @@ public class PancakePlannerApp extends Application {
     private ColorPicker tentColorPicker;
     private ComboBox<CustomObjectShape> customObjectShapeComboBox;
     private ColorPicker customObjectColorPicker;
+    private ColorPicker textObjectColorPicker;
     private Label customObjectWidthLabel;
     private Label customObjectHeightLabel;
     private TextField customObjectWidthField;
@@ -166,6 +168,7 @@ public class PancakePlannerApp extends Application {
     private Button updateOutletButton;
     private Button removeOutletButton;
     private VBox customObjectPanel;
+    private VBox textObjectPanel;
     private VBox tentPanel;
     private VBox powerConnectionPanel;
     private VBox equipmentPanel;
@@ -194,6 +197,7 @@ public class PancakePlannerApp extends Application {
     private boolean pendingTentPlacement;
     private boolean pendingPowerSourcePlacement;
     private boolean pendingCustomObjectPlacement;
+    private boolean pendingTextObjectPlacement;
     private boolean unsavedChanges;
     private Stage stage;
 
@@ -380,6 +384,10 @@ public class PancakePlannerApp extends Application {
                 placeCustomObject(new Position(event.getX(), event.getY()));
                 return;
             }
+            if (pendingTextObjectPlacement && !mapDraggedSincePress) {
+                placeTextObject(new Position(event.getX(), event.getY()));
+                return;
+            }
             if (addingCablePoint && !mapDraggedSincePress) {
                 addCableRoutePoint(new Position(event.getX(), event.getY()));
                 return;
@@ -501,6 +509,7 @@ public class PancakePlannerApp extends Application {
         customObjectShapeComboBox.setConverter(customObjectShapeConverter());
         customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
         customObjectColorPicker = new ColorPicker();
+        textObjectColorPicker = new ColorPicker();
         customObjectWidthLabel = new Label("Objekti laius m");
         customObjectHeightLabel = new Label("Objekti pikkus m");
         customObjectWidthField = new TextField();
@@ -582,6 +591,10 @@ public class PancakePlannerApp extends Application {
         customObjectForm.addRow(4, customObjectRotationLabel, customObjectRotationField);
         customObjectPanel = new VBox(8, sectionLabel("Objekt"), customObjectForm);
 
+        GridPane textObjectForm = detailGrid();
+        textObjectForm.addRow(0, new Label("Värv"), textObjectColorPicker);
+        textObjectPanel = new VBox(8, sectionLabel("Tekst"), textObjectForm);
+
         GridPane tentForm = detailGrid();
         tentForm.addRow(0, new Label("Laius m"), tentWidthField);
         tentForm.addRow(1, new Label("Pikkus m"), tentHeightField);
@@ -631,6 +644,7 @@ public class PancakePlannerApp extends Application {
                 10,
                 baseForm,
                 customObjectPanel,
+                textObjectPanel,
                 tentPanel,
                 powerConnectionPanel,
                 equipmentSection,
@@ -693,6 +707,7 @@ public class PancakePlannerApp extends Application {
             case TENT -> addTent();
             case POWER_SOURCE -> addPowerSource();
             case CUSTOM_OBJECT -> addCustomObject();
+            case TEXT_OBJECT -> addTextObject();
         }
     }
 
@@ -736,7 +751,7 @@ public class PancakePlannerApp extends Application {
             int colorRow = switch (placementType) {
                 case TENT -> 4;
                 case CUSTOM_OBJECT -> 5;
-                case POWER_SOURCE -> 2;
+                case POWER_SOURCE, TEXT_OBJECT -> 2;
             };
             form.addRow(colorRow, new Label("Värv"), colorPicker);
         }
@@ -780,26 +795,24 @@ public class PancakePlannerApp extends Application {
             if (shape == null) {
                 shape = CustomObjectShape.SQUARE;
             }
-            if (shape != CustomObjectShape.TEXT) {
-                try {
-                    widthMeters = Double.parseDouble(objectWidthField.getText().trim().replace(',', '.'));
-                    heightMeters = shape == CustomObjectShape.CIRCLE
-                            ? widthMeters
-                            : Double.parseDouble(objectHeightField.getText().trim().replace(',', '.'));
-                    if (widthMeters <= 0 || heightMeters <= 0) {
-                        throw new IllegalArgumentException("Objekti mõõdud peavad olema positiivsed.");
-                    }
-                } catch (NumberFormatException exception) {
-                    if (shape == CustomObjectShape.CIRCLE) {
-                        showError("Objekti ei lisatud", "Sisesta objekti läbimõõt arvuna meetrites.");
-                    } else {
-                        showError("Objekti ei lisatud", "Sisesta objekti laius ja pikkus arvuna meetrites.");
-                    }
-                    return null;
-                } catch (IllegalArgumentException exception) {
-                    showError("Objekti ei lisatud", exception.getMessage());
-                    return null;
+            try {
+                widthMeters = Double.parseDouble(objectWidthField.getText().trim().replace(',', '.'));
+                heightMeters = shape == CustomObjectShape.CIRCLE
+                        ? widthMeters
+                        : Double.parseDouble(objectHeightField.getText().trim().replace(',', '.'));
+                if (widthMeters <= 0 || heightMeters <= 0) {
+                    throw new IllegalArgumentException("Objekti mõõdud peavad olema positiivsed.");
                 }
+            } catch (NumberFormatException exception) {
+                if (shape == CustomObjectShape.CIRCLE) {
+                    showError("Objekti ei lisatud", "Sisesta objekti läbimõõt arvuna meetrites.");
+                } else {
+                    showError("Objekti ei lisatud", "Sisesta objekti laius ja pikkus arvuna meetrites.");
+                }
+                return null;
+            } catch (IllegalArgumentException exception) {
+                showError("Objekti ei lisatud", exception.getMessage());
+                return null;
             }
         }
         return new PlacementDetails(name, groupName, toHex(colorPicker.getValue()), widthMeters, heightMeters, shape);
@@ -814,16 +827,15 @@ public class PancakePlannerApp extends Application {
     ) {
         CustomObjectShape selectedShape = shapeComboBox.getSelectionModel().getSelectedItem();
         boolean circleSelected = selectedShape == CustomObjectShape.CIRCLE;
-        boolean textSelected = selectedShape == CustomObjectShape.TEXT;
         objectWidthLabel.setText(circleSelected ? "Läbimõõt m" : "Laius m");
-        objectWidthLabel.setVisible(!textSelected);
-        objectWidthLabel.setManaged(!textSelected);
-        objectWidthField.setVisible(!textSelected);
-        objectWidthField.setManaged(!textSelected);
-        objectHeightLabel.setVisible(!circleSelected && !textSelected);
-        objectHeightLabel.setManaged(!circleSelected && !textSelected);
-        objectHeightField.setVisible(!circleSelected && !textSelected);
-        objectHeightField.setManaged(!circleSelected && !textSelected);
+        objectWidthLabel.setVisible(true);
+        objectWidthLabel.setManaged(true);
+        objectWidthField.setVisible(true);
+        objectWidthField.setManaged(true);
+        objectHeightLabel.setVisible(!circleSelected);
+        objectHeightLabel.setManaged(!circleSelected);
+        objectHeightField.setVisible(!circleSelected);
+        objectHeightField.setManaged(!circleSelected);
     }
 
     private List<String> existingGroupNames() {
@@ -843,6 +855,7 @@ public class PancakePlannerApp extends Application {
         pendingTentPlacement = !pendingTentPlacement;
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
+        pendingTextObjectPlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -868,6 +881,7 @@ public class PancakePlannerApp extends Application {
         pendingPowerSourcePlacement = !pendingPowerSourcePlacement;
         pendingTentPlacement = false;
         pendingCustomObjectPlacement = false;
+        pendingTextObjectPlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -896,6 +910,7 @@ public class PancakePlannerApp extends Application {
         pendingCustomObjectPlacement = !pendingCustomObjectPlacement;
         pendingTentPlacement = false;
         pendingPowerSourcePlacement = false;
+        pendingTextObjectPlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -910,6 +925,31 @@ public class PancakePlannerApp extends Application {
         plan.addObject(object);
         clearPendingPlacementDetails();
         pendingCustomObjectPlacement = false;
+        refreshPlacementButtons();
+        updateMapToolStatus();
+        refreshGroupFilters();
+        selectObject(object);
+        refreshSummary();
+        markDirty();
+    }
+
+    private void addTextObject() {
+        pendingTextObjectPlacement = !pendingTextObjectPlacement;
+        pendingTentPlacement = false;
+        pendingPowerSourcePlacement = false;
+        pendingCustomObjectPlacement = false;
+        pendingPowerSourceTent = null;
+        refreshPlacementButtons();
+        updateMapToolStatus();
+    }
+
+    private void placeTextObject(Position position) {
+        TextObject object = new TextObject(planFactory.newId(), placementNameOrDefault(PlacementType.TEXT_OBJECT), position);
+        object.setGroupName(placementGroupNameOrDefault());
+        object.setColorHex(placementColorHexOrDefault(PlacementType.TEXT_OBJECT));
+        plan.addObject(object);
+        clearPendingPlacementDetails();
+        pendingTextObjectPlacement = false;
         refreshPlacementButtons();
         updateMapToolStatus();
         refreshGroupFilters();
@@ -1101,6 +1141,7 @@ public class PancakePlannerApp extends Application {
         pendingTentPlacement = false;
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
+        pendingTextObjectPlacement = false;
         measuringActive = false;
         addingCablePoint = false;
         if (measureButton != null) {
@@ -1186,6 +1227,10 @@ public class PancakePlannerApp extends Application {
             mapToolStatusLabel.setText("Paiguta objekt kaardile");
             return;
         }
+        if (pendingTextObjectPlacement) {
+            mapToolStatusLabel.setText("Paiguta tekst kaardile");
+            return;
+        }
         if (addingCablePoint) {
             mapToolStatusLabel.setText("Lisa kaabli punkt kaardile");
             return;
@@ -1230,6 +1275,8 @@ public class PancakePlannerApp extends Application {
                 drawTent(tent);
             } else if (object instanceof PowerSource source) {
                 drawPowerSource(source);
+            } else if (object instanceof TextObject textObject) {
+                drawTextObject(textObject);
             } else if (object instanceof CustomObject customObject) {
                 drawCustomObject(customObject);
             }
@@ -1399,6 +1446,12 @@ public class PancakePlannerApp extends Application {
             if (pendingCustomObjectPlacement) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
                 placeCustomObject(new Position(mapPoint.getX(), mapPoint.getY()));
+                event.consume();
+                return;
+            }
+            if (pendingTextObjectPlacement) {
+                Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                placeTextObject(new Position(mapPoint.getX(), mapPoint.getY()));
                 event.consume();
                 return;
             }
@@ -1649,20 +1702,6 @@ public class PancakePlannerApp extends Application {
     }
 
     private void drawCustomObject(CustomObject object) {
-        if (object.shape() == CustomObjectShape.TEXT) {
-            Label textLabel = new Label(object.name());
-            textLabel.setLayoutX(object.position().x());
-            textLabel.setLayoutY(object.position().y());
-            textLabel.setTextFill(Color.web(object.colorHex()));
-            textLabel.setStyle(isSelected(object)
-                    ? "-fx-background-color: rgba(255,255,255,0.85); -fx-border-color: #111827; -fx-border-width: 2; -fx-padding: 3 6 3 6; -fx-font-weight: bold;"
-                    : "-fx-background-color: rgba(255,255,255,0.7); -fx-padding: 3 6 3 6; -fx-font-weight: bold;");
-            makeSelectable(textLabel, object);
-            makeDraggable(textLabel, object);
-            mapPane.getChildren().add(textLabel);
-            return;
-        }
-
         javafx.scene.shape.Shape shape;
         double widthPixels = metersToPixels(object.widthMeters());
         double heightPixels = metersToPixels(object.heightMeters());
@@ -1695,6 +1734,19 @@ public class PancakePlannerApp extends Application {
         mapPane.getChildren().addAll(shape, label);
     }
 
+    private void drawTextObject(TextObject object) {
+        Label textLabel = new Label(object.name());
+        textLabel.setLayoutX(object.position().x());
+        textLabel.setLayoutY(object.position().y());
+        textLabel.setTextFill(Color.web(object.colorHex()));
+        textLabel.setStyle(isSelected(object)
+                ? "-fx-background-color: rgba(255,255,255,0.85); -fx-border-color: #111827; -fx-border-width: 2; -fx-padding: 3 6 3 6; -fx-font-weight: bold;"
+                : "-fx-background-color: rgba(255,255,255,0.7); -fx-padding: 3 6 3 6; -fx-font-weight: bold;");
+        makeSelectable(textLabel, object);
+        makeDraggable(textLabel, object);
+        mapPane.getChildren().add(textLabel);
+    }
+
     private void makeSelectable(Node node, PlannerObject object) {
         node.setOnMouseClicked(event -> {
             if (pendingTentPlacement) {
@@ -1712,6 +1764,12 @@ public class PancakePlannerApp extends Application {
             if (pendingCustomObjectPlacement) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
                 placeCustomObject(new Position(mapPoint.getX(), mapPoint.getY()));
+                event.consume();
+                return;
+            }
+            if (pendingTextObjectPlacement) {
+                Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                placeTextObject(new Position(mapPoint.getX(), mapPoint.getY()));
                 event.consume();
                 return;
             }
@@ -1860,6 +1918,7 @@ public class PancakePlannerApp extends Application {
         boolean tentSelected = selectedObject instanceof Tent;
         boolean powerSourceSelected = selectedObject instanceof PowerSource;
         boolean customObjectSelected = selectedObject instanceof CustomObject;
+        boolean textObjectSelected = selectedObject instanceof TextObject;
         nameField.setDisable(!hasSelection);
         groupField.setDisable(!hasSelection);
         notesArea.setDisable(!hasSelection);
@@ -1871,6 +1930,7 @@ public class PancakePlannerApp extends Application {
                 : null);
         customObjectShapeComboBox.setDisable(!customObjectSelected);
         customObjectColorPicker.setDisable(!customObjectSelected);
+        textObjectColorPicker.setDisable(!textObjectSelected);
         tentWidthField.setDisable(!tentSelected);
         tentHeightField.setDisable(!tentSelected);
         tentRotationField.setDisable(!tentSelected);
@@ -1915,6 +1975,7 @@ public class PancakePlannerApp extends Application {
                 ? "Tühista kapi valik"
                 : "Vali kapp kaardilt");
         setSectionVisible(customObjectPanel, customObjectSelected);
+        setSectionVisible(textObjectPanel, textObjectSelected);
         setSectionVisible(tentPanel, tentSelected);
         setSectionVisible(powerConnectionPanel, tentSelected);
         setSectionVisible(equipmentSection, tentSelected);
@@ -1934,6 +1995,7 @@ public class PancakePlannerApp extends Application {
             tentColorPicker.setValue(Color.web("#e74c3c"));
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
+            textObjectColorPicker.setValue(Color.web("#111827"));
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
@@ -1957,6 +2019,7 @@ public class PancakePlannerApp extends Application {
             tentColorPicker.setValue(Color.web(tent.colorHex()));
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
+            textObjectColorPicker.setValue(Color.web("#111827"));
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
@@ -1978,6 +2041,19 @@ public class PancakePlannerApp extends Application {
             customObjectRotationField.setText(formatDegrees(customObject.rotationDegrees()));
             cableLengthNotesField.clear();
             cableNotesField.clear();
+        } else if (selectedObject instanceof TextObject textObject) {
+            tentWidthField.clear();
+            tentHeightField.clear();
+            tentRotationField.clear();
+            tentColorPicker.setValue(Color.web("#2563eb"));
+            customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
+            customObjectColorPicker.setValue(Color.web("#9ca3af"));
+            textObjectColorPicker.setValue(Color.web(textObject.colorHex()));
+            customObjectWidthField.clear();
+            customObjectHeightField.clear();
+            customObjectRotationField.clear();
+            cableLengthNotesField.clear();
+            cableNotesField.clear();
         } else {
             tentWidthField.clear();
             tentHeightField.clear();
@@ -1985,6 +2061,7 @@ public class PancakePlannerApp extends Application {
             tentColorPicker.setValue(Color.web("#2563eb"));
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
+            textObjectColorPicker.setValue(Color.web("#111827"));
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
@@ -2001,24 +2078,23 @@ public class PancakePlannerApp extends Application {
         boolean customObjectSelected = selectedObject instanceof CustomObject;
         CustomObjectShape selectedShape = customObjectShapeComboBox.getSelectionModel().getSelectedItem();
         boolean circleSelected = selectedShape == CustomObjectShape.CIRCLE;
-        boolean textSelected = selectedShape == CustomObjectShape.TEXT;
         customObjectWidthLabel.setText(circleSelected ? "Objekti läbimõõt m" : "Objekti laius m");
-        customObjectWidthLabel.setVisible(!textSelected);
-        customObjectWidthLabel.setManaged(!textSelected);
-        customObjectWidthField.setVisible(!textSelected);
-        customObjectWidthField.setManaged(!textSelected);
-        customObjectHeightLabel.setVisible(!circleSelected && !textSelected);
-        customObjectHeightLabel.setManaged(!circleSelected && !textSelected);
-        customObjectHeightField.setVisible(!circleSelected && !textSelected);
-        customObjectHeightField.setManaged(!circleSelected && !textSelected);
-        customObjectWidthField.setDisable(!customObjectSelected || textSelected);
-        customObjectHeightField.setDisable(!customObjectSelected || circleSelected || textSelected);
-        customObjectRotationLabel.setVisible(!circleSelected && !textSelected);
-        customObjectRotationLabel.setManaged(!circleSelected && !textSelected);
-        customObjectRotationField.setVisible(!circleSelected && !textSelected);
-        customObjectRotationField.setManaged(!circleSelected && !textSelected);
-        customObjectRotationField.setDisable(!customObjectSelected || circleSelected || textSelected);
-        if (customObjectSelected && !circleSelected && !textSelected && customObjectRotationField.getText().isBlank()) {
+        customObjectWidthLabel.setVisible(true);
+        customObjectWidthLabel.setManaged(true);
+        customObjectWidthField.setVisible(true);
+        customObjectWidthField.setManaged(true);
+        customObjectHeightLabel.setVisible(!circleSelected);
+        customObjectHeightLabel.setManaged(!circleSelected);
+        customObjectHeightField.setVisible(!circleSelected);
+        customObjectHeightField.setManaged(!circleSelected);
+        customObjectWidthField.setDisable(!customObjectSelected);
+        customObjectHeightField.setDisable(!customObjectSelected || circleSelected);
+        customObjectRotationLabel.setVisible(!circleSelected);
+        customObjectRotationLabel.setManaged(!circleSelected);
+        customObjectRotationField.setVisible(!circleSelected);
+        customObjectRotationField.setManaged(!circleSelected);
+        customObjectRotationField.setDisable(!customObjectSelected || circleSelected);
+        if (customObjectSelected && !circleSelected && customObjectRotationField.getText().isBlank()) {
             customObjectRotationField.setText("0");
         }
     }
@@ -2035,6 +2111,7 @@ public class PancakePlannerApp extends Application {
         pendingTentPlacement = false;
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
+        pendingTextObjectPlacement = false;
         clearPendingPlacementDetails();
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -2131,6 +2208,9 @@ public class PancakePlannerApp extends Application {
         if (object instanceof PowerSource) {
             return "Elektrikapp";
         }
+        if (object instanceof TextObject) {
+            return "Tekst";
+        }
         if (object instanceof CustomObject) {
             return "Objekt";
         }
@@ -2167,6 +2247,8 @@ public class PancakePlannerApp extends Application {
             CustomObjectShape selectedShape = customObjectShapeComboBox.getSelectionModel().getSelectedItem();
             customObject.setShape(selectedShape);
             customObject.setColorHex(toHex(customObjectColorPicker.getValue()));
+        } else if (selectedObject instanceof TextObject textObject) {
+            textObject.setColorHex(toHex(textObjectColorPicker.getValue()));
         }
         setAddingCablePoint(false);
         if (addCablePointButton != null) {
@@ -2242,6 +2324,7 @@ public class PancakePlannerApp extends Application {
             pendingTentPlacement = false;
             pendingPowerSourcePlacement = false;
             pendingCustomObjectPlacement = false;
+            pendingTextObjectPlacement = false;
             clearPendingPlacementDetails();
             refreshPlacementButtons();
         }
@@ -2259,6 +2342,7 @@ public class PancakePlannerApp extends Application {
             pendingTentPlacement = false;
             pendingPowerSourcePlacement = false;
             pendingCustomObjectPlacement = false;
+            pendingTextObjectPlacement = false;
             clearPendingPlacementDetails();
             pendingPowerSourceTent = null;
             refreshPlacementButtons();
@@ -2360,6 +2444,8 @@ public class PancakePlannerApp extends Application {
                 placementTypeComboBox.getSelectionModel().select(PlacementType.POWER_SOURCE);
             } else if (pendingCustomObjectPlacement) {
                 placementTypeComboBox.getSelectionModel().select(PlacementType.CUSTOM_OBJECT);
+            } else if (pendingTextObjectPlacement) {
+                placementTypeComboBox.getSelectionModel().select(PlacementType.TEXT_OBJECT);
             }
         }
         if (addPlacementButton != null) {
@@ -2368,13 +2454,14 @@ public class PancakePlannerApp extends Application {
     }
 
     private boolean isPlacementPending() {
-        return pendingTentPlacement || pendingPowerSourcePlacement || pendingCustomObjectPlacement;
+        return pendingTentPlacement || pendingPowerSourcePlacement || pendingCustomObjectPlacement || pendingTextObjectPlacement;
     }
 
     private void cancelPlacement() {
         pendingTentPlacement = false;
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
+        pendingTextObjectPlacement = false;
         pendingPowerSourceTent = null;
         clearPendingPlacementDetails();
         refreshPlacementButtons();
@@ -2553,9 +2640,6 @@ public class PancakePlannerApp extends Application {
     private boolean applyCustomObjectSize(CustomObject object) {
         try {
             CustomObjectShape selectedShape = customObjectShapeComboBox.getSelectionModel().getSelectedItem();
-            if (selectedShape == CustomObjectShape.TEXT) {
-                return true;
-            }
             double widthMeters = Double.parseDouble(customObjectWidthField.getText().trim().replace(',', '.'));
             if (selectedShape == CustomObjectShape.CIRCLE) {
                 object.setSizeMeters(widthMeters, widthMeters);
@@ -2579,7 +2663,7 @@ public class PancakePlannerApp extends Application {
 
     private boolean applyCustomObjectRotation(CustomObject object) {
         CustomObjectShape selectedShape = customObjectShapeComboBox.getSelectionModel().getSelectedItem();
-        if (selectedShape == CustomObjectShape.CIRCLE || selectedShape == CustomObjectShape.TEXT) {
+        if (selectedShape == CustomObjectShape.CIRCLE) {
             object.setRotationDegrees(0);
             return true;
         }
@@ -3804,7 +3888,8 @@ public class PancakePlannerApp extends Application {
     private enum PlacementType {
         TENT("Telk", "Uus telk", "#e74c3c", true),
         POWER_SOURCE("Elektrikapp", "Uus kapp", "#2563eb", false),
-        CUSTOM_OBJECT("Objekt", "Uus objekt", "#9ca3af", true);
+        CUSTOM_OBJECT("Objekt", "Uus objekt", "#9ca3af", true),
+        TEXT_OBJECT("Tekst", "Uus tekst", "#111827", true);
 
         private final String label;
         private final String defaultName;

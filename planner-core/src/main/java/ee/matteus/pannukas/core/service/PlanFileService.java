@@ -10,6 +10,7 @@ import ee.matteus.pannukas.core.model.Position;
 import ee.matteus.pannukas.core.model.PowerConnection;
 import ee.matteus.pannukas.core.model.PowerOutlet;
 import ee.matteus.pannukas.core.model.PowerSource;
+import ee.matteus.pannukas.core.model.TextObject;
 import ee.matteus.pannukas.core.model.Tent;
 
 import java.io.IOException;
@@ -118,6 +119,8 @@ public class PlanFileService {
             writeTent(properties, prefix, tent);
         } else if (object instanceof PowerSource source) {
             writePowerSource(properties, prefix, source);
+        } else if (object instanceof TextObject textObject) {
+            writeTextObject(properties, prefix, textObject);
         } else if (object instanceof CustomObject customObject) {
             writeCustomObject(properties, prefix, customObject);
         }
@@ -160,11 +163,18 @@ public class PlanFileService {
         properties.setProperty(prefix + "rotationDegrees", Double.toString(object.rotationDegrees()));
     }
 
+    private void writeTextObject(Properties properties, String prefix, TextObject object) {
+        properties.setProperty(prefix + "type", "TEXT_OBJECT");
+        properties.setProperty(prefix + "colorHex", object.colorHex());
+    }
+
     private PlannerObject readObject(Properties properties, String prefix) {
         String type = properties.getProperty(prefix + "type", "TENT");
         PlannerObject object;
         if ("POWER_SOURCE".equals(type)) {
             object = readPowerSource(properties, prefix);
+        } else if ("TEXT_OBJECT".equals(type)) {
+            object = readTextObject(properties, prefix);
         } else if ("CUSTOM_OBJECT".equals(type)) {
             object = readCustomObject(properties, prefix);
         } else {
@@ -221,19 +231,33 @@ public class PlanFileService {
         return source;
     }
 
-    private CustomObject readCustomObject(Properties properties, String prefix) {
+    private PlannerObject readCustomObject(Properties properties, String prefix) {
+        String shapeName = properties.getProperty(prefix + "shape", CustomObjectShape.SQUARE.name());
+        if ("TEXT".equals(shapeName)) {
+            return readTextObject(properties, prefix);
+        }
         CustomObject object = new CustomObject(
                 properties.getProperty(prefix + "id", ""),
                 properties.getProperty(prefix + "name", "Objekt"),
                 readPosition(properties, prefix)
         );
-        object.setShape(CustomObjectShape.valueOf(properties.getProperty(prefix + "shape", CustomObjectShape.SQUARE.name())));
+        object.setShape(CustomObjectShape.valueOf(shapeName));
         object.setColorHex(properties.getProperty(prefix + "colorHex", "#9ca3af"));
         object.setSizeMeters(
                 doubleValue(properties, prefix + "widthMeters", 1.0),
                 doubleValue(properties, prefix + "heightMeters", 1.0)
         );
         object.setRotationDegrees(doubleValue(properties, prefix + "rotationDegrees", 0));
+        return object;
+    }
+
+    private TextObject readTextObject(Properties properties, String prefix) {
+        TextObject object = new TextObject(
+                properties.getProperty(prefix + "id", ""),
+                properties.getProperty(prefix + "name", "Tekst"),
+                readPosition(properties, prefix)
+        );
+        object.setColorHex(properties.getProperty(prefix + "colorHex", "#111827"));
         return object;
     }
 
