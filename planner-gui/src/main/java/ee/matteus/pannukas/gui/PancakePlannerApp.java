@@ -713,14 +713,14 @@ public class PancakePlannerApp extends Application {
         Label objectHeightLabel = new Label("Pikkus m");
         TextField objectWidthField = new TextField("1");
         TextField objectHeightField = new TextField("1");
-        shapeComboBox.setOnAction(event -> {
-            boolean circleSelected = shapeComboBox.getSelectionModel().getSelectedItem() == CustomObjectShape.CIRCLE;
-            objectWidthLabel.setText(circleSelected ? "Läbimõõt m" : "Laius m");
-            objectHeightLabel.setVisible(!circleSelected);
-            objectHeightLabel.setManaged(!circleSelected);
-            objectHeightField.setVisible(!circleSelected);
-            objectHeightField.setManaged(!circleSelected);
-        });
+        shapeComboBox.setOnAction(event -> updatePlacementObjectSizeFields(
+                shapeComboBox,
+                objectWidthLabel,
+                objectWidthField,
+                objectHeightLabel,
+                objectHeightField
+        ));
+        updatePlacementObjectSizeFields(shapeComboBox, objectWidthLabel, objectWidthField, objectHeightLabel, objectHeightField);
         GridPane form = detailGrid();
         form.addRow(0, new Label("Nimi"), nameField);
         form.addRow(1, new Label("Grupp"), groupComboBox);
@@ -780,27 +780,50 @@ public class PancakePlannerApp extends Application {
             if (shape == null) {
                 shape = CustomObjectShape.SQUARE;
             }
-            try {
-                widthMeters = Double.parseDouble(objectWidthField.getText().trim().replace(',', '.'));
-                heightMeters = shape == CustomObjectShape.CIRCLE
-                        ? widthMeters
-                        : Double.parseDouble(objectHeightField.getText().trim().replace(',', '.'));
-                if (widthMeters <= 0 || heightMeters <= 0) {
-                    throw new IllegalArgumentException("Objekti mõõdud peavad olema positiivsed.");
+            if (shape != CustomObjectShape.TEXT) {
+                try {
+                    widthMeters = Double.parseDouble(objectWidthField.getText().trim().replace(',', '.'));
+                    heightMeters = shape == CustomObjectShape.CIRCLE
+                            ? widthMeters
+                            : Double.parseDouble(objectHeightField.getText().trim().replace(',', '.'));
+                    if (widthMeters <= 0 || heightMeters <= 0) {
+                        throw new IllegalArgumentException("Objekti mõõdud peavad olema positiivsed.");
+                    }
+                } catch (NumberFormatException exception) {
+                    if (shape == CustomObjectShape.CIRCLE) {
+                        showError("Objekti ei lisatud", "Sisesta objekti läbimõõt arvuna meetrites.");
+                    } else {
+                        showError("Objekti ei lisatud", "Sisesta objekti laius ja pikkus arvuna meetrites.");
+                    }
+                    return null;
+                } catch (IllegalArgumentException exception) {
+                    showError("Objekti ei lisatud", exception.getMessage());
+                    return null;
                 }
-            } catch (NumberFormatException exception) {
-                if (shape == CustomObjectShape.CIRCLE) {
-                    showError("Objekti ei lisatud", "Sisesta objekti läbimõõt arvuna meetrites.");
-                } else {
-                    showError("Objekti ei lisatud", "Sisesta objekti laius ja pikkus arvuna meetrites.");
-                }
-                return null;
-            } catch (IllegalArgumentException exception) {
-                showError("Objekti ei lisatud", exception.getMessage());
-                return null;
             }
         }
         return new PlacementDetails(name, groupName, toHex(colorPicker.getValue()), widthMeters, heightMeters, shape);
+    }
+
+    private void updatePlacementObjectSizeFields(
+            ComboBox<CustomObjectShape> shapeComboBox,
+            Label objectWidthLabel,
+            TextField objectWidthField,
+            Label objectHeightLabel,
+            TextField objectHeightField
+    ) {
+        CustomObjectShape selectedShape = shapeComboBox.getSelectionModel().getSelectedItem();
+        boolean circleSelected = selectedShape == CustomObjectShape.CIRCLE;
+        boolean textSelected = selectedShape == CustomObjectShape.TEXT;
+        objectWidthLabel.setText(circleSelected ? "Läbimõõt m" : "Laius m");
+        objectWidthLabel.setVisible(!textSelected);
+        objectWidthLabel.setManaged(!textSelected);
+        objectWidthField.setVisible(!textSelected);
+        objectWidthField.setManaged(!textSelected);
+        objectHeightLabel.setVisible(!circleSelected && !textSelected);
+        objectHeightLabel.setManaged(!circleSelected && !textSelected);
+        objectHeightField.setVisible(!circleSelected && !textSelected);
+        objectHeightField.setManaged(!circleSelected && !textSelected);
     }
 
     private List<String> existingGroupNames() {
@@ -1626,6 +1649,20 @@ public class PancakePlannerApp extends Application {
     }
 
     private void drawCustomObject(CustomObject object) {
+        if (object.shape() == CustomObjectShape.TEXT) {
+            Label textLabel = new Label(object.name());
+            textLabel.setLayoutX(object.position().x());
+            textLabel.setLayoutY(object.position().y());
+            textLabel.setTextFill(Color.web(object.colorHex()));
+            textLabel.setStyle(isSelected(object)
+                    ? "-fx-background-color: rgba(255,255,255,0.85); -fx-border-color: #111827; -fx-border-width: 2; -fx-padding: 3 6 3 6; -fx-font-weight: bold;"
+                    : "-fx-background-color: rgba(255,255,255,0.7); -fx-padding: 3 6 3 6; -fx-font-weight: bold;");
+            makeSelectable(textLabel, object);
+            makeDraggable(textLabel, object);
+            mapPane.getChildren().add(textLabel);
+            return;
+        }
+
         javafx.scene.shape.Shape shape;
         double widthPixels = metersToPixels(object.widthMeters());
         double heightPixels = metersToPixels(object.heightMeters());
@@ -1962,20 +1999,26 @@ public class PancakePlannerApp extends Application {
 
     private void updateCustomObjectSizeFields() {
         boolean customObjectSelected = selectedObject instanceof CustomObject;
-        boolean circleSelected = customObjectShapeComboBox.getSelectionModel().getSelectedItem() == CustomObjectShape.CIRCLE;
+        CustomObjectShape selectedShape = customObjectShapeComboBox.getSelectionModel().getSelectedItem();
+        boolean circleSelected = selectedShape == CustomObjectShape.CIRCLE;
+        boolean textSelected = selectedShape == CustomObjectShape.TEXT;
         customObjectWidthLabel.setText(circleSelected ? "Objekti läbimõõt m" : "Objekti laius m");
-        customObjectHeightLabel.setVisible(!circleSelected);
-        customObjectHeightLabel.setManaged(!circleSelected);
-        customObjectHeightField.setVisible(!circleSelected);
-        customObjectHeightField.setManaged(!circleSelected);
-        customObjectWidthField.setDisable(!customObjectSelected);
-        customObjectHeightField.setDisable(!customObjectSelected || circleSelected);
-        customObjectRotationLabel.setVisible(!circleSelected);
-        customObjectRotationLabel.setManaged(!circleSelected);
-        customObjectRotationField.setVisible(!circleSelected);
-        customObjectRotationField.setManaged(!circleSelected);
-        customObjectRotationField.setDisable(!customObjectSelected || circleSelected);
-        if (customObjectSelected && !circleSelected && customObjectRotationField.getText().isBlank()) {
+        customObjectWidthLabel.setVisible(!textSelected);
+        customObjectWidthLabel.setManaged(!textSelected);
+        customObjectWidthField.setVisible(!textSelected);
+        customObjectWidthField.setManaged(!textSelected);
+        customObjectHeightLabel.setVisible(!circleSelected && !textSelected);
+        customObjectHeightLabel.setManaged(!circleSelected && !textSelected);
+        customObjectHeightField.setVisible(!circleSelected && !textSelected);
+        customObjectHeightField.setManaged(!circleSelected && !textSelected);
+        customObjectWidthField.setDisable(!customObjectSelected || textSelected);
+        customObjectHeightField.setDisable(!customObjectSelected || circleSelected || textSelected);
+        customObjectRotationLabel.setVisible(!circleSelected && !textSelected);
+        customObjectRotationLabel.setManaged(!circleSelected && !textSelected);
+        customObjectRotationField.setVisible(!circleSelected && !textSelected);
+        customObjectRotationField.setManaged(!circleSelected && !textSelected);
+        customObjectRotationField.setDisable(!customObjectSelected || circleSelected || textSelected);
+        if (customObjectSelected && !circleSelected && !textSelected && customObjectRotationField.getText().isBlank()) {
             customObjectRotationField.setText("0");
         }
     }
@@ -2510,6 +2553,9 @@ public class PancakePlannerApp extends Application {
     private boolean applyCustomObjectSize(CustomObject object) {
         try {
             CustomObjectShape selectedShape = customObjectShapeComboBox.getSelectionModel().getSelectedItem();
+            if (selectedShape == CustomObjectShape.TEXT) {
+                return true;
+            }
             double widthMeters = Double.parseDouble(customObjectWidthField.getText().trim().replace(',', '.'));
             if (selectedShape == CustomObjectShape.CIRCLE) {
                 object.setSizeMeters(widthMeters, widthMeters);
@@ -2532,7 +2578,8 @@ public class PancakePlannerApp extends Application {
     }
 
     private boolean applyCustomObjectRotation(CustomObject object) {
-        if (customObjectShapeComboBox.getSelectionModel().getSelectedItem() == CustomObjectShape.CIRCLE) {
+        CustomObjectShape selectedShape = customObjectShapeComboBox.getSelectionModel().getSelectedItem();
+        if (selectedShape == CustomObjectShape.CIRCLE || selectedShape == CustomObjectShape.TEXT) {
             object.setRotationDegrees(0);
             return true;
         }
