@@ -183,6 +183,7 @@ public class PancakePlannerApp extends Application {
     private PlannerObject selectedObject;
     private Tent pendingPowerSourceTent;
     private String pendingPlacementName;
+    private String pendingPlacementGroupName;
     private boolean pendingTentPlacement;
     private boolean pendingPowerSourcePlacement;
     private boolean pendingCustomObjectPlacement;
@@ -656,11 +657,12 @@ public class PancakePlannerApp extends Application {
             selectedType = PlacementType.TENT;
         }
 
-        String placementName = askPlacementName(selectedType);
-        if (placementName == null) {
+        PlacementDetails placementDetails = askPlacementDetails(selectedType);
+        if (placementDetails == null) {
             return;
         }
-        pendingPlacementName = placementName;
+        pendingPlacementName = placementDetails.name();
+        pendingPlacementGroupName = placementDetails.groupName();
 
         switch (selectedType) {
             case TENT -> addTent();
@@ -669,21 +671,31 @@ public class PancakePlannerApp extends Application {
         }
     }
 
-    private String askPlacementName(PlacementType placementType) {
-        TextInputDialog dialog = new TextInputDialog(placementType.defaultName());
-        dialog.setTitle("Lisa objekt");
-        dialog.setHeaderText("Sisesta lisatava objekti nimi");
-        dialog.setContentText("Nimi:");
+    private PlacementDetails askPlacementDetails(PlacementType placementType) {
+        TextField nameField = new TextField(placementType.defaultName());
+        TextField groupField = new TextField("Määramata");
+        GridPane form = detailGrid();
+        form.addRow(0, new Label("Nimi"), nameField);
+        form.addRow(1, new Label("Grupp"), groupField);
 
-        String name = dialog.showAndWait().orElse(null);
-        if (name == null) {
+        Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
+        dialog.setTitle("Lisa objekt");
+        dialog.setHeaderText("Sisesta lisatava objekti andmed");
+        dialog.getDialogPane().setContent(form);
+
+        if (dialog.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
             return null;
         }
-        name = name.trim();
+
+        String name = nameField.getText().trim();
         if (name.isBlank()) {
-            return placementType.defaultName();
+            name = placementType.defaultName();
         }
-        return name;
+        String groupName = groupField.getText().trim();
+        if (groupName.isBlank()) {
+            groupName = "Määramata";
+        }
+        return new PlacementDetails(name, groupName);
     }
 
     private void addTent() {
@@ -697,9 +709,9 @@ public class PancakePlannerApp extends Application {
 
     private void placeTent(Position position) {
         Tent tent = new Tent(planFactory.newId(), placementNameOrDefault(PlacementType.TENT), position);
-        tent.setGroupName("Määramata");
+        tent.setGroupName(placementGroupNameOrDefault());
         plan.addObject(tent);
-        pendingPlacementName = null;
+        clearPendingPlacementDetails();
         pendingTentPlacement = false;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -725,8 +737,9 @@ public class PancakePlannerApp extends Application {
                 ConnectorType.SCHUKO_230V,
                 ConnectorType.SCHUKO_230V.defaultCapacityWatts()
         ));
+        source.setGroupName(placementGroupNameOrDefault());
         plan.addObject(source);
-        pendingPlacementName = null;
+        clearPendingPlacementDetails();
         pendingPowerSourcePlacement = false;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -747,9 +760,9 @@ public class PancakePlannerApp extends Application {
 
     private void placeCustomObject(Position position) {
         CustomObject object = new CustomObject(planFactory.newId(), placementNameOrDefault(PlacementType.CUSTOM_OBJECT), position);
-        object.setGroupName("Määramata");
+        object.setGroupName(placementGroupNameOrDefault());
         plan.addObject(object);
-        pendingPlacementName = null;
+        clearPendingPlacementDetails();
         pendingCustomObjectPlacement = false;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -764,6 +777,18 @@ public class PancakePlannerApp extends Application {
             return placementType.defaultName();
         }
         return pendingPlacementName;
+    }
+
+    private String placementGroupNameOrDefault() {
+        if (pendingPlacementGroupName == null || pendingPlacementGroupName.isBlank()) {
+            return "Määramata";
+        }
+        return pendingPlacementGroupName;
+    }
+
+    private void clearPendingPlacementDetails() {
+        pendingPlacementName = null;
+        pendingPlacementGroupName = null;
     }
 
     private void applyPlanName() {
@@ -895,7 +920,7 @@ public class PancakePlannerApp extends Application {
     private void resetPlanViewState() {
         selectedObject = null;
         pendingPowerSourceTent = null;
-        pendingPlacementName = null;
+        clearPendingPlacementDetails();
         pendingTentPlacement = false;
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
@@ -1813,7 +1838,7 @@ public class PancakePlannerApp extends Application {
         pendingTentPlacement = false;
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
-        pendingPlacementName = null;
+        clearPendingPlacementDetails();
         refreshPlacementButtons();
         updateMapToolStatus();
         if (pendingPowerSourceTent != null && pendingPowerSourceTent.id().equals(tent.id())) {
@@ -2020,7 +2045,7 @@ public class PancakePlannerApp extends Application {
             pendingTentPlacement = false;
             pendingPowerSourcePlacement = false;
             pendingCustomObjectPlacement = false;
-            pendingPlacementName = null;
+            clearPendingPlacementDetails();
             refreshPlacementButtons();
         }
         measurementStart = null;
@@ -2037,7 +2062,7 @@ public class PancakePlannerApp extends Application {
             pendingTentPlacement = false;
             pendingPowerSourcePlacement = false;
             pendingCustomObjectPlacement = false;
-            pendingPlacementName = null;
+            clearPendingPlacementDetails();
             pendingPowerSourceTent = null;
             refreshPlacementButtons();
         }
@@ -2154,7 +2179,7 @@ public class PancakePlannerApp extends Application {
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
         pendingPowerSourceTent = null;
-        pendingPlacementName = null;
+        clearPendingPlacementDetails();
         refreshPlacementButtons();
         updateMapToolStatus();
     }
@@ -3563,6 +3588,9 @@ public class PancakePlannerApp extends Application {
         public String toString() {
             return name;
         }
+    }
+
+    private record PlacementDetails(String name, String groupName) {
     }
 
     private enum PlacementType {
