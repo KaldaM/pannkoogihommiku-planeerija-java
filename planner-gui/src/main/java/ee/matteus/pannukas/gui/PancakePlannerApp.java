@@ -1877,6 +1877,8 @@ public class PancakePlannerApp extends Application {
             case SECURITY -> securityIcon();
             case INFO -> infoIcon();
             case START_FINISH -> startFinishIcon();
+            case SAUNA -> saunaIcon();
+            case MEMBER -> memberIcon();
         });
         return icon;
     }
@@ -1925,6 +1927,34 @@ public class PancakePlannerApp extends Application {
         );
         flag.setFill(Color.WHITE);
         return List.of(pole, flag);
+    }
+
+    private List<Node> saunaIcon() {
+        Polygon roof = new Polygon(
+                6.0, 14.0,
+                14.0, 7.0,
+                22.0, 14.0
+        );
+        roof.setFill(Color.WHITE);
+        Rectangle house = new Rectangle(8, 14, 12, 8);
+        house.setFill(Color.WHITE);
+        Line steamOne = new Line(10, 5, 10, 10);
+        Line steamTwo = new Line(14, 4, 14, 9);
+        Line steamThree = new Line(18, 5, 18, 10);
+        for (Line steam : List.of(steamOne, steamTwo, steamThree)) {
+            steam.setStroke(Color.WHITE);
+            steam.setStrokeWidth(1.5);
+        }
+        return List.of(steamOne, steamTwo, steamThree, roof, house);
+    }
+
+    private List<Node> memberIcon() {
+        Circle head = new Circle(14, 8, 4, Color.WHITE);
+        Rectangle body = new Rectangle(9, 14, 10, 9);
+        body.setArcWidth(6);
+        body.setArcHeight(6);
+        body.setFill(Color.WHITE);
+        return List.of(head, body);
     }
 
     private void makeSelectable(Node node, PlannerObject object) {

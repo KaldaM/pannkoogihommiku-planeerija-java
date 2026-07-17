@@ -4,7 +4,9 @@ public enum MarkerType {
     WC("WC"),
     SECURITY("Turva"),
     INFO("Info"),
-    START_FINISH("Start/finish");
+    START_FINISH("Start/finish"),
+    SAUNA("Saun/tünnisaun"),
+    MEMBER("Liige");
 
     private final String displayName;
 
