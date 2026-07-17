@@ -756,6 +756,22 @@ public class PancakePlannerApp extends Application {
         markerTypeComboBox.getItems().addAll(MarkerType.values());
         markerTypeComboBox.setConverter(markerTypeConverter());
         markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
+        boolean[] markerNameEdited = {false};
+        if (placementType == PlacementType.MARKER_OBJECT) {
+            nameField.setText(MarkerType.WC.displayName());
+            nameField.textProperty().addListener((observable, oldValue, newValue) -> {
+                MarkerType selectedMarkerType = markerTypeComboBox.getSelectionModel().getSelectedItem();
+                if (selectedMarkerType != null && !newValue.equals(selectedMarkerType.displayName())) {
+                    markerNameEdited[0] = true;
+                }
+            });
+            markerTypeComboBox.setOnAction(event -> {
+                if (!markerNameEdited[0]) {
+                    MarkerType selectedMarkerType = markerTypeComboBox.getSelectionModel().getSelectedItem();
+                    nameField.setText(selectedMarkerType == null ? MarkerType.WC.displayName() : selectedMarkerType.displayName());
+                }
+            });
+        }
         shapeComboBox.setOnAction(event -> updatePlacementObjectSizeFields(
                 shapeComboBox,
                 objectWidthLabel,
@@ -796,10 +812,6 @@ public class PancakePlannerApp extends Application {
             return null;
         }
 
-        String name = nameField.getText().trim();
-        if (name.isBlank()) {
-            name = placementType.defaultName();
-        }
         String groupName = groupComboBox.getEditor().getText().trim();
         if (groupName.isBlank()) {
             groupName = "Määramata";
@@ -808,6 +820,7 @@ public class PancakePlannerApp extends Application {
         double heightMeters = placementType == PlacementType.TENT ? 3.0 : 1.0;
         CustomObjectShape shape = CustomObjectShape.SQUARE;
         MarkerType markerType = MarkerType.WC;
+        String name = nameField.getText().trim();
         if (placementType == PlacementType.TENT) {
             try {
                 widthMeters = Double.parseDouble(tentWidthField.getText().trim().replace(',', '.'));
@@ -852,6 +865,11 @@ public class PancakePlannerApp extends Application {
             if (markerType == null) {
                 markerType = MarkerType.WC;
             }
+        }
+        if (name.isBlank()) {
+            name = placementType == PlacementType.MARKER_OBJECT
+                    ? markerType.displayName()
+                    : placementType.defaultName();
         }
         return new PlacementDetails(name, groupName, toHex(colorPicker.getValue()), widthMeters, heightMeters, shape, markerType);
     }
