@@ -516,6 +516,7 @@ public class PancakePlannerApp extends Application {
         lockedCheckBox = new CheckBox("Lukus");
         lockedCheckBox.setOnAction(event -> updateSelectedLock());
         showMapLabelCheckBox = new CheckBox("Näita nime");
+        showMapLabelCheckBox.setTooltip(new Tooltip("Peidab või näitab ainult kaardil olevat nime, mitte objekti ennast"));
         resetMapLabelButton = new Button("Lähtesta nime asukoht");
         resetMapLabelButton.setOnAction(event -> resetSelectedMapLabelPosition());
         tentWidthField = new TextField();
@@ -2255,6 +2256,32 @@ public class PancakePlannerApp extends Application {
         }
     }
 
+    private String mapLabelResetTooltip(boolean hasSelection, boolean textObjectSelected, boolean customMapLabelPosition) {
+        if (!hasSelection) {
+            return "Vali objekt, mille nime asukohta lähtestada";
+        }
+        if (textObjectSelected) {
+            return "Tekstobjekt on ise kaardil olev tekst";
+        }
+        if (!customMapLabelPosition) {
+            return "Nime asukoht on automaatne";
+        }
+        return "Viib nime tagasi automaatsesse asukohta";
+    }
+
+    private String cableLabelResetTooltip(boolean tentSelected, boolean tentHasPowerConnection, boolean customCableLabelPosition) {
+        if (!tentSelected) {
+            return "Vali telk, mille kaablisilti lähtestada";
+        }
+        if (!tentHasPowerConnection) {
+            return "Valitud telgil pole vooluühendust";
+        }
+        if (!customCableLabelPosition) {
+            return "Kaablisildi asukoht on automaatne";
+        }
+        return "Viib kaablisildi tagasi automaatsesse asukohta";
+    }
+
     private void refreshDetails() {
         boolean hasSelection = selectedObject != null;
         boolean tentSelected = selectedObject instanceof Tent;
@@ -2267,7 +2294,9 @@ public class PancakePlannerApp extends Application {
         notesArea.setDisable(!hasSelection);
         lockedCheckBox.setDisable(!hasSelection);
         showMapLabelCheckBox.setDisable(!hasSelection || textObjectSelected);
-        resetMapLabelButton.setDisable(!hasSelection || textObjectSelected || !selectedObject.customMapLabelPosition());
+        boolean customMapLabelPosition = hasSelection && !textObjectSelected && selectedObject.customMapLabelPosition();
+        resetMapLabelButton.setDisable(!customMapLabelPosition);
+        resetMapLabelButton.setTooltip(new Tooltip(mapLabelResetTooltip(hasSelection, textObjectSelected, customMapLabelPosition)));
         boolean lockedSelection = selectedObject != null && selectedObject.locked();
         deleteObjectButton.setDisable(!hasSelection || lockedSelection);
         deleteObjectButton.setTooltip(lockedSelection
@@ -2287,11 +2316,14 @@ public class PancakePlannerApp extends Application {
         connectionOutletComboBox.setDisable(!tentSelected);
         cableLengthNotesField.setDisable(!tentSelected);
         cableNotesField.setDisable(!tentSelected);
+        boolean tentHasPowerConnection = selectedObject instanceof Tent tent
+                && plan.findPowerConnectionForConsumer(tent.id()).isPresent();
         boolean customCableLabelPosition = selectedObject instanceof Tent selectedTent
                 && plan.findPowerConnectionForConsumer(selectedTent.id())
                 .map(PowerConnection::customCableLabelPosition)
                 .orElse(false);
         resetCableLabelButton.setDisable(!customCableLabelPosition);
+        resetCableLabelButton.setTooltip(new Tooltip(cableLabelResetTooltip(tentSelected, tentHasPowerConnection, customCableLabelPosition)));
         equipmentList.setDisable(!tentSelected);
         equipmentNameField.setDisable(!tentSelected);
         equipmentWattsField.setDisable(!tentSelected);
@@ -2306,8 +2338,6 @@ public class PancakePlannerApp extends Application {
         updateOutletButton.setDisable(!outletSelected);
         removeOutletButton.setDisable(!outletSelected);
         choosePowerSourceButton.setDisable(!tentSelected);
-        boolean tentHasPowerConnection = selectedObject instanceof Tent tent
-                && plan.findPowerConnectionForConsumer(tent.id()).isPresent();
         if (addCablePointButton != null) {
             addCablePointButton.setDisable(!tentHasPowerConnection);
             addCablePointButton.setText(addingCablePoint ? "Tähista kaabli punkt" : "Kaabli punkt");
