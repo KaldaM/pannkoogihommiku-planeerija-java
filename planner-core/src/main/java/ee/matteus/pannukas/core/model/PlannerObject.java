@@ -8,6 +8,8 @@ public abstract class PlannerObject {
     private String groupName;
     private String notes;
     private boolean showMapLabel;
+    private boolean customMapLabelPosition;
+    private Position mapLabelOffset;
 
     protected PlannerObject(String id, String name, Position position) {
         this.id = id;
@@ -16,6 +18,8 @@ public abstract class PlannerObject {
         this.groupName = "";
         this.notes = "";
         this.showMapLabel = true;
+        this.customMapLabelPosition = false;
+        this.mapLabelOffset = new Position(0, 0);
     }
 
     public String id() {
@@ -70,5 +74,23 @@ public abstract class PlannerObject {
 
     public void setShowMapLabel(boolean showMapLabel) {
         this.showMapLabel = showMapLabel;
+    }
+
+    public boolean customMapLabelPosition() {
+        return customMapLabelPosition;
+    }
+
+    public Position mapLabelOffset() {
+        return mapLabelOffset;
+    }
+
+    public void setMapLabelOffset(Position mapLabelOffset) {
+        this.mapLabelOffset = mapLabelOffset == null ? new Position(0, 0) : mapLabelOffset;
+        this.customMapLabelPosition = true;
+    }
+
+    public void resetMapLabelPosition() {
+        this.mapLabelOffset = new Position(0, 0);
+        this.customMapLabelPosition = false;
     }
 }

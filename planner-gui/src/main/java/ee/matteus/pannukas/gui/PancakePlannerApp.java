@@ -140,6 +140,7 @@ public class PancakePlannerApp extends Application {
     private TextField groupField;
     private CheckBox lockedCheckBox;
     private CheckBox showMapLabelCheckBox;
+    private Button resetMapLabelButton;
     private TextField tentWidthField;
     private TextField tentHeightField;
     private TextField tentRotationField;
@@ -514,6 +515,8 @@ public class PancakePlannerApp extends Application {
         lockedCheckBox = new CheckBox("Lukus");
         lockedCheckBox.setOnAction(event -> updateSelectedLock());
         showMapLabelCheckBox = new CheckBox("Näita nime");
+        resetMapLabelButton = new Button("Lähtesta nime asukoht");
+        resetMapLabelButton.setOnAction(event -> resetSelectedMapLabelPosition());
         tentWidthField = new TextField();
         tentHeightField = new TextField();
         tentRotationField = new TextField();
@@ -597,6 +600,7 @@ public class PancakePlannerApp extends Application {
         baseForm.addRow(2, new Label("Grupp"), groupField);
         baseForm.addRow(3, new Label("Lukustus"), lockedCheckBox);
         baseForm.addRow(4, new Label("Kaardil"), showMapLabelCheckBox);
+        baseForm.addRow(5, new Label("Nime asukoht"), resetMapLabelButton);
 
         GridPane customObjectForm = detailGrid();
         customObjectForm.addRow(0, new Label("Kuju"), customObjectShapeComboBox);
@@ -1876,9 +1880,11 @@ public class PancakePlannerApp extends Application {
         if (!object.showMapLabel()) {
             return;
         }
+        double labelX = object.customMapLabelPosition() ? x + object.mapLabelOffset().x() : x;
+        double labelY = object.customMapLabelPosition() ? y + object.mapLabelOffset().y() : y;
         Label label = new Label(mapLabel(object));
-        label.setLayoutX(x);
-        label.setLayoutY(y);
+        label.setLayoutX(labelX);
+        label.setLayoutY(labelY);
         label.setStyle("""
                 -fx-background-color: rgba(255,255,255,0.82);
                 -fx-border-color: rgba(17,24,39,0.35);
@@ -1889,7 +1895,37 @@ public class PancakePlannerApp extends Application {
                 -fx-text-fill: #111827;
                 """);
         makeSelectable(label, object);
+        makeMapLabelDraggable(label, object, x, y);
         mapPane.getChildren().add(label);
+    }
+
+    private void makeMapLabelDraggable(Label label, PlannerObject object, double defaultX, double defaultY) {
+        final Delta dragDelta = new Delta();
+        label.setOnMousePressed(event -> {
+            if (measuringActive || addingCablePoint) {
+                return;
+            }
+            selectedObject = object;
+            refreshDetails();
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            dragDelta.x = mapPoint.getX() - label.getLayoutX();
+            dragDelta.y = mapPoint.getY() - label.getLayoutY();
+            event.consume();
+        });
+        label.setOnMouseDragged(event -> {
+            if (measuringActive || addingCablePoint) {
+                return;
+            }
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            double labelX = mapPoint.getX() - dragDelta.x;
+            double labelY = mapPoint.getY() - dragDelta.y;
+            label.setLayoutX(labelX);
+            label.setLayoutY(labelY);
+            object.setMapLabelOffset(new Position(labelX - defaultX, labelY - defaultY));
+            refreshDetails();
+            markDirty();
+            event.consume();
+        });
     }
 
     private Pane createMarkerIcon(MarkerObject object) {
@@ -2166,6 +2202,7 @@ public class PancakePlannerApp extends Application {
         notesArea.setDisable(!hasSelection);
         lockedCheckBox.setDisable(!hasSelection);
         showMapLabelCheckBox.setDisable(!hasSelection || textObjectSelected);
+        resetMapLabelButton.setDisable(!hasSelection || textObjectSelected || !selectedObject.customMapLabelPosition());
         boolean lockedSelection = selectedObject != null && selectedObject.locked();
         deleteObjectButton.setDisable(!hasSelection || lockedSelection);
         deleteObjectButton.setTooltip(lockedSelection
@@ -2421,6 +2458,16 @@ public class PancakePlannerApp extends Application {
         }
         selectedObject.setLocked(lockedCheckBox.isSelected());
         redrawMap();
+        markDirty();
+    }
+
+    private void resetSelectedMapLabelPosition() {
+        if (selectedObject == null || selectedObject instanceof TextObject) {
+            return;
+        }
+        selectedObject.resetMapLabelPosition();
+        redrawMap();
+        refreshDetails();
         markDirty();
     }
 

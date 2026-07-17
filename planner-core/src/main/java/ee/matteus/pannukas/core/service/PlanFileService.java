@@ -117,6 +117,9 @@ public class PlanFileService {
         properties.setProperty(prefix + "groupName", object.groupName());
         properties.setProperty(prefix + "notes", object.notes());
         properties.setProperty(prefix + "showMapLabel", Boolean.toString(object.showMapLabel()));
+        properties.setProperty(prefix + "customMapLabelPosition", Boolean.toString(object.customMapLabelPosition()));
+        properties.setProperty(prefix + "mapLabelOffsetX", Double.toString(object.mapLabelOffset().x()));
+        properties.setProperty(prefix + "mapLabelOffsetY", Double.toString(object.mapLabelOffset().y()));
 
         if (object instanceof Tent tent) {
             writeTent(properties, prefix, tent);
@@ -198,6 +201,12 @@ public class PlanFileService {
         object.setNotes(properties.getProperty(prefix + "notes", ""));
         object.setLocked(Boolean.parseBoolean(properties.getProperty(prefix + "locked", "false")));
         object.setShowMapLabel(Boolean.parseBoolean(properties.getProperty(prefix + "showMapLabel", "true")));
+        if (Boolean.parseBoolean(properties.getProperty(prefix + "customMapLabelPosition", "false"))) {
+            object.setMapLabelOffset(new Position(
+                    doubleValue(properties, prefix + "mapLabelOffsetX", 0),
+                    doubleValue(properties, prefix + "mapLabelOffsetY", 0)
+            ));
+        }
         return object;
     }
 
