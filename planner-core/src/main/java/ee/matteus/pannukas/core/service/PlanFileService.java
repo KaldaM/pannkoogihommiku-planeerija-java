@@ -279,8 +279,9 @@ public class PlanFileService {
                 properties.getProperty(prefix + "name", "Marker"),
                 readPosition(properties, prefix)
         );
-        object.setMarkerType(MarkerType.valueOf(properties.getProperty(prefix + "markerType", MarkerType.WC.name())));
-        object.setColorHex(properties.getProperty(prefix + "colorHex", "#0f766e"));
+        MarkerType markerType = MarkerType.valueOf(properties.getProperty(prefix + "markerType", MarkerType.WC.name()));
+        object.setMarkerType(markerType);
+        object.setColorHex(properties.getProperty(prefix + "colorHex", markerType.defaultColorHex()));
         return object;
     }
 

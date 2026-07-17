@@ -758,8 +758,18 @@ public class PancakePlannerApp extends Application {
         markerTypeComboBox.setConverter(markerTypeConverter());
         markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
         boolean[] markerNameEdited = {false};
+        boolean[] markerColorEdited = {false};
+        boolean[] updatingMarkerColor = {false};
+        colorPicker.valueProperty().addListener((observable, oldValue, newValue) -> {
+            if (placementType == PlacementType.MARKER_OBJECT && !updatingMarkerColor[0]) {
+                markerColorEdited[0] = true;
+            }
+        });
         if (placementType == PlacementType.MARKER_OBJECT) {
             nameField.setText(MarkerType.WC.displayName());
+            updatingMarkerColor[0] = true;
+            colorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
+            updatingMarkerColor[0] = false;
             nameField.textProperty().addListener((observable, oldValue, newValue) -> {
                 MarkerType selectedMarkerType = markerTypeComboBox.getSelectionModel().getSelectedItem();
                 if (selectedMarkerType != null && !newValue.equals(selectedMarkerType.displayName())) {
@@ -767,9 +777,17 @@ public class PancakePlannerApp extends Application {
                 }
             });
             markerTypeComboBox.setOnAction(event -> {
+                MarkerType selectedMarkerType = markerTypeComboBox.getSelectionModel().getSelectedItem();
+                if (selectedMarkerType == null) {
+                    selectedMarkerType = MarkerType.WC;
+                }
                 if (!markerNameEdited[0]) {
-                    MarkerType selectedMarkerType = markerTypeComboBox.getSelectionModel().getSelectedItem();
-                    nameField.setText(selectedMarkerType == null ? MarkerType.WC.displayName() : selectedMarkerType.displayName());
+                    nameField.setText(selectedMarkerType.displayName());
+                }
+                if (!markerColorEdited[0]) {
+                    updatingMarkerColor[0] = true;
+                    colorPicker.setValue(Color.web(selectedMarkerType.defaultColorHex()));
+                    updatingMarkerColor[0] = false;
                 }
             });
         }
@@ -2217,7 +2235,7 @@ public class PancakePlannerApp extends Application {
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web("#111827"));
             markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
-            markerColorPicker.setValue(Color.web("#0f766e"));
+            markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
@@ -2243,7 +2261,7 @@ public class PancakePlannerApp extends Application {
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web("#111827"));
             markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
-            markerColorPicker.setValue(Color.web("#0f766e"));
+            markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
@@ -2274,7 +2292,7 @@ public class PancakePlannerApp extends Application {
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web(textObject.colorHex()));
             markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
-            markerColorPicker.setValue(Color.web("#0f766e"));
+            markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
@@ -2304,7 +2322,7 @@ public class PancakePlannerApp extends Application {
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web("#111827"));
             markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
-            markerColorPicker.setValue(Color.web("#0f766e"));
+            markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
@@ -4160,7 +4178,7 @@ public class PancakePlannerApp extends Application {
         POWER_SOURCE("Elektrikapp", "Uus kapp", "#2563eb", false),
         CUSTOM_OBJECT("Objekt", "Uus objekt", "#9ca3af", true),
         TEXT_OBJECT("Tekst", "Uus tekst", "#111827", true),
-        MARKER_OBJECT("Marker", "Uus marker", "#0f766e", true);
+        MARKER_OBJECT("Marker", "Uus marker", MarkerType.WC.defaultColorHex(), true);
 
         private final String label;
         private final String defaultName;

@@ -7,7 +7,7 @@ public class MarkerObject extends PlannerObject {
     public MarkerObject(String id, String name, Position position) {
         super(id, name, position);
         this.markerType = MarkerType.WC;
-        this.colorHex = "#0f766e";
+        this.colorHex = MarkerType.WC.defaultColorHex();
     }
 
     public MarkerType markerType() {
@@ -23,6 +23,6 @@ public class MarkerObject extends PlannerObject {
     }
 
     public void setColorHex(String colorHex) {
-        this.colorHex = colorHex == null || colorHex.isBlank() ? "#0f766e" : colorHex;
+        this.colorHex = colorHex == null || colorHex.isBlank() ? markerType.defaultColorHex() : colorHex;
     }
 }
