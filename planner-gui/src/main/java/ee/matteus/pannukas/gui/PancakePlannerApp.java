@@ -54,6 +54,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Polyline;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
@@ -1848,32 +1849,82 @@ public class PancakePlannerApp extends Application {
     }
 
     private void drawMarkerObject(MarkerObject object) {
-        Label markerLabel = new Label(markerShortLabel(object.markerType()));
-        markerLabel.setLayoutX(object.position().x());
-        markerLabel.setLayoutY(object.position().y());
-        markerLabel.setTextFill(Color.WHITE);
-        markerLabel.setStyle("-fx-background-color: %s; -fx-padding: 4 7 4 7; -fx-background-radius: 4; -fx-font-weight: bold;%s".formatted(
+        Pane markerIcon = createMarkerIcon(object);
+        markerIcon.setLayoutX(object.position().x());
+        markerIcon.setLayoutY(object.position().y());
+        markerIcon.setStyle("-fx-background-color: %s; -fx-background-radius: 6; -fx-border-radius: 6;%s".formatted(
                 object.colorHex(),
-                isSelected(object) ? " -fx-border-color: #111827; -fx-border-width: 2;" : ""
+                isSelected(object) ? " -fx-border-color: #111827; -fx-border-width: 2;" : " -fx-border-color: #111827; -fx-border-width: 1;"
         ));
-        makeSelectable(markerLabel, object);
-        makeDraggable(markerLabel, object);
+        makeSelectable(markerIcon, object);
+        makeDraggable(markerIcon, object);
 
         Label label = new Label(object.name());
         label.setLayoutX(object.position().x() + 34);
-        label.setLayoutY(object.position().y());
+        label.setLayoutY(object.position().y() + 4);
         makeSelectable(label, object);
 
-        mapPane.getChildren().addAll(markerLabel, label);
+        mapPane.getChildren().addAll(markerIcon, label);
     }
 
-    private String markerShortLabel(MarkerType markerType) {
-        return switch (markerType) {
-            case WC -> "WC";
-            case SECURITY -> "Turva";
-            case INFO -> "Info";
-            case START_FINISH -> "Start";
-        };
+    private Pane createMarkerIcon(MarkerObject object) {
+        Pane icon = new Pane();
+        icon.setMinSize(28, 28);
+        icon.setPrefSize(28, 28);
+        icon.setMaxSize(28, 28);
+        icon.getChildren().addAll(switch (object.markerType()) {
+            case WC -> wcIcon();
+            case SECURITY -> securityIcon();
+            case INFO -> infoIcon();
+            case START_FINISH -> startFinishIcon();
+        });
+        return icon;
+    }
+
+    private List<Node> wcIcon() {
+        Circle leftHead = new Circle(10, 8, 3, Color.WHITE);
+        Circle rightHead = new Circle(18, 8, 3, Color.WHITE);
+        Rectangle leftBody = new Rectangle(7, 12, 6, 10);
+        Rectangle rightBody = new Rectangle(15, 12, 6, 10);
+        leftBody.setFill(Color.WHITE);
+        rightBody.setFill(Color.WHITE);
+        return List.of(leftHead, rightHead, leftBody, rightBody);
+    }
+
+    private List<Node> securityIcon() {
+        Polygon shield = new Polygon(
+                14.0, 5.0,
+                22.0, 8.0,
+                20.0, 17.0,
+                14.0, 23.0,
+                8.0, 17.0,
+                6.0, 8.0
+        );
+        shield.setFill(Color.WHITE);
+        return List.of(shield);
+    }
+
+    private List<Node> infoIcon() {
+        Circle circle = new Circle(14, 14, 9, Color.WHITE);
+        Label label = new Label("i");
+        label.setTextFill(Color.web("#111827"));
+        label.setStyle("-fx-font-weight: bold; -fx-font-size: 16;");
+        label.setLayoutX(12);
+        label.setLayoutY(4);
+        return List.of(circle, label);
+    }
+
+    private List<Node> startFinishIcon() {
+        Line pole = new Line(9, 6, 9, 23);
+        pole.setStroke(Color.WHITE);
+        pole.setStrokeWidth(2);
+        Polygon flag = new Polygon(
+                10.0, 6.0,
+                22.0, 9.0,
+                10.0, 13.0
+        );
+        flag.setFill(Color.WHITE);
+        return List.of(pole, flag);
     }
 
     private void makeSelectable(Node node, PlannerObject object) {
