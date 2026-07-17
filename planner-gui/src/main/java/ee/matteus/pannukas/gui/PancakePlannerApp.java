@@ -161,6 +161,7 @@ public class PancakePlannerApp extends Application {
     private ComboBox<OutletChoice> connectionOutletComboBox;
     private TextField cableLengthNotesField;
     private TextField cableNotesField;
+    private Button resetCableLabelButton;
     private TextArea notesArea;
     private ListView<String> equipmentList;
     private TextField equipmentNameField;
@@ -556,6 +557,8 @@ public class PancakePlannerApp extends Application {
                 autoApplyCableNotes();
             }
         });
+        resetCableLabelButton = new Button("Lähtesta kaablisilt");
+        resetCableLabelButton.setOnAction(event -> resetSelectedCableLabelPosition());
         notesArea = new TextArea();
         notesArea.setPrefRowCount(3);
         notesArea.focusedProperty().addListener((observable, wasFocused, isFocused) -> {
@@ -637,6 +640,7 @@ public class PancakePlannerApp extends Application {
         powerConnectionForm.addRow(2, new Label("Väljund"), connectionOutletComboBox);
         powerConnectionForm.addRow(3, new Label("Kaabli tükid"), cableLengthNotesField);
         powerConnectionForm.addRow(4, new Label("Kaabli märkmed"), cableNotesField);
+        powerConnectionForm.addRow(5, new Label("Sildi asukoht"), resetCableLabelButton);
         powerConnectionPanel = new VBox(8, sectionLabel("Vool"), powerConnectionForm);
 
         GridPane notesForm = detailGrid();
@@ -2283,6 +2287,11 @@ public class PancakePlannerApp extends Application {
         connectionOutletComboBox.setDisable(!tentSelected);
         cableLengthNotesField.setDisable(!tentSelected);
         cableNotesField.setDisable(!tentSelected);
+        boolean customCableLabelPosition = selectedObject instanceof Tent selectedTent
+                && plan.findPowerConnectionForConsumer(selectedTent.id())
+                .map(PowerConnection::customCableLabelPosition)
+                .orElse(false);
+        resetCableLabelButton.setDisable(!customCableLabelPosition);
         equipmentList.setDisable(!tentSelected);
         equipmentNameField.setDisable(!tentSelected);
         equipmentWattsField.setDisable(!tentSelected);
@@ -2527,6 +2536,16 @@ public class PancakePlannerApp extends Application {
             return;
         }
         selectedObject.resetMapLabelPosition();
+        redrawMap();
+        refreshDetails();
+        markDirty();
+    }
+
+    private void resetSelectedCableLabelPosition() {
+        if (!(selectedObject instanceof Tent tent)) {
+            return;
+        }
+        plan.resetCableLabelOffset(tent.id());
         redrawMap();
         refreshDetails();
         markDirty();
