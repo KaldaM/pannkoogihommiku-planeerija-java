@@ -55,6 +55,9 @@ public class PlanFileService {
             properties.setProperty(prefix + "outletId", connection.outletId());
             properties.setProperty(prefix + "cableNotes", connection.cableNotes());
             properties.setProperty(prefix + "cableLengthNotes", connection.cableLengthNotes());
+            properties.setProperty(prefix + "customCableLabelPosition", Boolean.toString(connection.customCableLabelPosition()));
+            properties.setProperty(prefix + "cableLabelOffsetX", Double.toString(connection.cableLabelOffset().x()));
+            properties.setProperty(prefix + "cableLabelOffsetY", Double.toString(connection.cableLabelOffset().y()));
             properties.setProperty(prefix + "routePoints.count", Integer.toString(connection.routePoints().size()));
             for (int pointIndex = 0; pointIndex < connection.routePoints().size(); pointIndex++) {
                 Position point = connection.routePoints().get(pointIndex);
@@ -98,6 +101,15 @@ public class PlanFileService {
                     connection.consumerId(),
                     readRoutePoints(properties, prefix)
             ));
+            if (Boolean.parseBoolean(properties.getProperty(prefix + "customCableLabelPosition", "false"))) {
+                plan.updateCableLabelOffset(
+                        properties.getProperty(prefix + "consumerId", ""),
+                        new Position(
+                                doubleValue(properties, prefix + "cableLabelOffsetX", 0),
+                                doubleValue(properties, prefix + "cableLabelOffsetY", 0)
+                        )
+                );
+            }
         }
 
         int hiddenGroupCount = intValue(properties, "hiddenGroups.count", 0);

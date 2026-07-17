@@ -1497,16 +1497,17 @@ public class PancakePlannerApp extends Application {
         mapPane.getChildren().addAll(highlightLine, line, hitLine);
         Label distanceLabel = null;
         if (showCableLabels()) {
-            Position labelPosition = pathMidpoint(path);
+            Position labelPosition = cableLabelPosition(cable.connection(), path);
             distanceLabel = new Label(cableMapLabel(cable.connection(), cableLengthMeters(path)));
             distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,%s); -fx-padding: 2 5 2 5; -fx-border-color: %s; -fx-font-weight: %s;".formatted(
                     selectedCable ? "0.96" : "0.88",
                     toHex(selectedCable ? Color.web("#111827") : cableColor),
                     selectedCable ? "bold" : "normal"
             ));
-            distanceLabel.setLayoutX(labelPosition.x() + 6);
-            distanceLabel.setLayoutY(labelPosition.y() + 6);
+            distanceLabel.setLayoutX(labelPosition.x());
+            distanceLabel.setLayoutY(labelPosition.y());
             makeCableSelectable(distanceLabel, cable.tent());
+            makeCableLabelDraggable(distanceLabel, cable);
             mapPane.getChildren().add(distanceLabel);
         }
         if (selectedCable) {
@@ -1608,6 +1609,50 @@ public class PancakePlannerApp extends Application {
         });
     }
 
+    private void makeCableLabelDraggable(Label label, PowerCableView cable) {
+        final Delta dragDelta = new Delta();
+        final boolean[] dragged = {false};
+        label.setOnMousePressed(event -> {
+            if (measuringActive || addingCablePoint) {
+                event.consume();
+                return;
+            }
+            selectedObject = cable.tent();
+            refreshDetails();
+            dragged[0] = false;
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            dragDelta.x = mapPoint.getX() - label.getLayoutX();
+            dragDelta.y = mapPoint.getY() - label.getLayoutY();
+            event.consume();
+        });
+        label.setOnMouseDragged(event -> {
+            if (measuringActive || addingCablePoint) {
+                event.consume();
+                return;
+            }
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            double labelX = mapPoint.getX() - dragDelta.x;
+            double labelY = mapPoint.getY() - dragDelta.y;
+            label.setLayoutX(labelX);
+            label.setLayoutY(labelY);
+            Position defaultPosition = cableDefaultLabelPosition(cablePath(cable));
+            plan.updateCableLabelOffset(cable.tent().id(), new Position(
+                    labelX - defaultPosition.x(),
+                    labelY - defaultPosition.y()
+            ));
+            dragged[0] = true;
+            event.consume();
+        });
+        label.setOnMouseReleased(event -> {
+            if (dragged[0]) {
+                redrawMap();
+                refreshSummary();
+                markDirty();
+            }
+            event.consume();
+        });
+    }
+
     private void makeCableRoutePointDraggable(
             Circle marker,
             PowerCableView cable,
@@ -1705,10 +1750,26 @@ public class PancakePlannerApp extends Application {
         path.addAll(routePoints);
         path.add(objectCenter(cable.tent()));
 
-        Position labelPosition = pathMidpoint(path);
+        Position labelPosition = cableLabelPosition(cable.connection(), path);
         distanceLabel.setText(cableMapLabel(cable.connection(), cableLengthMeters(path)));
-        distanceLabel.setLayoutX(labelPosition.x() + 6);
-        distanceLabel.setLayoutY(labelPosition.y() + 6);
+        distanceLabel.setLayoutX(labelPosition.x());
+        distanceLabel.setLayoutY(labelPosition.y());
+    }
+
+    private Position cableLabelPosition(PowerConnection connection, List<Position> path) {
+        Position defaultPosition = cableDefaultLabelPosition(path);
+        if (connection.customCableLabelPosition()) {
+            return new Position(
+                    defaultPosition.x() + connection.cableLabelOffset().x(),
+                    defaultPosition.y() + connection.cableLabelOffset().y()
+            );
+        }
+        return defaultPosition;
+    }
+
+    private Position cableDefaultLabelPosition(List<Position> path) {
+        Position midpoint = pathMidpoint(path);
+        return new Position(midpoint.x() + 6, midpoint.y() + 6);
     }
 
     private Color cableColor(ConnectorType connectorType) {

@@ -116,6 +116,7 @@ public class EventPlan {
         }
 
         List<Position> existingRoutePoints = existingCableRoutePoints(consumerId);
+        PowerConnection existingConnection = findPowerConnectionForConsumer(consumerId).orElse(null);
         powerConnections.removeIf(connection -> connection.consumerId().equals(consumerId));
         PowerConnection connection = new PowerConnection(
                 sourceId,
@@ -124,7 +125,9 @@ public class EventPlan {
                 selectedOutlet.get().id(),
                 cableNotes,
                 cableLengthNotes,
-                existingRoutePoints
+                existingRoutePoints,
+                existingConnection != null && existingConnection.customCableLabelPosition(),
+                existingConnection == null ? new Position(0, 0) : existingConnection.cableLabelOffset()
         );
         powerConnections.add(connection);
         return Optional.of(connection);
@@ -141,7 +144,9 @@ public class EventPlan {
                         connection.outletId(),
                         cableNotes,
                         connection.cableLengthNotes(),
-                        connection.routePoints()
+                        connection.routePoints(),
+                        connection.customCableLabelPosition(),
+                        connection.cableLabelOffset()
                 ));
                 return;
             }
@@ -159,7 +164,9 @@ public class EventPlan {
                         connection.outletId(),
                         connection.cableNotes(),
                         cableLengthNotes,
-                        connection.routePoints()
+                        connection.routePoints(),
+                        connection.customCableLabelPosition(),
+                        connection.cableLabelOffset()
                 ));
                 return;
             }
@@ -246,7 +253,9 @@ public class EventPlan {
                         connection.outletId(),
                         connection.cableNotes(),
                         connection.cableLengthNotes(),
-                        connection.routePoints()
+                        connection.routePoints(),
+                        connection.customCableLabelPosition(),
+                        connection.cableLabelOffset()
                 ));
             }
         }
@@ -276,7 +285,9 @@ public class EventPlan {
                         connection.outletId(),
                         connection.cableNotes(),
                         connection.cableLengthNotes(),
-                        routePoints
+                        routePoints,
+                        connection.customCableLabelPosition(),
+                        connection.cableLabelOffset()
                 ));
                 return;
             }
@@ -294,7 +305,49 @@ public class EventPlan {
                         connection.outletId(),
                         connection.cableNotes(),
                         connection.cableLengthNotes(),
-                        routePoints
+                        routePoints,
+                        connection.customCableLabelPosition(),
+                        connection.cableLabelOffset()
+                ));
+                return;
+            }
+        }
+    }
+
+    public void updateCableLabelOffset(String consumerId, Position offset) {
+        for (int index = 0; index < powerConnections.size(); index++) {
+            PowerConnection connection = powerConnections.get(index);
+            if (connection.consumerId().equals(consumerId)) {
+                powerConnections.set(index, new PowerConnection(
+                        connection.sourceId(),
+                        connection.consumerId(),
+                        connection.connectorType(),
+                        connection.outletId(),
+                        connection.cableNotes(),
+                        connection.cableLengthNotes(),
+                        connection.routePoints(),
+                        true,
+                        offset
+                ));
+                return;
+            }
+        }
+    }
+
+    public void resetCableLabelOffset(String consumerId) {
+        for (int index = 0; index < powerConnections.size(); index++) {
+            PowerConnection connection = powerConnections.get(index);
+            if (connection.consumerId().equals(consumerId)) {
+                powerConnections.set(index, new PowerConnection(
+                        connection.sourceId(),
+                        connection.consumerId(),
+                        connection.connectorType(),
+                        connection.outletId(),
+                        connection.cableNotes(),
+                        connection.cableLengthNotes(),
+                        connection.routePoints(),
+                        false,
+                        new Position(0, 0)
                 ));
                 return;
             }
