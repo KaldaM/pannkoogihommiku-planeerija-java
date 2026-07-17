@@ -7,6 +7,7 @@ public abstract class PlannerObject {
     private boolean locked;
     private String groupName;
     private String notes;
+    private boolean showMapLabel;
 
     protected PlannerObject(String id, String name, Position position) {
         this.id = id;
@@ -14,6 +15,7 @@ public abstract class PlannerObject {
         this.position = position;
         this.groupName = "";
         this.notes = "";
+        this.showMapLabel = true;
     }
 
     public String id() {
@@ -60,5 +62,13 @@ public abstract class PlannerObject {
 
     public void setNotes(String notes) {
         this.notes = notes == null ? "" : notes;
+    }
+
+    public boolean showMapLabel() {
+        return showMapLabel;
+    }
+
+    public void setShowMapLabel(boolean showMapLabel) {
+        this.showMapLabel = showMapLabel;
     }
 }

@@ -139,6 +139,7 @@ public class PancakePlannerApp extends Application {
     private TextField nameField;
     private TextField groupField;
     private CheckBox lockedCheckBox;
+    private CheckBox showMapLabelCheckBox;
     private TextField tentWidthField;
     private TextField tentHeightField;
     private TextField tentRotationField;
@@ -512,6 +513,7 @@ public class PancakePlannerApp extends Application {
         groupField = new TextField();
         lockedCheckBox = new CheckBox("Lukus");
         lockedCheckBox.setOnAction(event -> updateSelectedLock());
+        showMapLabelCheckBox = new CheckBox("Näita nime");
         tentWidthField = new TextField();
         tentHeightField = new TextField();
         tentRotationField = new TextField();
@@ -594,6 +596,7 @@ public class PancakePlannerApp extends Application {
         baseForm.addRow(1, new Label("Nimi"), nameField);
         baseForm.addRow(2, new Label("Grupp"), groupField);
         baseForm.addRow(3, new Label("Lukustus"), lockedCheckBox);
+        baseForm.addRow(4, new Label("Kaardil"), showMapLabelCheckBox);
 
         GridPane customObjectForm = detailGrid();
         customObjectForm.addRow(0, new Label("Kuju"), customObjectShapeComboBox);
@@ -1795,12 +1798,8 @@ public class PancakePlannerApp extends Application {
         makeSelectable(rectangle, tent);
         makeDraggable(rectangle, tent);
 
-        Label label = new Label(mapLabel(tent));
-        label.setLayoutX(tent.position().x());
-        label.setLayoutY(tent.position().y() - 24);
-        makeSelectable(label, tent);
-
-        mapPane.getChildren().addAll(rectangle, label);
+        mapPane.getChildren().add(rectangle);
+        addMapLabel(tent, tent.position().x(), tent.position().y() - 24);
     }
 
     private void drawPowerSource(PowerSource source) {
@@ -1812,12 +1811,8 @@ public class PancakePlannerApp extends Application {
         makeSelectable(circle, source);
         makeDraggable(circle, source);
 
-        Label label = new Label(mapLabel(source));
-        label.setLayoutX(source.position().x() + 16);
-        label.setLayoutY(source.position().y() - 12);
-        makeSelectable(label, source);
-
-        mapPane.getChildren().addAll(circle, label);
+        mapPane.getChildren().add(circle);
+        addMapLabel(source, source.position().x() + 16, source.position().y() - 12);
     }
 
     private void drawCustomObject(CustomObject object) {
@@ -1845,12 +1840,8 @@ public class PancakePlannerApp extends Application {
         makeSelectable(shape, object);
         makeDraggable(shape, object);
 
-        Label label = new Label(mapLabel(object));
-        label.setLayoutX(object.position().x() + 16);
-        label.setLayoutY(object.position().y() - 12);
-        makeSelectable(label, object);
-
-        mapPane.getChildren().addAll(shape, label);
+        mapPane.getChildren().add(shape);
+        addMapLabel(object, object.position().x() + 16, object.position().y() - 12);
     }
 
     private void drawTextObject(TextObject object) {
@@ -1877,12 +1868,28 @@ public class PancakePlannerApp extends Application {
         makeSelectable(markerIcon, object);
         makeDraggable(markerIcon, object);
 
-        Label label = new Label(object.name());
-        label.setLayoutX(object.position().x() + 34);
-        label.setLayoutY(object.position().y() + 4);
-        makeSelectable(label, object);
+        mapPane.getChildren().add(markerIcon);
+        addMapLabel(object, object.position().x() + 34, object.position().y() + 4);
+    }
 
-        mapPane.getChildren().addAll(markerIcon, label);
+    private void addMapLabel(PlannerObject object, double x, double y) {
+        if (!object.showMapLabel()) {
+            return;
+        }
+        Label label = new Label(mapLabel(object));
+        label.setLayoutX(x);
+        label.setLayoutY(y);
+        label.setStyle("""
+                -fx-background-color: rgba(255,255,255,0.82);
+                -fx-border-color: rgba(17,24,39,0.35);
+                -fx-border-width: 1;
+                -fx-background-radius: 3;
+                -fx-border-radius: 3;
+                -fx-padding: 2 5 2 5;
+                -fx-text-fill: #111827;
+                """);
+        makeSelectable(label, object);
+        mapPane.getChildren().add(label);
     }
 
     private Pane createMarkerIcon(MarkerObject object) {
@@ -2158,6 +2165,7 @@ public class PancakePlannerApp extends Application {
         groupField.setDisable(!hasSelection);
         notesArea.setDisable(!hasSelection);
         lockedCheckBox.setDisable(!hasSelection);
+        showMapLabelCheckBox.setDisable(!hasSelection || textObjectSelected);
         boolean lockedSelection = selectedObject != null && selectedObject.locked();
         deleteObjectButton.setDisable(!hasSelection || lockedSelection);
         deleteObjectButton.setTooltip(lockedSelection
@@ -2227,6 +2235,7 @@ public class PancakePlannerApp extends Application {
             groupField.clear();
             notesArea.clear();
             lockedCheckBox.setSelected(false);
+            showMapLabelCheckBox.setSelected(false);
             tentWidthField.clear();
             tentHeightField.clear();
             tentRotationField.clear();
@@ -2252,6 +2261,7 @@ public class PancakePlannerApp extends Application {
         groupField.setText(selectedObject.groupName());
         notesArea.setText(selectedObject.notes());
         lockedCheckBox.setSelected(selectedObject.locked());
+        showMapLabelCheckBox.setSelected(selectedObject.showMapLabel());
         if (selectedObject instanceof Tent tent) {
             tentWidthField.setText(formatMeters(tent.widthMeters()));
             tentHeightField.setText(formatMeters(tent.heightMeters()));
@@ -2490,6 +2500,7 @@ public class PancakePlannerApp extends Application {
         selectedObject.setGroupName(groupField.getText());
         selectedObject.setNotes(notesArea.getText());
         selectedObject.setLocked(lockedCheckBox.isSelected());
+        selectedObject.setShowMapLabel(showMapLabelCheckBox.isSelected());
         if (selectedObject instanceof Tent tent) {
             if (!applyTentSize(tent)) {
                 return;

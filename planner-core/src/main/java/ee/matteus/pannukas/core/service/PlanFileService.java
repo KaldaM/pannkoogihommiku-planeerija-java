@@ -116,6 +116,7 @@ public class PlanFileService {
         properties.setProperty(prefix + "locked", Boolean.toString(object.locked()));
         properties.setProperty(prefix + "groupName", object.groupName());
         properties.setProperty(prefix + "notes", object.notes());
+        properties.setProperty(prefix + "showMapLabel", Boolean.toString(object.showMapLabel()));
 
         if (object instanceof Tent tent) {
             writeTent(properties, prefix, tent);
@@ -196,6 +197,7 @@ public class PlanFileService {
         object.setGroupName(properties.getProperty(prefix + "groupName", ""));
         object.setNotes(properties.getProperty(prefix + "notes", ""));
         object.setLocked(Boolean.parseBoolean(properties.getProperty(prefix + "locked", "false")));
+        object.setShowMapLabel(Boolean.parseBoolean(properties.getProperty(prefix + "showMapLabel", "true")));
         return object;
     }
 
