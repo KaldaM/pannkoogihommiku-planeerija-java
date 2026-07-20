@@ -85,6 +85,7 @@ public class PancakePlannerApp extends Application {
     private static final String DEFAULT_MAP_PATH = "classpath:/maps/tavakaart.png";
     private static final String ORTHOPHOTO_MAP_PATH = "classpath:/maps/ortofoto.png";
     private static final String SELECTED_OBJECT_SECTION = "selectedObject";
+    private static final String OBJECT_LIST_SECTION = "objectList";
     private static final String MAP_LAYERS_SECTION = "mapLayers";
     private static final String SUMMARY_SECTION = "summary";
     private static final String EQUIPMENT_SECTION = "equipment";
@@ -131,6 +132,8 @@ public class PancakePlannerApp extends Application {
     private Label mapToolStatusLabel;
     private Label planTitleLabel;
     private Label saveStatusLabel;
+    private TextField objectSearchField;
+    private ListView<ObjectListItem> objectList;
     private VBox groupFilterPanel;
     private TitledPane equipmentSection;
     private TitledPane outletSection;
@@ -475,6 +478,7 @@ public class PancakePlannerApp extends Application {
         VBox sidebar = new VBox(10);
         sidebar.setPadding(new Insets(12));
         sidebar.getChildren().add(collapsibleSection(SELECTED_OBJECT_SECTION, "Valitud objekt", createDetailPanel(), true));
+        sidebar.getChildren().add(collapsibleSection(OBJECT_LIST_SECTION, "Objektid", createObjectListPanel(), false));
         sidebar.getChildren().add(collapsibleSection(MAP_LAYERS_SECTION, "Kaardi kihid", createMapLayersPanel(), false));
 
         showPowerSummaryCheckBox = new CheckBox("Vool");
@@ -520,6 +524,25 @@ public class PancakePlannerApp extends Application {
         SplitPane splitPane = new SplitPane(mapScrollPane, sidebarScrollPane);
         splitPane.setDividerPositions(0.72);
         return splitPane;
+    }
+
+    private VBox createObjectListPanel() {
+        objectSearchField = new TextField();
+        objectSearchField.setPromptText("Otsi nime, tüübi või grupi järgi");
+        objectSearchField.textProperty().addListener((observable, oldValue, newValue) -> refreshObjectList());
+        objectList = new ListView<>();
+        objectList.setPrefHeight(180);
+        objectList.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null) {
+                return;
+            }
+            if (selectedObject != null && selectedObject.id().equals(newValue.object().id())) {
+                return;
+            }
+            selectObject(newValue.object());
+        });
+        refreshObjectList();
+        return new VBox(8, objectSearchField, objectList);
     }
 
     private VBox createMapLayersPanel() {
@@ -570,6 +593,35 @@ public class PancakePlannerApp extends Application {
         showTextObjectsButton.setSelected(visible);
         showMarkerObjectsButton.setSelected(visible);
         updateMapLayerVisibility();
+    }
+
+    private void refreshObjectList() {
+        if (objectList == null || plan == null) {
+            return;
+        }
+        String selectedId = selectedObject == null ? "" : selectedObject.id();
+        String query = objectSearchField == null ? "" : objectSearchField.getText().trim().toLowerCase();
+        List<ObjectListItem> items = plan.objects().stream()
+                .map(object -> new ObjectListItem(object, objectTypeName(object), groupNameForFilter(object)))
+                .filter(item -> objectListItemMatches(item, query))
+                .sorted(Comparator
+                        .comparing(ObjectListItem::type, String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing(item -> item.object().name(), String.CASE_INSENSITIVE_ORDER))
+                .toList();
+        objectList.getItems().setAll(items);
+        items.stream()
+                .filter(item -> item.object().id().equals(selectedId))
+                .findFirst()
+                .ifPresent(item -> objectList.getSelectionModel().select(item));
+    }
+
+    private boolean objectListItemMatches(ObjectListItem item, String query) {
+        if (query.isBlank()) {
+            return true;
+        }
+        return item.object().name().toLowerCase().contains(query)
+                || item.type().toLowerCase().contains(query)
+                || item.groupName().toLowerCase().contains(query);
     }
 
     private void changeZoom(double factor) {
@@ -1394,6 +1446,7 @@ public class PancakePlannerApp extends Application {
         refreshPlacementButtons();
         updateMapToolStatus();
         refreshGroupFilters();
+        refreshObjectList();
         redrawMap();
         refreshSummary();
         refreshDetails();
@@ -2301,6 +2354,7 @@ public class PancakePlannerApp extends Application {
     private void selectObject(PlannerObject object) {
         selectedObject = object;
         refreshDetails();
+        refreshObjectList();
         redrawMap();
     }
 
@@ -2819,6 +2873,7 @@ public class PancakePlannerApp extends Application {
             addCablePointButton.setSelected(false);
         }
         refreshGroupFilters();
+        refreshObjectList();
         redrawMap();
         refreshSummary();
         markDirty();
@@ -2922,6 +2977,7 @@ public class PancakePlannerApp extends Application {
         selectedObject = null;
         pendingPowerSourceTent = null;
         refreshGroupFilters();
+        refreshObjectList();
         redrawMap();
         refreshSummary();
         refreshDetails();
@@ -4516,6 +4572,13 @@ public class PancakePlannerApp extends Application {
 
     public static void main(String[] args) {
         launch(args);
+    }
+
+    private record ObjectListItem(PlannerObject object, String type, String groupName) {
+        @Override
+        public String toString() {
+            return "%s (%s, %s)".formatted(object.name(), type, groupName);
+        }
     }
 
     private record PowerSourceChoice(String sourceId, String name) {
