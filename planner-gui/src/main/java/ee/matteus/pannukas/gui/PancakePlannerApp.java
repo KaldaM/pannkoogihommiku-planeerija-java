@@ -79,6 +79,7 @@ import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.prefs.Preferences;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -103,10 +104,12 @@ public class PancakePlannerApp extends Application {
     private static final double MIN_OBJECT_LIST_HEIGHT = 90.0;
     private static final double MAX_OBJECT_LIST_HEIGHT = 800.0;
     private static final double DEFAULT_OBJECT_LIST_HEIGHT = 180.0;
+    private static final String OBJECT_LIST_HEIGHT_PREFERENCE = "objectListHeight";
 
     private final PlanFactory planFactory = new PlanFactory();
     private final PowerSummaryService powerSummaryService = new PowerSummaryService();
     private final PlanFileService planFileService = new PlanFileService();
+    private final Preferences preferences = Preferences.userNodeForPackage(PancakePlannerApp.class);
 
     private EventPlan plan;
     private Pane mapPane;
@@ -118,7 +121,7 @@ public class PancakePlannerApp extends Application {
     private double zoomLevel = 1.0;
     private double mapWidth = MIN_MAP_WIDTH;
     private double mapHeight = MIN_MAP_HEIGHT;
-    private double objectListHeight = DEFAULT_OBJECT_LIST_HEIGHT;
+    private double objectListHeight;
     private boolean measuringActive;
     private boolean addingCablePoint;
     private boolean mapDraggedSincePress;
@@ -233,6 +236,7 @@ public class PancakePlannerApp extends Application {
     public void start(Stage stage) {
         this.stage = stage;
         plan = planFactory.createEmptyPlan();
+        objectListHeight = loadObjectListHeightPreference();
 
         BorderPane root = new BorderPane();
         root.setTop(createToolbar());
@@ -609,11 +613,27 @@ public class PancakePlannerApp extends Application {
             objectList.setPrefHeight(objectListHeight);
             event.consume();
         });
+        handle.setOnMouseReleased(event -> {
+            saveObjectListHeightPreference();
+            event.consume();
+        });
         return handle;
     }
 
     private double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    private double loadObjectListHeightPreference() {
+        return clamp(
+                preferences.getDouble(OBJECT_LIST_HEIGHT_PREFERENCE, DEFAULT_OBJECT_LIST_HEIGHT),
+                MIN_OBJECT_LIST_HEIGHT,
+                MAX_OBJECT_LIST_HEIGHT
+        );
+    }
+
+    private void saveObjectListHeightPreference() {
+        preferences.putDouble(OBJECT_LIST_HEIGHT_PREFERENCE, objectListHeight);
     }
 
     private VBox createMapLayersPanel() {
