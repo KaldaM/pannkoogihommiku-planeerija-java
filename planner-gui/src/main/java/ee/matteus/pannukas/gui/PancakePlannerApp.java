@@ -194,6 +194,11 @@ public class PancakePlannerApp extends Application {
     private ToggleButton show16ACablesButton;
     private ToggleButton show32ACablesButton;
     private ToggleButton show63ACablesButton;
+    private ToggleButton showTentsButton;
+    private ToggleButton showPowerSourcesButton;
+    private ToggleButton showCustomObjectsButton;
+    private ToggleButton showTextObjectsButton;
+    private ToggleButton showMarkerObjectsButton;
     private ComboBox<PlacementType> placementTypeComboBox;
     private Button addPlacementButton;
     private PlannerObject selectedObject;
@@ -290,6 +295,11 @@ public class PancakePlannerApp extends Application {
         show16ACablesButton = cableTypeToggle("16A", ConnectorType.INDUSTRIAL_16A);
         show32ACablesButton = cableTypeToggle("32A", ConnectorType.INDUSTRIAL_32A);
         show63ACablesButton = cableTypeToggle("63A", ConnectorType.INDUSTRIAL_63A);
+        showTentsButton = objectTypeToggle("Telgid", "Näitab või peidab kaardil telgid");
+        showPowerSourcesButton = objectTypeToggle("Kapid", "Näitab või peidab kaardil elektrikapid");
+        showCustomObjectsButton = objectTypeToggle("Objektid", "Näitab või peidab kaardil tavalised objektid");
+        showTextObjectsButton = objectTypeToggle("Tekstid", "Näitab või peidab kaardil tekstobjektid");
+        showMarkerObjectsButton = objectTypeToggle("Markerid", "Näitab või peidab kaardil markerid");
 
         measureButton = new ToggleButton("Mõõdulint");
         measureButton.setTooltip(new Tooltip("Mõõda kaardil vahemaid"));
@@ -338,6 +348,12 @@ public class PancakePlannerApp extends Application {
                 show16ACablesButton,
                 show32ACablesButton,
                 show63ACablesButton,
+                new Separator(),
+                showTentsButton,
+                showPowerSourcesButton,
+                showCustomObjectsButton,
+                showTextObjectsButton,
+                showMarkerObjectsButton,
                 measureButton,
                 clearMeasurementsButton,
                 addCablePointButton,
@@ -354,6 +370,14 @@ public class PancakePlannerApp extends Application {
         ToggleButton button = new ToggleButton(text);
         button.setSelected(true);
         button.setTooltip(new Tooltip("Näitab või peidab kaardil %s kaablid".formatted(shortCableTypeName(connectorType))));
+        button.setOnAction(event -> redrawMap());
+        return button;
+    }
+
+    private ToggleButton objectTypeToggle(String text, String tooltip) {
+        ToggleButton button = new ToggleButton(text);
+        button.setSelected(true);
+        button.setTooltip(new Tooltip(tooltip));
         button.setOnAction(event -> redrawMap());
         return button;
     }
@@ -1395,7 +1419,7 @@ public class PancakePlannerApp extends Application {
             drawPowerConnections();
         }
         for (PlannerObject object : plan.objects()) {
-            if (!isGroupVisible(object)) {
+            if (!isGroupVisible(object) || !isObjectTypeVisible(object)) {
                 continue;
             }
             if (object instanceof Tent tent) {
@@ -1444,6 +1468,25 @@ public class PancakePlannerApp extends Application {
         };
     }
 
+    private boolean isObjectTypeVisible(PlannerObject object) {
+        if (object instanceof Tent) {
+            return showTentsButton == null || showTentsButton.isSelected();
+        }
+        if (object instanceof PowerSource) {
+            return showPowerSourcesButton == null || showPowerSourcesButton.isSelected();
+        }
+        if (object instanceof TextObject) {
+            return showTextObjectsButton == null || showTextObjectsButton.isSelected();
+        }
+        if (object instanceof MarkerObject) {
+            return showMarkerObjectsButton == null || showMarkerObjectsButton.isSelected();
+        }
+        if (object instanceof CustomObject) {
+            return showCustomObjectsButton == null || showCustomObjectsButton.isSelected();
+        }
+        return true;
+    }
+
     private HBox cableLegendRow(ConnectorType connectorType) {
         Line sample = new Line(0, 0, 34, 0);
         sample.setStroke(cableColor(connectorType));
@@ -1460,7 +1503,7 @@ public class PancakePlannerApp extends Application {
 
     private void drawPowerConnections() {
         for (Tent tent : plan.tents()) {
-            if (!isGroupVisible(tent)) {
+            if (!isGroupVisible(tent) || !isObjectTypeVisible(tent)) {
                 continue;
             }
             plan.findPowerConnectionForConsumer(tent.id())
@@ -1469,6 +1512,7 @@ public class PancakePlannerApp extends Application {
                             .filter(PowerSource.class::isInstance)
                             .map(PowerSource.class::cast)
                             .filter(this::isGroupVisible)
+                            .filter(this::isObjectTypeVisible)
                             .map(source -> new PowerCableView(tent, source, connection)))
                     .ifPresent(this::drawPowerConnection);
         }
