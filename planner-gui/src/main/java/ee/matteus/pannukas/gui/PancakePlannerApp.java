@@ -32,7 +32,6 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -4429,7 +4428,7 @@ public class PancakePlannerApp extends Application {
     private void exportSummary() {
         refreshSummary();
 
-        Optional<ReportExportScope> selectedReportScope = chooseReportExportScope();
+        Optional<ReportExportScope> selectedReportScope = ExportOptionsDialog.chooseReportExportScope();
         if (selectedReportScope.isEmpty()) {
             return;
         }
@@ -4455,7 +4454,7 @@ public class PancakePlannerApp extends Application {
     private void exportMapImage() {
         redrawMap();
 
-        Optional<MapImageExportScope> selectedScope = chooseMapImageExportScope();
+        Optional<MapImageExportScope> selectedScope = ExportOptionsDialog.chooseMapImageExportScope();
         if (selectedScope.isEmpty()) {
             return;
         }
@@ -4485,7 +4484,7 @@ public class PancakePlannerApp extends Application {
     private void exportPdf() {
         redrawMap();
 
-        Optional<PdfExportOptions> selectedOptions = choosePdfExportOptions();
+        Optional<PdfExportOptions> selectedOptions = ExportOptionsDialog.choosePdfExportOptions();
         if (selectedOptions.isEmpty()) {
             return;
         }
@@ -4530,56 +4529,6 @@ public class PancakePlannerApp extends Application {
                 zoomLevel,
                 this::updateZoomContentSize
         );
-    }
-
-    private Optional<MapImageExportScope> chooseMapImageExportScope() {
-        ChoiceDialog<MapImageExportScope> dialog = new ChoiceDialog<>(
-                MapImageExportScope.FULL_MAP,
-                MapImageExportScope.FULL_MAP,
-                MapImageExportScope.CURRENT_VIEW
-        );
-        dialog.setTitle("Ekspordi kaart pildina");
-        dialog.setHeaderText("Vali eksporditav ala");
-        dialog.setContentText("Ala");
-        return dialog.showAndWait();
-    }
-
-    private Optional<ReportExportScope> chooseReportExportScope() {
-        ChoiceDialog<ReportExportScope> dialog = new ChoiceDialog<>(
-                ReportExportScope.COMPACT,
-                ReportExportScope.COMPACT,
-                ReportExportScope.FULL
-        );
-        dialog.setTitle("Ekspordi raport");
-        dialog.setHeaderText("Vali raporti detailsus");
-        dialog.setContentText("Raport");
-        return dialog.showAndWait();
-    }
-
-    private Optional<PdfExportOptions> choosePdfExportOptions() {
-        ComboBox<MapImageExportScope> mapScopeComboBox = new ComboBox<>();
-        mapScopeComboBox.getItems().addAll(MapImageExportScope.values());
-        mapScopeComboBox.getSelectionModel().select(MapImageExportScope.FULL_MAP);
-
-        ComboBox<ReportExportScope> reportScopeComboBox = new ComboBox<>();
-        reportScopeComboBox.getItems().addAll(ReportExportScope.values());
-        reportScopeComboBox.getSelectionModel().select(ReportExportScope.COMPACT);
-
-        GridPane form = detailGrid();
-        form.addRow(0, new Label("Kaardi ala"), mapScopeComboBox);
-        form.addRow(1, new Label("Raport"), reportScopeComboBox);
-
-        Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
-        dialog.setTitle("Ekspordi PDF");
-        dialog.setHeaderText("Vali PDF ekspordi seaded");
-        dialog.getDialogPane().setContent(form);
-
-        return dialog.showAndWait()
-                .filter(buttonType -> buttonType == ButtonType.OK)
-                .map(buttonType -> new PdfExportOptions(
-                        mapScopeComboBox.getSelectionModel().getSelectedItem(),
-                        reportScopeComboBox.getSelectionModel().getSelectedItem()
-                ));
     }
 
     private String summaryText(ReportExportScope reportScope) {
@@ -4820,9 +4769,6 @@ public class PancakePlannerApp extends Application {
 
     public static void main(String[] args) {
         launch(args);
-    }
-
-    private record PdfExportOptions(MapImageExportScope mapScope, ReportExportScope reportScope) {
     }
 
     private record ObjectListItem(PlannerObject object, String type, String groupName, boolean visible) {
