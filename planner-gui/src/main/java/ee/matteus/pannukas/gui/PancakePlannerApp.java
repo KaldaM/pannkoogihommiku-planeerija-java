@@ -4447,7 +4447,7 @@ public class PancakePlannerApp extends Application {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Ekspordi kokkuvõte");
         applyInitialDirectory(fileChooser);
-        fileChooser.setInitialFileName(exportSummaryFileName());
+        fileChooser.setInitialFileName(ExportFileNames.summaryFileName(plan.name(), currentPlanFile));
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Tekstifail", "*.txt"));
         File file = fileChooser.showSaveDialog(stage);
         if (file == null) {
@@ -4473,14 +4473,14 @@ public class PancakePlannerApp extends Application {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Ekspordi kaart pildina");
         applyInitialDirectory(fileChooser);
-        fileChooser.setInitialFileName(exportMapImageFileName());
+        fileChooser.setInitialFileName(ExportFileNames.mapImageFileName(plan.name(), currentPlanFile));
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG pilt", "*.png"));
         File selectedFile = fileChooser.showSaveDialog(stage);
         if (selectedFile == null) {
             return;
         }
 
-        File file = ensurePngExtension(selectedFile);
+        File file = ExportFileNames.ensurePngExtension(selectedFile);
         double previousScaleX = mapScale.getX();
         double previousScaleY = mapScale.getY();
         try {
@@ -4521,14 +4521,14 @@ public class PancakePlannerApp extends Application {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Ekspordi PDF");
         applyInitialDirectory(fileChooser);
-        fileChooser.setInitialFileName(exportPdfFileName());
+        fileChooser.setInitialFileName(ExportFileNames.pdfFileName(plan.name(), currentPlanFile));
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF fail", "*.pdf"));
         File selectedFile = fileChooser.showSaveDialog(stage);
         if (selectedFile == null) {
             return;
         }
 
-        File file = ensurePdfExtension(selectedFile);
+        File file = ExportFileNames.ensurePdfExtension(selectedFile);
         double previousScaleX = mapScale.getX();
         double previousScaleY = mapScale.getY();
         try {
@@ -5231,46 +5231,6 @@ public class PancakePlannerApp extends Application {
         if (file != null && file.getParentFile() != null && file.getParentFile().isDirectory()) {
             lastUsedDirectory = file.getParentFile();
         }
-    }
-
-    private File ensurePngExtension(File file) {
-        if (file.getName().toLowerCase().endsWith(".png")) {
-            return file;
-        }
-        return new File(file.getParentFile(), file.getName() + ".png");
-    }
-
-    private File ensurePdfExtension(File file) {
-        if (file.getName().toLowerCase().endsWith(".pdf")) {
-            return file;
-        }
-        return new File(file.getParentFile(), file.getName() + ".pdf");
-    }
-
-    private String exportMapImageFileName() {
-        return safeExportBaseName() + "-kaart.png";
-    }
-
-    private String exportPdfFileName() {
-        return safeExportBaseName() + "-plaan.pdf";
-    }
-
-    private String exportSummaryFileName() {
-        return safeExportBaseName() + "-kokkuvõte.txt";
-    }
-
-    private String safeExportBaseName() {
-        String baseName = currentPlanFile == null
-                ? plan.name()
-                : currentPlanFile.getName().replaceFirst("\\.pplan$", "");
-        String safeName = baseName.trim()
-                .replaceAll("[\\\\/:*?\"<>|]+", "-")
-                .replaceAll("\\s+", "-")
-                .toLowerCase();
-        if (safeName.isBlank()) {
-            safeName = "pannkoogihommik";
-        }
-        return safeName;
     }
 
     private void showError(String title, String message) {
