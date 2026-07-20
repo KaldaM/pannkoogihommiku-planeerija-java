@@ -19,14 +19,6 @@ import ee.matteus.pannukas.core.service.PlanFactory;
 import ee.matteus.pannukas.core.service.PlanFileService;
 import ee.matteus.pannukas.core.service.PowerSummary;
 import ee.matteus.pannukas.core.service.PowerSummaryService;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
@@ -78,7 +70,6 @@ import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
 import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -4513,14 +4504,12 @@ public class PancakePlannerApp extends Application {
         File file = ExportFileNames.ensurePdfExtension(selectedFile);
         try {
             WritableImage image = snapshotMapImage(options.mapScope());
-            BufferedImage mapImage = SwingFXUtils.fromFXImage(image, null);
-
-            try (PDDocument document = new PDDocument()) {
-                addMapPdfPage(document, mapImage);
-                addReportPdfPages(document, summaryText(options.reportScope()));
-                addPdfPageNumbers(document);
-                document.save(file);
-            }
+            PdfReportExporter.export(
+                    file,
+                    plan.name(),
+                    SwingFXUtils.fromFXImage(image, null),
+                    summaryText(options.reportScope())
+            );
 
             rememberDirectory(file);
             saveStatusLabel.setText("PDF eksporditud");
@@ -4541,145 +4530,6 @@ public class PancakePlannerApp extends Application {
                 zoomLevel,
                 this::updateZoomContentSize
         );
-    }
-
-    private void addMapPdfPage(PDDocument document, BufferedImage mapImage) throws IOException {
-        PDRectangle pageSize = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
-        PDPage page = new PDPage(pageSize);
-        document.addPage(page);
-
-        float margin = 36;
-        float titleSize = 16;
-        float availableWidth = pageSize.getWidth() - margin * 2;
-        float availableHeight = pageSize.getHeight() - margin * 2 - 28;
-        float scale = Math.min(availableWidth / mapImage.getWidth(), availableHeight / mapImage.getHeight());
-        float imageWidth = mapImage.getWidth() * scale;
-        float imageHeight = mapImage.getHeight() * scale;
-        float imageX = margin + (availableWidth - imageWidth) / 2;
-        float imageY = margin;
-
-        PDImageXObject pdfImage = LosslessFactory.createFromImage(document, mapImage);
-        try (PDPageContentStream content = new PDPageContentStream(document, page)) {
-            content.beginText();
-            content.setFont(PDType1Font.HELVETICA_BOLD, titleSize);
-            content.newLineAtOffset(margin, pageSize.getHeight() - margin - titleSize);
-            content.showText(plan.name());
-            content.endText();
-            content.drawImage(pdfImage, imageX, imageY, imageWidth, imageHeight);
-        }
-    }
-
-    private void addReportPdfPages(PDDocument document, String reportText) throws IOException {
-        float margin = 50;
-        float fontSize = 10;
-        float leading = 14;
-        PDType1Font regularFont = PDType1Font.HELVETICA;
-        PDType1Font boldFont = PDType1Font.HELVETICA_BOLD;
-        PDRectangle pageSize = PDRectangle.A4;
-        PDPage page = new PDPage(pageSize);
-        document.addPage(page);
-        PDPageContentStream content = new PDPageContentStream(document, page);
-        float y = pageSize.getHeight() - margin;
-        try {
-            for (String originalLine : reportText.split("\\R", -1)) {
-                String trimmedLine = originalLine.trim();
-                if (!trimmedLine.isBlank() && trimmedLine.chars().allMatch(character -> character == '=')) {
-                    continue;
-                }
-                PdfReportLineStyle style = pdfReportLineStyle(originalLine, regularFont, boldFont, fontSize);
-                y -= style.extraSpaceBefore();
-                float maxLineWidth = pageSize.getWidth() - margin * 2 - style.indent();
-                for (String line : wrapPdfLine(originalLine.trim(), style.font(), style.fontSize(), maxLineWidth)) {
-                    if (y <= margin + 20) {
-                        content.close();
-                        page = new PDPage(pageSize);
-                        document.addPage(page);
-                        content = new PDPageContentStream(document, page);
-                        y = pageSize.getHeight() - margin;
-                    }
-                    content.beginText();
-                    content.setFont(style.font(), style.fontSize());
-                    content.newLineAtOffset(margin + style.indent(), y);
-                    content.showText(line);
-                    content.endText();
-                    y -= style.lineHeight(leading);
-                }
-            }
-        } finally {
-            content.close();
-        }
-    }
-
-    private PdfReportLineStyle pdfReportLineStyle(
-            String line,
-            PDType1Font regularFont,
-            PDType1Font boldFont,
-            float defaultFontSize
-    ) {
-        String trimmedLine = line.trim();
-        if (trimmedLine.isBlank()) {
-            return new PdfReportLineStyle(regularFont, defaultFontSize, 0, 4);
-        }
-        if (isPdfHeadingLine(line)) {
-            return new PdfReportLineStyle(boldFont, defaultFontSize + 1, 0, 10);
-        }
-        int leadingSpaces = line.length() - line.stripLeading().length();
-        return new PdfReportLineStyle(regularFont, defaultFontSize, leadingSpaces * 5.0f, 0);
-    }
-
-    private boolean isPdfHeadingLine(String line) {
-        String trimmedLine = line.trim();
-        return !trimmedLine.isBlank() && !line.startsWith(" ");
-    }
-
-    private void addPdfPageNumbers(PDDocument document) throws IOException {
-        int pageCount = document.getNumberOfPages();
-        for (int index = 0; index < pageCount; index++) {
-            PDPage page = document.getPage(index);
-            PDRectangle pageSize = page.getMediaBox();
-            String pageNumber = "lk %d / %d".formatted(index + 1, pageCount);
-            float fontSize = 9;
-            float textWidth = pdfTextWidth(pageNumber, PDType1Font.HELVETICA, fontSize);
-            try (PDPageContentStream content = new PDPageContentStream(
-                    document,
-                    page,
-                    PDPageContentStream.AppendMode.APPEND,
-                    true,
-                    true
-            )) {
-                content.beginText();
-                content.setFont(PDType1Font.HELVETICA, fontSize);
-                content.newLineAtOffset((pageSize.getWidth() - textWidth) / 2, 24);
-                content.showText(pageNumber);
-                content.endText();
-            }
-        }
-    }
-
-    private List<String> wrapPdfLine(String line, PDType1Font font, float fontSize, float maxWidth) throws IOException {
-        if (line.isBlank()) {
-            return List.of("");
-        }
-
-        List<String> lines = new ArrayList<>();
-        StringBuilder currentLine = new StringBuilder();
-        for (String word : line.split(" ")) {
-            String candidate = currentLine.isEmpty() ? word : currentLine + " " + word;
-            if (pdfTextWidth(candidate, font, fontSize) <= maxWidth || currentLine.isEmpty()) {
-                currentLine.setLength(0);
-                currentLine.append(candidate);
-            } else {
-                lines.add(currentLine.toString());
-                currentLine.setLength(0);
-                currentLine.append(word);
-            }
-        }
-        lines.add(currentLine.toString());
-        return lines;
-    }
-
-    private float pdfTextWidth(String text, PDType1Font font, float fontSize) throws IOException {
-        return font.getStringWidth(text) / 1000 * fontSize;
     }
 
     private Optional<MapImageExportScope> chooseMapImageExportScope() {
@@ -4973,15 +4823,6 @@ public class PancakePlannerApp extends Application {
     }
 
     private record PdfExportOptions(MapImageExportScope mapScope, ReportExportScope reportScope) {
-    }
-
-    private record PdfReportLineStyle(PDType1Font font, float fontSize, float indent, float extraSpaceBefore) {
-        private float lineHeight(float defaultLineHeight) {
-            if (fontSize > 10) {
-                return defaultLineHeight + 2;
-            }
-            return defaultLineHeight;
-        }
     }
 
     private record ObjectListItem(PlannerObject object, String type, String groupName, boolean visible) {
