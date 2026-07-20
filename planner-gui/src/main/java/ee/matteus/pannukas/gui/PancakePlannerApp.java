@@ -565,8 +565,18 @@ public class PancakePlannerApp extends Application {
                 detailLabel.setStyle(item.visible()
                         ? "-fx-text-fill: #6b7280; -fx-font-size: 11;"
                         : "-fx-text-fill: #6b7280; -fx-font-size: 11; -fx-font-style: italic;");
+                Rectangle colorSwatch = new Rectangle(12, 12);
+                colorSwatch.setArcWidth(3);
+                colorSwatch.setArcHeight(3);
+                colorSwatch.setFill(Color.web(objectListColorHex(item.object())));
+                colorSwatch.setStroke(Color.web("#111827"));
+                colorSwatch.setStrokeWidth(0.7);
+                colorSwatch.setOpacity(item.visible() ? 1.0 : 0.45);
+                VBox textBox = new VBox(2, nameLabel, detailLabel);
+                HBox row = new HBox(8, colorSwatch, textBox);
+                row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
                 setText(null);
-                setGraphic(new VBox(2, nameLabel, detailLabel));
+                setGraphic(row);
                 setStyle(item.visible()
                         ? ""
                         : "-fx-text-fill: #6b7280; -fx-font-style: italic;");
@@ -733,6 +743,25 @@ public class PancakePlannerApp extends Application {
                 || item.type().toLowerCase().contains(query)
                 || item.groupName().toLowerCase().contains(query)
                 || (!item.visible() && "peidetud".contains(query));
+    }
+
+    private String objectListColorHex(PlannerObject object) {
+        if (object instanceof Tent tent) {
+            return tent.colorHex();
+        }
+        if (object instanceof PowerSource) {
+            return "#2563eb";
+        }
+        if (object instanceof CustomObject customObject) {
+            return customObject.colorHex();
+        }
+        if (object instanceof TextObject textObject) {
+            return textObject.colorHex();
+        }
+        if (object instanceof MarkerObject markerObject) {
+            return markerObject.colorHex();
+        }
+        return "#9ca3af";
     }
 
     private void centerMapOnObject(PlannerObject object) {
