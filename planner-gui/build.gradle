@@ -16,7 +16,7 @@ sourceSets {
 
 javafx {
     version = '21.0.4'
-    modules = ['javafx.controls', 'javafx.fxml']
+    modules = ['javafx.controls', 'javafx.fxml', 'javafx.swing']
 }
 
 application {

@@ -21,12 +21,15 @@ import ee.matteus.pannukas.core.service.PowerSummary;
 import ee.matteus.pannukas.core.service.PowerSummaryService;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -54,6 +57,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -66,6 +70,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
+import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -286,6 +291,9 @@ public class PancakePlannerApp extends Application {
         Button exportSummaryButton = new Button("Ekspordi");
         exportSummaryButton.setOnAction(event -> exportSummary());
 
+        Button exportMapImageButton = new Button("Ekspordi pilt");
+        exportMapImageButton.setOnAction(event -> exportMapImage());
+
         Button openButton = new Button("Ava");
         openButton.setOnAction(event -> openPlan());
 
@@ -355,6 +363,7 @@ public class PancakePlannerApp extends Application {
                 saveAsButton,
                 openButton,
                 exportSummaryButton,
+                exportMapImageButton,
                 planSettingsButton,
                 new Separator(),
                 new Label("Lisa"),
@@ -4430,6 +4439,47 @@ public class PancakePlannerApp extends Application {
         }
     }
 
+    private void exportMapImage() {
+        redrawMap();
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Ekspordi kaart pildina");
+        applyInitialDirectory(fileChooser);
+        fileChooser.setInitialFileName(exportMapImageFileName());
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG pilt", "*.png"));
+        File selectedFile = fileChooser.showSaveDialog(stage);
+        if (selectedFile == null) {
+            return;
+        }
+
+        File file = ensurePngExtension(selectedFile);
+        double previousScaleX = mapScale.getX();
+        double previousScaleY = mapScale.getY();
+        try {
+            mapScale.setX(1.0);
+            mapScale.setY(1.0);
+            mapPane.applyCss();
+            mapPane.layout();
+
+            SnapshotParameters parameters = new SnapshotParameters();
+            parameters.setViewport(new Rectangle2D(0, 0, mapWidth, mapHeight));
+            parameters.setFill(Color.web("#eef1ec"));
+            WritableImage image = new WritableImage((int) Math.ceil(mapWidth), (int) Math.ceil(mapHeight));
+            mapPane.snapshot(parameters, image);
+
+            ImageIO.write(SwingFXUtils.fromFXImage(image, null), "png", file);
+            rememberDirectory(file);
+            saveStatusLabel.setText("Pilt eksporditud");
+            saveStatusLabel.setStyle("-fx-text-fill: #166534; -fx-font-weight: bold;");
+        } catch (IOException exception) {
+            showError("Pildi eksportimine ebaõnnestus", exception.getMessage());
+        } finally {
+            mapScale.setX(previousScaleX);
+            mapScale.setY(previousScaleY);
+            updateZoomContentSize();
+        }
+    }
+
     private String summaryText() {
         String lineSeparator = System.lineSeparator();
         StringBuilder builder = new StringBuilder();
@@ -4846,6 +4896,27 @@ public class PancakePlannerApp extends Application {
         if (file != null && file.getParentFile() != null && file.getParentFile().isDirectory()) {
             lastUsedDirectory = file.getParentFile();
         }
+    }
+
+    private File ensurePngExtension(File file) {
+        if (file.getName().toLowerCase().endsWith(".png")) {
+            return file;
+        }
+        return new File(file.getParentFile(), file.getName() + ".png");
+    }
+
+    private String exportMapImageFileName() {
+        String baseName = currentPlanFile == null
+                ? plan.name()
+                : currentPlanFile.getName().replaceFirst("\\.pplan$", "");
+        String safeName = baseName.trim()
+                .replaceAll("[\\\\/:*?\"<>|]+", "-")
+                .replaceAll("\\s+", "-")
+                .toLowerCase();
+        if (safeName.isBlank()) {
+            safeName = "pannkoogihommik";
+        }
+        return safeName + "-kaart.png";
     }
 
     private String exportSummaryFileName() {
