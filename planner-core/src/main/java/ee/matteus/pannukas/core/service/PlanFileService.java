@@ -210,6 +210,7 @@ public class PlanFileService {
     private void writeTextObject(Properties properties, String prefix, TextObject object) {
         properties.setProperty(prefix + "type", "TEXT_OBJECT");
         properties.setProperty(prefix + "colorHex", object.colorHex());
+        properties.setProperty(prefix + "fontSize", Double.toString(object.fontSize()));
     }
 
     private void writeMarkerObject(Properties properties, String prefix, MarkerObject object) {
@@ -317,6 +318,7 @@ public class PlanFileService {
                 readPosition(properties, prefix)
         );
         object.setColorHex(properties.getProperty(prefix + "colorHex", "#111827"));
+        object.setFontSize(doubleValue(properties, prefix + "fontSize", TextObject.DEFAULT_FONT_SIZE));
         return object;
     }
 
