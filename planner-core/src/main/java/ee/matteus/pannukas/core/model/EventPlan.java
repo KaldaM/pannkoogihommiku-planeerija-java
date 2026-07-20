@@ -9,10 +9,14 @@ import java.util.Set;
 
 public class EventPlan {
     public static final double DEFAULT_PIXELS_PER_METER = 24.0;
+    public static final double DEFAULT_OBJECT_LABEL_FONT_SIZE = 12.0;
+    public static final double DEFAULT_CABLE_LABEL_FONT_SIZE = 12.0;
 
     private String name;
     private String mapImagePath;
     private double pixelsPerMeter = DEFAULT_PIXELS_PER_METER;
+    private double objectLabelFontSize = DEFAULT_OBJECT_LABEL_FONT_SIZE;
+    private double cableLabelFontSize = DEFAULT_CABLE_LABEL_FONT_SIZE;
     private final List<PlannerObject> objects = new ArrayList<>();
     private final List<PowerConnection> powerConnections = new ArrayList<>();
     private final Set<String> hiddenGroups = new HashSet<>();
@@ -59,6 +63,28 @@ public class EventPlan {
             throw new IllegalArgumentException("Pikslit meetri kohta peab olema positiivne.");
         }
         this.pixelsPerMeter = pixelsPerMeter;
+    }
+
+    public double objectLabelFontSize() {
+        return objectLabelFontSize;
+    }
+
+    public void setObjectLabelFontSize(double objectLabelFontSize) {
+        if (objectLabelFontSize <= 0) {
+            throw new IllegalArgumentException("Objektisildi teksti suurus peab olema positiivne.");
+        }
+        this.objectLabelFontSize = objectLabelFontSize;
+    }
+
+    public double cableLabelFontSize() {
+        return cableLabelFontSize;
+    }
+
+    public void setCableLabelFontSize(double cableLabelFontSize) {
+        if (cableLabelFontSize <= 0) {
+            throw new IllegalArgumentException("Kaablisildi teksti suurus peab olema positiivne.");
+        }
+        this.cableLabelFontSize = cableLabelFontSize;
     }
 
     public void addObject(PlannerObject object) {

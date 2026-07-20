@@ -1538,6 +1538,10 @@ public class PancakePlannerApp extends Application {
         TextField dialogPlanNameField = new TextField(plan.name());
         TextField dialogPixelsPerMeterField = new TextField(formatMeters(plan.pixelsPerMeter()));
         dialogPixelsPerMeterField.setPromptText("px/m");
+        TextField dialogObjectLabelFontSizeField = new TextField(formatNumber(plan.objectLabelFontSize()));
+        dialogObjectLabelFontSizeField.setPromptText("px");
+        TextField dialogCableLabelFontSizeField = new TextField(formatNumber(plan.cableLabelFontSize()));
+        dialogCableLabelFontSizeField.setPromptText("px");
         Label mapLabel = new Label(plan.mapImagePath().isBlank() ? "Kaarti pole valitud" : plan.mapImagePath());
 
         final String[] selectedMapPath = {plan.mapImagePath()};
@@ -1575,8 +1579,10 @@ public class PancakePlannerApp extends Application {
         GridPane form = detailGrid();
         form.addRow(0, new Label("Plaani nimi"), dialogPlanNameField);
         form.addRow(1, new Label("Piksleid meetri kohta"), new HBox(8, dialogPixelsPerMeterField, setScaleFromMeasurementButton));
-        form.addRow(2, new Label("Kaart"), new HBox(8, defaultMapButton, orthophotoButton, loadMapButton));
-        form.addRow(3, new Label("Valitud kaart"), mapLabel);
+        form.addRow(2, new Label("Objektisildi suurus px"), dialogObjectLabelFontSizeField);
+        form.addRow(3, new Label("Kaablisildi suurus px"), dialogCableLabelFontSizeField);
+        form.addRow(4, new Label("Kaart"), new HBox(8, defaultMapButton, orthophotoButton, loadMapButton));
+        form.addRow(5, new Label("Valitud kaart"), mapLabel);
 
         Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
         dialog.setTitle("Plaani andmed");
@@ -1586,11 +1592,23 @@ public class PancakePlannerApp extends Application {
             if (buttonType != ButtonType.OK) {
                 return;
             }
-            applyPlanSettings(dialogPlanNameField.getText(), dialogPixelsPerMeterField.getText(), selectedMapPath[0]);
+            applyPlanSettings(
+                    dialogPlanNameField.getText(),
+                    dialogPixelsPerMeterField.getText(),
+                    dialogObjectLabelFontSizeField.getText(),
+                    dialogCableLabelFontSizeField.getText(),
+                    selectedMapPath[0]
+            );
         });
     }
 
-    private void applyPlanSettings(String planName, String pixelsPerMeterText, String mapImagePath) {
+    private void applyPlanSettings(
+            String planName,
+            String pixelsPerMeterText,
+            String objectLabelFontSizeText,
+            String cableLabelFontSizeText,
+            String mapImagePath
+    ) {
         String trimmedPlanName = planName == null ? "" : planName.trim();
         if (trimmedPlanName.isBlank()) {
             showError("Plaani andmeid ei muudetud", "Sisesta plaani nimi.");
@@ -1599,8 +1617,12 @@ public class PancakePlannerApp extends Application {
 
         try {
             double pixelsPerMeter = Double.parseDouble(pixelsPerMeterText.trim().replace(',', '.'));
+            double objectLabelFontSize = Double.parseDouble(objectLabelFontSizeText.trim().replace(',', '.'));
+            double cableLabelFontSize = Double.parseDouble(cableLabelFontSizeText.trim().replace(',', '.'));
             plan.rename(trimmedPlanName);
             plan.setPixelsPerMeter(pixelsPerMeter);
+            plan.setObjectLabelFontSize(objectLabelFontSize);
+            plan.setCableLabelFontSize(cableLabelFontSize);
             plan.setMapImagePath(mapImagePath);
             if (planNameField != null) {
                 planNameField.setText(plan.name());
@@ -1613,7 +1635,7 @@ public class PancakePlannerApp extends Application {
             refreshSummary();
             markDirty();
         } catch (NumberFormatException exception) {
-            showError("Plaani andmeid ei muudetud", "Sisesta pikslite arv meetri kohta arvuna.");
+            showError("Plaani andmeid ei muudetud", "Sisesta mõõtkava ja siltide suurused arvudena.");
         } catch (IllegalArgumentException exception) {
             showError("Plaani andmeid ei muudetud", exception.getMessage());
         }
@@ -1902,10 +1924,11 @@ public class PancakePlannerApp extends Application {
         if (showCableLabels()) {
             Position labelPosition = cableLabelPosition(cable.connection(), path);
             distanceLabel = new Label(cableMapLabel(cable.connection(), cableLengthMeters(path)));
-            distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,%s); -fx-padding: 2 5 2 5; -fx-border-color: %s; -fx-font-weight: %s;".formatted(
+            distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,%s); -fx-padding: 2 5 2 5; -fx-border-color: %s; -fx-font-weight: %s; -fx-font-size: %spx;".formatted(
                     selectedCable ? "0.96" : "0.88",
                     toHex(selectedCable ? Color.web("#111827") : cableColor),
-                    selectedCable ? "bold" : "normal"
+                    selectedCable ? "bold" : "normal",
+                    Double.toString(plan.cableLabelFontSize())
             ));
             distanceLabel.setLayoutX(labelPosition.x());
             distanceLabel.setLayoutY(labelPosition.y());
@@ -2379,7 +2402,8 @@ public class PancakePlannerApp extends Application {
                 -fx-border-radius: 3;
                 -fx-padding: 2 5 2 5;
                 -fx-text-fill: #111827;
-                """);
+                -fx-font-size: %spx;
+                """.formatted(Double.toString(plan.objectLabelFontSize())));
         makeSelectable(label, object);
         makeMapLabelDraggable(label, object, x, y);
         mapPane.getChildren().add(label);

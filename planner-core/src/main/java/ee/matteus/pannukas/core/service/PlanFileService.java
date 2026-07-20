@@ -30,6 +30,8 @@ public class PlanFileService {
         properties.setProperty("plan.name", plan.name());
         properties.setProperty("plan.mapImagePath", plan.mapImagePath());
         properties.setProperty("plan.pixelsPerMeter", Double.toString(plan.pixelsPerMeter()));
+        properties.setProperty("plan.objectLabelFontSize", Double.toString(plan.objectLabelFontSize()));
+        properties.setProperty("plan.cableLabelFontSize", Double.toString(plan.cableLabelFontSize()));
         properties.setProperty("layers.showCables", Boolean.toString(plan.showCables()));
         properties.setProperty("layers.showCableLabels", Boolean.toString(plan.showCableLabels()));
         properties.setProperty("layers.show230VCables", Boolean.toString(plan.showCableType(ConnectorType.SCHUKO_230V)));
@@ -93,6 +95,8 @@ public class PlanFileService {
         EventPlan plan = new EventPlan(properties.getProperty("plan.name", "Pannkoogihommik"));
         plan.setMapImagePath(properties.getProperty("plan.mapImagePath", ""));
         plan.setPixelsPerMeter(doubleValue(properties, "plan.pixelsPerMeter", EventPlan.DEFAULT_PIXELS_PER_METER));
+        plan.setObjectLabelFontSize(doubleValue(properties, "plan.objectLabelFontSize", EventPlan.DEFAULT_OBJECT_LABEL_FONT_SIZE));
+        plan.setCableLabelFontSize(doubleValue(properties, "plan.cableLabelFontSize", EventPlan.DEFAULT_CABLE_LABEL_FONT_SIZE));
         plan.setShowCables(booleanValue(properties, "layers.showCables", true));
         plan.setShowCableLabels(booleanValue(properties, "layers.showCableLabels", true));
         plan.setShowCableType(ConnectorType.SCHUKO_230V, booleanValue(properties, "layers.show230VCables", true));
