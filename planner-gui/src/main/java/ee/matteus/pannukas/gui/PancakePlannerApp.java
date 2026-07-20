@@ -4518,7 +4518,9 @@ public class PancakePlannerApp extends Application {
         String lineSeparator = System.lineSeparator();
         StringBuilder builder = new StringBuilder();
         builder.append(plan.name()).append(lineSeparator);
+        builder.append("=".repeat(plan.name().length())).append(lineSeparator);
         builder.append(lineSeparator);
+        appendPlanInfoReport(builder, lineSeparator);
 
         if (showPowerSummary()) {
             builder.append("Voolu kokkuvõte pesade kaupa").append(lineSeparator);
@@ -4556,7 +4558,18 @@ public class PancakePlannerApp extends Application {
         if (showGroupSummary()) {
             appendGroupReport(builder, lineSeparator);
         }
+        appendTextObjectReport(builder, lineSeparator);
         return builder.toString();
+    }
+
+    private void appendPlanInfoReport(StringBuilder builder, String lineSeparator) {
+        builder.append("Plaani andmed").append(lineSeparator);
+        builder.append("  Plaan: ").append(plan.name()).append(lineSeparator);
+        builder.append("  Mõõtkava: ").append(formatMeters(plan.pixelsPerMeter())).append(" px/m").append(lineSeparator);
+        builder.append("  Kaart: ").append(plan.mapImagePath().isBlank() ? "määramata" : plan.mapImagePath()).append(lineSeparator);
+        builder.append("  Objekte: ").append(plan.objects().size()).append(lineSeparator);
+        builder.append("  Vooluühendusi: ").append(plan.powerConnections().size()).append(lineSeparator);
+        builder.append(lineSeparator);
     }
 
     private void appendOutletReport(StringBuilder builder, PowerSource source, PowerOutlet outlet, int index, String lineSeparator) {
@@ -4686,6 +4699,7 @@ public class PancakePlannerApp extends Application {
         for (String row : cableTypeSummaryRows(summariesByType)) {
             builder.append(row).append(lineSeparator);
         }
+        builder.append(lineSeparator);
     }
 
     private String cableNotesText(PowerConnection connection) {
@@ -4865,6 +4879,30 @@ public class PancakePlannerApp extends Application {
             }
         }
         builder.append(lineSeparator);
+    }
+
+    private void appendTextObjectReport(StringBuilder builder, String lineSeparator) {
+        List<TextObject> textObjects = plan.objects().stream()
+                .filter(TextObject.class::isInstance)
+                .map(TextObject.class::cast)
+                .filter(textObject -> !textObject.notes().isBlank())
+                .toList();
+        if (textObjects.isEmpty()) {
+            return;
+        }
+
+        builder.append("Tekstimärkmed").append(lineSeparator);
+        for (TextObject textObject : textObjects) {
+            builder.append(textObject.name());
+            if (!textObject.groupName().isBlank()) {
+                builder.append(" (").append(textObject.groupName()).append(")");
+            }
+            builder.append(lineSeparator);
+            for (String line : textObject.notes().split("\\R")) {
+                builder.append("  ").append(line).append(lineSeparator);
+            }
+            builder.append(lineSeparator);
+        }
     }
 
     private void loadMapImage() {
