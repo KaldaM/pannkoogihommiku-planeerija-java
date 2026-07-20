@@ -792,7 +792,7 @@ public class PancakePlannerApp extends Application {
             return;
         }
         Platform.runLater(() -> {
-            Position center = objectCenter(object);
+            Position center = CablePathHelper.objectCenter(object, pixelsPerMeter());
             Bounds viewportBounds = mapScrollPane.getViewportBounds();
             double contentWidth = Math.max(mapWidth * zoomLevel, viewportBounds.getWidth());
             double contentHeight = Math.max(mapHeight * zoomLevel, viewportBounds.getHeight());
@@ -1971,11 +1971,7 @@ public class PancakePlannerApp extends Application {
     }
 
     private List<Position> cablePath(PowerCableView cable) {
-        List<Position> path = new ArrayList<>();
-        path.add(objectCenter(cable.source()));
-        path.addAll(cable.connection().routePoints());
-        path.add(objectCenter(cable.tent()));
-        return path;
+        return CablePathHelper.cablePath(cable.tent(), cable.source(), cable.connection(), pixelsPerMeter());
     }
 
     private List<Position> cablePath(Tent tent, PowerSource source, PowerConnection connection) {
@@ -2190,10 +2186,13 @@ public class PancakePlannerApp extends Application {
         if (distanceLabel == null) {
             return;
         }
-        List<Position> path = new ArrayList<>();
-        path.add(objectCenter(cable.source()));
-        path.addAll(routePoints);
-        path.add(objectCenter(cable.tent()));
+        List<Position> path = CablePathHelper.cablePath(
+                cable.tent(),
+                cable.source(),
+                cable.connection(),
+                routePoints,
+                pixelsPerMeter()
+        );
 
         Position labelPosition = CableDisplayHelper.labelPosition(cable.connection(), path);
         distanceLabel.setText(CableDisplayHelper.mapLabel(
@@ -2205,18 +2204,6 @@ public class PancakePlannerApp extends Application {
     }
 
     private record PowerCableView(Tent tent, PowerSource source, PowerConnection connection) {
-    }
-
-    private Position objectCenter(PlannerObject object) {
-        if (object instanceof Tent tent) {
-            double widthPixels = metersToPixels(tent.widthMeters());
-            double heightPixels = metersToPixels(tent.heightMeters());
-            return new Position(
-                    tent.position().x() + widthPixels / 2,
-                    tent.position().y() + heightPixels / 2
-            );
-        }
-        return object.position();
     }
 
     private Image loadImage(String imagePath) {

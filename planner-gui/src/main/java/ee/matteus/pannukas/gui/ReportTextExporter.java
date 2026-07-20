@@ -5,7 +5,6 @@ import ee.matteus.pannukas.core.model.Equipment;
 import ee.matteus.pannukas.core.model.EventPlan;
 import ee.matteus.pannukas.core.model.MarkerObject;
 import ee.matteus.pannukas.core.model.PlannerObject;
-import ee.matteus.pannukas.core.model.Position;
 import ee.matteus.pannukas.core.model.PowerConnection;
 import ee.matteus.pannukas.core.model.PowerConsumer;
 import ee.matteus.pannukas.core.model.PowerOutlet;
@@ -206,7 +205,7 @@ final class ReportTextExporter {
             }
 
             double lengthMeters = CableDisplayHelper.lengthMeters(
-                    cablePath(plan, tent, source, connection),
+                    CablePathHelper.cablePath(tent, source, connection, plan.pixelsPerMeter()),
                     plan.pixelsPerMeter()
             );
             totalLengthMeters += lengthMeters;
@@ -243,28 +242,6 @@ final class ReportTextExporter {
             builder.append(row).append(lineSeparator);
         }
         builder.append(lineSeparator);
-    }
-
-    private List<Position> cablePath(EventPlan plan, Tent tent, PowerSource source, PowerConnection connection) {
-        List<Position> path = new ArrayList<>();
-        path.add(objectCenter(plan, source));
-        path.addAll(connection.routePoints());
-        path.add(objectCenter(plan, tent));
-        return path;
-    }
-
-    private Position objectCenter(EventPlan plan, PlannerObject object) {
-        if (object instanceof Tent tent) {
-            return new Position(
-                    tent.position().x() + metersToPixels(plan, tent.widthMeters()) / 2,
-                    tent.position().y() + metersToPixels(plan, tent.heightMeters()) / 2
-            );
-        }
-        return object.position();
-    }
-
-    private double metersToPixels(EventPlan plan, double meters) {
-        return meters * plan.pixelsPerMeter();
     }
 
     private String cableNotesText(PowerConnection connection) {
