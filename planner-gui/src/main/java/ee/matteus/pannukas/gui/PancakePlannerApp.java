@@ -2117,16 +2117,18 @@ public class PancakePlannerApp extends Application {
                 event.consume();
                 return;
             }
-            PowerConnection connection = plan.findPowerConnectionForConsumer(cable.tent().id()).orElse(null);
-            if (connection == null || routePointIndex < 0 || routePointIndex >= connection.routePoints().size()) {
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            Position updatedPoint = new Position(mapPoint.getX(), mapPoint.getY());
+            List<Position> routePoints = CableRouteEditor.replacePoint(
+                    plan,
+                    cable.tent().id(),
+                    routePointIndex,
+                    updatedPoint
+            ).orElse(null);
+            if (routePoints == null) {
                 event.consume();
                 return;
             }
-
-            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
-            List<Position> routePoints = new ArrayList<>(connection.routePoints());
-            routePoints.set(routePointIndex, new Position(mapPoint.getX(), mapPoint.getY()));
-            plan.updateCableRoutePoints(cable.tent().id(), routePoints);
             marker.setCenterX(mapPoint.getX());
             marker.setCenterY(mapPoint.getY());
             updateCablePolylineRoutePoint(line, routePointIndex, mapPoint);
@@ -2158,14 +2160,9 @@ public class PancakePlannerApp extends Application {
     }
 
     private void removeCableRoutePoint(PowerCableView cable, int routePointIndex) {
-        PowerConnection connection = plan.findPowerConnectionForConsumer(cable.tent().id()).orElse(null);
-        if (connection == null || routePointIndex < 0 || routePointIndex >= connection.routePoints().size()) {
+        if (!CableRouteEditor.removePoint(plan, cable.tent().id(), routePointIndex)) {
             return;
         }
-
-        List<Position> routePoints = new ArrayList<>(connection.routePoints());
-        routePoints.remove(routePointIndex);
-        plan.updateCableRoutePoints(cable.tent().id(), routePoints);
         redrawMap();
         refreshSummary();
         markDirty();
@@ -3309,7 +3306,9 @@ public class PancakePlannerApp extends Application {
             }
             return;
         }
-        plan.addCableRoutePoint(tent.id(), point);
+        if (!CableRouteEditor.addPoint(plan, tent.id(), point)) {
+            return;
+        }
         redrawMap();
         refreshSummary();
         markDirty();
@@ -3321,8 +3320,9 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        int insertionIndex = CableRouteGeometry.closestSegmentIndex(cablePath(cable.tent(), cable.source(), connection), point);
-        plan.insertCableRoutePoint(cable.tent().id(), insertionIndex, point);
+        if (!CableRouteEditor.insertPoint(plan, cable.tent().id(), cablePath(cable.tent(), cable.source(), connection), point)) {
+            return;
+        }
         selectedObject = cable.tent();
         redrawMap();
         refreshSummary();
@@ -3336,7 +3336,9 @@ public class PancakePlannerApp extends Application {
         if (plan.findPowerConnectionForConsumer(tent.id()).isEmpty()) {
             return;
         }
-        plan.clearCableRoutePoints(tent.id());
+        if (!CableRouteEditor.clearRoute(plan, tent.id())) {
+            return;
+        }
         redrawMap();
         refreshSummary();
         markDirty();
