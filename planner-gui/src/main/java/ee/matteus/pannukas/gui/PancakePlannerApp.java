@@ -632,7 +632,9 @@ public class PancakePlannerApp extends Application {
                 ))
                 .filter(item -> objectListItemMatches(item, query))
                 .sorted(Comparator
-                        .comparing(ObjectListItem::type, String.CASE_INSENSITIVE_ORDER)
+                        .comparing(ObjectListItem::visible).reversed()
+                        .thenComparing(ObjectListItem::groupName, String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing(ObjectListItem::type, String.CASE_INSENSITIVE_ORDER)
                         .thenComparing(item -> item.object().name(), String.CASE_INSENSITIVE_ORDER))
                 .toList();
         objectList.getItems().setAll(items);
