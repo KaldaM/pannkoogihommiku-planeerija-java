@@ -44,6 +44,7 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -84,6 +85,7 @@ public class PancakePlannerApp extends Application {
     private static final String DEFAULT_MAP_PATH = "classpath:/maps/tavakaart.png";
     private static final String ORTHOPHOTO_MAP_PATH = "classpath:/maps/ortofoto.png";
     private static final String SELECTED_OBJECT_SECTION = "selectedObject";
+    private static final String MAP_LAYERS_SECTION = "mapLayers";
     private static final String SUMMARY_SECTION = "summary";
     private static final String EQUIPMENT_SECTION = "equipment";
     private static final String OUTLET_SECTION = "outlet";
@@ -342,18 +344,6 @@ public class PancakePlannerApp extends Application {
                 zoomInButton,
                 zoomOutButton,
                 resetZoomButton,
-                showCablesButton,
-                showCableLabelsButton,
-                show230VCablesButton,
-                show16ACablesButton,
-                show32ACablesButton,
-                show63ACablesButton,
-                new Separator(),
-                showTentsButton,
-                showPowerSourcesButton,
-                showCustomObjectsButton,
-                showTextObjectsButton,
-                showMarkerObjectsButton,
                 measureButton,
                 clearMeasurementsButton,
                 addCablePointButton,
@@ -448,6 +438,7 @@ public class PancakePlannerApp extends Application {
         VBox sidebar = new VBox(10);
         sidebar.setPadding(new Insets(12));
         sidebar.getChildren().add(collapsibleSection(SELECTED_OBJECT_SECTION, "Valitud objekt", createDetailPanel(), true));
+        sidebar.getChildren().add(collapsibleSection(MAP_LAYERS_SECTION, "Kaardi kihid", createMapLayersPanel(), false));
 
         showPowerSummaryCheckBox = new CheckBox("Vool");
         showPowerSummaryCheckBox.setSelected(true);
@@ -492,6 +483,35 @@ public class PancakePlannerApp extends Application {
         SplitPane splitPane = new SplitPane(mapScrollPane, sidebarScrollPane);
         splitPane.setDividerPositions(0.72);
         return splitPane;
+    }
+
+    private VBox createMapLayersPanel() {
+        FlowPane cableVisibilityRow = new FlowPane(8, 6, showCablesButton, showCableLabelsButton);
+        FlowPane cableTypeRow = new FlowPane(
+                8,
+                6,
+                show230VCablesButton,
+                show16ACablesButton,
+                show32ACablesButton,
+                show63ACablesButton
+        );
+        FlowPane objectTypeRow = new FlowPane(
+                8,
+                6,
+                showTentsButton,
+                showPowerSourcesButton,
+                showCustomObjectsButton,
+                showTextObjectsButton,
+                showMarkerObjectsButton
+        );
+        return new VBox(
+                8,
+                new Label("Kaablid"),
+                cableVisibilityRow,
+                cableTypeRow,
+                new Label("Objektid"),
+                objectTypeRow
+        );
     }
 
     private void changeZoom(double factor) {
