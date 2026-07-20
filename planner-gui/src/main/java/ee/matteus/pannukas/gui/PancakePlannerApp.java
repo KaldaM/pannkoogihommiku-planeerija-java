@@ -20,6 +20,8 @@ import ee.matteus.pannukas.core.service.PlanFileService;
 import ee.matteus.pannukas.core.service.PowerSummary;
 import ee.matteus.pannukas.core.service.PowerSummaryService;
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Cursor;
@@ -114,6 +116,7 @@ public class PancakePlannerApp extends Application {
     private EventPlan plan;
     private Pane mapPane;
     private Pane mapContentPane;
+    private ScrollPane mapScrollPane;
     private Scale mapScale;
     private ImageView mapImageView;
     private File currentPlanFile;
@@ -480,7 +483,7 @@ public class PancakePlannerApp extends Application {
         mapContentPane = new Pane(mapPane);
         updateZoomContentSize();
 
-        ScrollPane mapScrollPane = new ScrollPane(mapContentPane);
+        mapScrollPane = new ScrollPane(mapContentPane);
         mapScrollPane.setPannable(true);
         mapScrollPane.setFitToWidth(false);
         mapScrollPane.setFitToHeight(false);
@@ -578,6 +581,13 @@ public class PancakePlannerApp extends Application {
                 return;
             }
             selectObject(newValue.object());
+        });
+        objectList.setOnMouseClicked(event -> {
+            ObjectListItem selectedItem = objectList.getSelectionModel().getSelectedItem();
+            if (selectedItem != null && event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+                centerMapOnObject(selectedItem.object());
+                event.consume();
+            }
         });
         revealObjectButton = new Button("Näita kaardil");
         revealObjectButton.setOnAction(event -> revealSelectedObjectOnMap());
@@ -722,6 +732,29 @@ public class PancakePlannerApp extends Application {
                 || item.type().toLowerCase().contains(query)
                 || item.groupName().toLowerCase().contains(query)
                 || (!item.visible() && "peidetud".contains(query));
+    }
+
+    private void centerMapOnObject(PlannerObject object) {
+        if (mapScrollPane == null || object == null) {
+            return;
+        }
+        Platform.runLater(() -> {
+            Position center = objectCenter(object);
+            Bounds viewportBounds = mapScrollPane.getViewportBounds();
+            double contentWidth = Math.max(mapWidth * zoomLevel, viewportBounds.getWidth());
+            double contentHeight = Math.max(mapHeight * zoomLevel, viewportBounds.getHeight());
+            double horizontalRange = contentWidth - viewportBounds.getWidth();
+            double verticalRange = contentHeight - viewportBounds.getHeight();
+
+            if (horizontalRange > 0) {
+                double targetX = center.x() * zoomLevel - viewportBounds.getWidth() / 2;
+                mapScrollPane.setHvalue(clamp(targetX / horizontalRange, 0, 1));
+            }
+            if (verticalRange > 0) {
+                double targetY = center.y() * zoomLevel - viewportBounds.getHeight() / 2;
+                mapScrollPane.setVvalue(clamp(targetY / verticalRange, 0, 1));
+            }
+        });
     }
 
     private void updateRevealObjectButton() {
