@@ -299,13 +299,16 @@ public class PancakePlannerApp extends Application {
         Button saveAsButton = new Button("Salvesta kui");
         saveAsButton.setOnAction(event -> savePlanAs());
 
-        Button exportSummaryButton = new Button("Ekspordi");
+        Button exportSummaryButton = new Button("Ekspordi TXT");
+        exportSummaryButton.setTooltip(new Tooltip("Ekspordib tekstiraporti .txt failina"));
         exportSummaryButton.setOnAction(event -> exportSummary());
 
         Button exportMapImageButton = new Button("Ekspordi pilt");
+        exportMapImageButton.setTooltip(new Tooltip("Ekspordib kaardi .png pildina"));
         exportMapImageButton.setOnAction(event -> exportMapImage());
 
         Button exportPdfButton = new Button("Ekspordi PDF");
+        exportPdfButton.setTooltip(new Tooltip("Ekspordib kaardi ja raporti .pdf failina"));
         exportPdfButton.setOnAction(event -> exportPdf());
 
         Button openButton = new Button("Ava");
