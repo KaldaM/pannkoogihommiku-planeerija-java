@@ -395,7 +395,7 @@ public class PancakePlannerApp extends Application {
     private ToggleButton cableTypeToggle(String text, ConnectorType connectorType) {
         ToggleButton button = new ToggleButton(text);
         button.setSelected(true);
-        button.setTooltip(new Tooltip("Näitab või peidab kaardil %s kaablid".formatted(shortCableTypeName(connectorType))));
+        button.setTooltip(new Tooltip("Näitab või peidab kaardil %s kaablid".formatted(CableDisplayHelper.shortTypeName(connectorType))));
         button.setOnAction(event -> updateMapLayerVisibility());
         return button;
     }
@@ -1877,13 +1877,13 @@ public class PancakePlannerApp extends Application {
 
     private HBox cableLegendRow(ConnectorType connectorType) {
         Line sample = new Line(0, 0, 34, 0);
-        sample.setStroke(cableColor(connectorType));
-        sample.setStrokeWidth(cableWidth(connectorType));
+        sample.setStroke(CableDisplayHelper.color(connectorType));
+        sample.setStrokeWidth(CableDisplayHelper.width(connectorType));
         if (connectorType == ConnectorType.SCHUKO_230V) {
             sample.getStrokeDashArray().addAll(8.0, 6.0);
         }
 
-        Label label = new Label(shortCableTypeName(connectorType));
+        Label label = new Label(CableDisplayHelper.shortTypeName(connectorType));
         HBox row = new HBox(8, sample, label);
         row.setStyle("-fx-alignment: center-left;");
         return row;
@@ -1908,9 +1908,9 @@ public class PancakePlannerApp extends Application {
 
     private void drawPowerConnection(PowerCableView cable) {
         List<Position> path = cablePath(cable);
-        Color cableColor = cableColor(cable.connection().connectorType());
+        Color cableColor = CableDisplayHelper.color(cable.connection().connectorType());
         boolean selectedCable = isSelected(cable.tent());
-        double strokeWidth = cableWidth(cable.connection().connectorType()) + (selectedCable ? 2.0 : 0.0);
+        double strokeWidth = CableDisplayHelper.width(cable.connection().connectorType()) + (selectedCable ? 2.0 : 0.0);
 
         Polyline line = createCablePolyline(path);
         line.setStroke(cableColor);
@@ -1938,8 +1938,11 @@ public class PancakePlannerApp extends Application {
         mapPane.getChildren().addAll(highlightLine, line, hitLine);
         Label distanceLabel = null;
         if (showCableLabels()) {
-            Position labelPosition = cableLabelPosition(cable.connection(), path);
-            distanceLabel = new Label(cableMapLabel(cable.connection(), cableLengthMeters(path)));
+            Position labelPosition = CableDisplayHelper.labelPosition(cable.connection(), path);
+            distanceLabel = new Label(CableDisplayHelper.mapLabel(
+                    cable.connection(),
+                    CableDisplayHelper.lengthMeters(path, pixelsPerMeter())
+            ));
             distanceLabel.setStyle("-fx-background-color: rgba(255,255,255,%s); -fx-padding: 2 5 2 5; -fx-border-color: %s; -fx-font-weight: %s; -fx-font-size: %spx;".formatted(
                     selectedCable ? "0.96" : "0.88",
                     toHex(selectedCable ? Color.web("#111827") : cableColor),
@@ -2077,7 +2080,7 @@ public class PancakePlannerApp extends Application {
             double labelY = mapPoint.getY() - dragDelta.y;
             label.setLayoutX(labelX);
             label.setLayoutY(labelY);
-            Position defaultPosition = cableDefaultLabelPosition(cablePath(cable));
+            Position defaultPosition = CableDisplayHelper.defaultLabelPosition(cablePath(cable));
             plan.updateCableLabelOffset(cable.tent().id(), new Position(
                     labelX - defaultPosition.x(),
                     labelY - defaultPosition.y()
@@ -2192,60 +2195,13 @@ public class PancakePlannerApp extends Application {
         path.addAll(routePoints);
         path.add(objectCenter(cable.tent()));
 
-        Position labelPosition = cableLabelPosition(cable.connection(), path);
-        distanceLabel.setText(cableMapLabel(cable.connection(), cableLengthMeters(path)));
+        Position labelPosition = CableDisplayHelper.labelPosition(cable.connection(), path);
+        distanceLabel.setText(CableDisplayHelper.mapLabel(
+                cable.connection(),
+                CableDisplayHelper.lengthMeters(path, pixelsPerMeter())
+        ));
         distanceLabel.setLayoutX(labelPosition.x());
         distanceLabel.setLayoutY(labelPosition.y());
-    }
-
-    private Position cableLabelPosition(PowerConnection connection, List<Position> path) {
-        Position defaultPosition = cableDefaultLabelPosition(path);
-        if (connection.customCableLabelPosition()) {
-            return new Position(
-                    defaultPosition.x() + connection.cableLabelOffset().x(),
-                    defaultPosition.y() + connection.cableLabelOffset().y()
-            );
-        }
-        return defaultPosition;
-    }
-
-    private Position cableDefaultLabelPosition(List<Position> path) {
-        Position midpoint = pathMidpoint(path);
-        return new Position(midpoint.x() + 6, midpoint.y() + 6);
-    }
-
-    private Color cableColor(ConnectorType connectorType) {
-        return switch (connectorType) {
-            case SCHUKO_230V -> Color.web("#2563eb");
-            case INDUSTRIAL_16A -> Color.web("#16a34a");
-            case INDUSTRIAL_32A -> Color.web("#ea580c");
-            case INDUSTRIAL_63A -> Color.web("#7c3aed");
-        };
-    }
-
-    private String shortCableTypeName(ConnectorType connectorType) {
-        return switch (connectorType) {
-            case SCHUKO_230V -> "230V";
-            case INDUSTRIAL_16A -> "16A";
-            case INDUSTRIAL_32A -> "32A";
-            case INDUSTRIAL_63A -> "63A";
-        };
-    }
-
-    private String cableMapLabel(PowerConnection connection, double lengthMeters) {
-        String baseLabel = "%s · %.1f m".formatted(shortCableTypeName(connection.connectorType()), lengthMeters);
-        return connection.cableLengthNotes().isBlank()
-                ? baseLabel
-                : "%s · %s".formatted(baseLabel, connection.cableLengthNotes());
-    }
-
-    private double cableWidth(ConnectorType connectorType) {
-        return switch (connectorType) {
-            case SCHUKO_230V -> 2.0;
-            case INDUSTRIAL_16A -> 2.8;
-            case INDUSTRIAL_32A -> 3.6;
-            case INDUSTRIAL_63A -> 4.4;
-        };
     }
 
     private record PowerCableView(Tent tent, PowerSource source, PowerConnection connection) {
@@ -3567,40 +3523,6 @@ public class PancakePlannerApp extends Application {
         return plan == null ? EventPlan.DEFAULT_PIXELS_PER_METER : plan.pixelsPerMeter();
     }
 
-    private double cableLengthMeters(List<Position> path) {
-        double lengthMeters = 0.0;
-        for (int index = 1; index < path.size(); index++) {
-            lengthMeters += distanceMeters(path.get(index - 1), path.get(index));
-        }
-        return lengthMeters;
-    }
-
-    private Position pathMidpoint(List<Position> path) {
-        if (path.isEmpty()) {
-            return new Position(0, 0);
-        }
-        if (path.size() == 1) {
-            return path.getFirst();
-        }
-
-        double halfLengthMeters = cableLengthMeters(path) / 2;
-        double walkedMeters = 0.0;
-        for (int index = 1; index < path.size(); index++) {
-            Position start = path.get(index - 1);
-            Position end = path.get(index);
-            double segmentLengthMeters = distanceMeters(start, end);
-            if (walkedMeters + segmentLengthMeters >= halfLengthMeters) {
-                double ratio = segmentLengthMeters == 0 ? 0 : (halfLengthMeters - walkedMeters) / segmentLengthMeters;
-                return new Position(
-                        start.x() + (end.x() - start.x()) * ratio,
-                        start.y() + (end.y() - start.y()) * ratio
-                );
-            }
-            walkedMeters += segmentLengthMeters;
-        }
-        return path.getLast();
-    }
-
     private void clearMeasurements() {
         measurementNodes.clear();
         measurements.clear();
@@ -4325,7 +4247,7 @@ public class PancakePlannerApp extends Application {
                 continue;
             }
 
-            double lengthMeters = cableLengthMeters(cablePath(tent, source, connection));
+            double lengthMeters = CableDisplayHelper.lengthMeters(cablePath(tent, source, connection), pixelsPerMeter());
             totalLengthMeters += lengthMeters;
             OptionalDouble notedLengthMeters = notedCableLengthMeters(connection);
             CableTypeSummary typeSummary = summariesByType.computeIfAbsent(
@@ -4565,12 +4487,12 @@ public class PancakePlannerApp extends Application {
     private String cableTypeSummaryRow(ConnectorType connectorType, CableTypeSummary summary) {
         if (summary.hasNotedLength()) {
             return "  %s: %.1f m märgitud, %.1f m kaardil".formatted(
-                    shortCableTypeName(connectorType),
+                    CableDisplayHelper.shortTypeName(connectorType),
                     summary.notedLengthMeters(),
                     summary.mapLengthMeters()
             );
         }
-        return "  %s: %.1f m kaardil".formatted(shortCableTypeName(connectorType), summary.mapLengthMeters());
+        return "  %s: %.1f m kaardil".formatted(CableDisplayHelper.shortTypeName(connectorType), summary.mapLengthMeters());
     }
 
     private String cableSummaryRow(CableSummaryRow row) {

@@ -205,7 +205,10 @@ final class ReportTextExporter {
                 continue;
             }
 
-            double lengthMeters = cableLengthMeters(plan, cablePath(plan, tent, source, connection));
+            double lengthMeters = CableDisplayHelper.lengthMeters(
+                    cablePath(plan, tent, source, connection),
+                    plan.pixelsPerMeter()
+            );
             totalLengthMeters += lengthMeters;
             OptionalDouble notedLengthMeters = notedCableLengthMeters(connection);
             CableTypeSummary typeSummary = summariesByType.computeIfAbsent(
@@ -260,20 +263,6 @@ final class ReportTextExporter {
         return object.position();
     }
 
-    private double cableLengthMeters(EventPlan plan, List<Position> path) {
-        double lengthMeters = 0.0;
-        for (int index = 1; index < path.size(); index++) {
-            lengthMeters += distancePixels(path.get(index - 1), path.get(index)) / plan.pixelsPerMeter();
-        }
-        return lengthMeters;
-    }
-
-    private double distancePixels(Position start, Position end) {
-        double deltaX = end.x() - start.x();
-        double deltaY = end.y() - start.y();
-        return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    }
-
     private double metersToPixels(EventPlan plan, double meters) {
         return meters * plan.pixelsPerMeter();
     }
@@ -303,12 +292,12 @@ final class ReportTextExporter {
     private String cableTypeSummaryRow(ConnectorType connectorType, CableTypeSummary summary) {
         if (summary.hasNotedLength()) {
             return "  %s: %.1f m märgitud, %.1f m kaardil".formatted(
-                    shortCableTypeName(connectorType),
+                    CableDisplayHelper.shortTypeName(connectorType),
                     summary.notedLengthMeters(),
                     summary.mapLengthMeters()
             );
         }
-        return "  %s: %.1f m kaardil".formatted(shortCableTypeName(connectorType), summary.mapLengthMeters());
+        return "  %s: %.1f m kaardil".formatted(CableDisplayHelper.shortTypeName(connectorType), summary.mapLengthMeters());
     }
 
     private String cableSummaryRow(CableSummaryRow row) {
@@ -465,15 +454,6 @@ final class ReportTextExporter {
             return "ÜLEKOORMUS %d W".formatted(Math.abs(remainingWatts));
         }
         return "%d W alles".formatted(remainingWatts);
-    }
-
-    private String shortCableTypeName(ConnectorType connectorType) {
-        return switch (connectorType) {
-            case SCHUKO_230V -> "230V";
-            case INDUSTRIAL_16A -> "16A";
-            case INDUSTRIAL_32A -> "32A";
-            case INDUSTRIAL_63A -> "63A";
-        };
     }
 
     private String objectTypeName(PlannerObject object) {
