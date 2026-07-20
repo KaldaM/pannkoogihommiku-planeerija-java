@@ -4433,16 +4433,17 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Ekspordi kokkuvõte");
-        applyInitialDirectory(fileChooser);
-        fileChooser.setInitialFileName(ExportFileNames.summaryFileName(plan.name(), currentPlanFile));
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Tekstifail", "*.txt"));
-        File file = fileChooser.showSaveDialog(stage);
-        if (file == null) {
+        Optional<File> selectedFile = ExportFileChooser.chooseSummaryFile(
+                stage,
+                initialDirectory(),
+                plan.name(),
+                currentPlanFile
+        );
+        if (selectedFile.isEmpty()) {
             return;
         }
 
+        File file = selectedFile.get();
         try {
             Files.writeString(file.toPath(), summaryText(selectedReportScope.get()), StandardCharsets.UTF_8);
             rememberDirectory(file);
@@ -4459,17 +4460,17 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Ekspordi kaart pildina");
-        applyInitialDirectory(fileChooser);
-        fileChooser.setInitialFileName(ExportFileNames.mapImageFileName(plan.name(), currentPlanFile));
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG pilt", "*.png"));
-        File selectedFile = fileChooser.showSaveDialog(stage);
-        if (selectedFile == null) {
+        Optional<File> selectedFile = ExportFileChooser.chooseMapImageFile(
+                stage,
+                initialDirectory(),
+                plan.name(),
+                currentPlanFile
+        );
+        if (selectedFile.isEmpty()) {
             return;
         }
 
-        File file = ExportFileNames.ensurePngExtension(selectedFile);
+        File file = selectedFile.get();
         try {
             WritableImage image = snapshotMapImage(selectedScope.get());
             ImageIO.write(SwingFXUtils.fromFXImage(image, null), "png", file);
@@ -4490,17 +4491,17 @@ public class PancakePlannerApp extends Application {
         }
         PdfExportOptions options = selectedOptions.get();
 
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Ekspordi PDF");
-        applyInitialDirectory(fileChooser);
-        fileChooser.setInitialFileName(ExportFileNames.pdfFileName(plan.name(), currentPlanFile));
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF fail", "*.pdf"));
-        File selectedFile = fileChooser.showSaveDialog(stage);
-        if (selectedFile == null) {
+        Optional<File> selectedFile = ExportFileChooser.choosePdfFile(
+                stage,
+                initialDirectory(),
+                plan.name(),
+                currentPlanFile
+        );
+        if (selectedFile.isEmpty()) {
             return;
         }
 
-        File file = ExportFileNames.ensurePdfExtension(selectedFile);
+        File file = selectedFile.get();
         try {
             WritableImage image = snapshotMapImage(options.mapScope());
             PdfReportExporter.export(
@@ -4744,13 +4745,22 @@ public class PancakePlannerApp extends Application {
     }
 
     private void applyInitialDirectory(FileChooser fileChooser) {
-        File directory = lastUsedDirectory;
-        if (directory == null && currentPlanFile != null) {
-            directory = currentPlanFile.getParentFile();
-        }
+        File directory = initialDirectory();
         if (directory != null && directory.isDirectory()) {
             fileChooser.setInitialDirectory(directory);
         }
+    }
+
+    private File initialDirectory() {
+        if (lastUsedDirectory != null && lastUsedDirectory.isDirectory()) {
+            return lastUsedDirectory;
+        }
+        if (currentPlanFile != null
+                && currentPlanFile.getParentFile() != null
+                && currentPlanFile.getParentFile().isDirectory()) {
+            return currentPlanFile.getParentFile();
+        }
+        return null;
     }
 
     private void rememberDirectory(File file) {
