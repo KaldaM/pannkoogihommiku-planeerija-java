@@ -4439,6 +4439,11 @@ public class PancakePlannerApp extends Application {
     private void exportSummary() {
         refreshSummary();
 
+        Optional<ReportExportScope> selectedReportScope = chooseReportExportScope();
+        if (selectedReportScope.isEmpty()) {
+            return;
+        }
+
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Ekspordi kokkuvõte");
         applyInitialDirectory(fileChooser);
@@ -4450,7 +4455,7 @@ public class PancakePlannerApp extends Application {
         }
 
         try {
-            Files.writeString(file.toPath(), summaryText(), StandardCharsets.UTF_8);
+            Files.writeString(file.toPath(), summaryText(selectedReportScope.get()), StandardCharsets.UTF_8);
             rememberDirectory(file);
         } catch (IOException exception) {
             showError("Eksportimine ebaõnnestus", exception.getMessage());
@@ -4507,10 +4512,11 @@ public class PancakePlannerApp extends Application {
     private void exportPdf() {
         redrawMap();
 
-        Optional<MapImageExportScope> selectedScope = chooseMapImageExportScope();
-        if (selectedScope.isEmpty()) {
+        Optional<PdfExportOptions> selectedOptions = choosePdfExportOptions();
+        if (selectedOptions.isEmpty()) {
             return;
         }
+        PdfExportOptions options = selectedOptions.get();
 
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Ekspordi PDF");
@@ -4526,7 +4532,7 @@ public class PancakePlannerApp extends Application {
         double previousScaleX = mapScale.getX();
         double previousScaleY = mapScale.getY();
         try {
-            Rectangle2D viewport = mapImageExportViewport(selectedScope.get());
+            Rectangle2D viewport = mapImageExportViewport(options.mapScope());
             mapScale.setX(1.0);
             mapScale.setY(1.0);
             mapPane.applyCss();
@@ -4541,7 +4547,7 @@ public class PancakePlannerApp extends Application {
 
             try (PDDocument document = new PDDocument()) {
                 addMapPdfPage(document, mapImage);
-                addReportPdfPages(document, summaryText());
+                addReportPdfPages(document, summaryText(options.reportScope()));
                 addPdfPageNumbers(document);
                 document.save(file);
             }
@@ -4709,6 +4715,44 @@ public class PancakePlannerApp extends Application {
         return dialog.showAndWait();
     }
 
+    private Optional<ReportExportScope> chooseReportExportScope() {
+        ChoiceDialog<ReportExportScope> dialog = new ChoiceDialog<>(
+                ReportExportScope.COMPACT,
+                ReportExportScope.COMPACT,
+                ReportExportScope.FULL
+        );
+        dialog.setTitle("Ekspordi raport");
+        dialog.setHeaderText("Vali raporti detailsus");
+        dialog.setContentText("Raport");
+        return dialog.showAndWait();
+    }
+
+    private Optional<PdfExportOptions> choosePdfExportOptions() {
+        ComboBox<MapImageExportScope> mapScopeComboBox = new ComboBox<>();
+        mapScopeComboBox.getItems().addAll(MapImageExportScope.values());
+        mapScopeComboBox.getSelectionModel().select(MapImageExportScope.FULL_MAP);
+
+        ComboBox<ReportExportScope> reportScopeComboBox = new ComboBox<>();
+        reportScopeComboBox.getItems().addAll(ReportExportScope.values());
+        reportScopeComboBox.getSelectionModel().select(ReportExportScope.COMPACT);
+
+        GridPane form = detailGrid();
+        form.addRow(0, new Label("Kaardi ala"), mapScopeComboBox);
+        form.addRow(1, new Label("Raport"), reportScopeComboBox);
+
+        Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
+        dialog.setTitle("Ekspordi PDF");
+        dialog.setHeaderText("Vali PDF ekspordi seaded");
+        dialog.getDialogPane().setContent(form);
+
+        return dialog.showAndWait()
+                .filter(buttonType -> buttonType == ButtonType.OK)
+                .map(buttonType -> new PdfExportOptions(
+                        mapScopeComboBox.getSelectionModel().getSelectedItem(),
+                        reportScopeComboBox.getSelectionModel().getSelectedItem()
+                ));
+    }
+
     private Rectangle2D mapImageExportViewport(MapImageExportScope scope) {
         if (scope == MapImageExportScope.CURRENT_VIEW && mapScrollPane != null) {
             Bounds viewportBounds = mapScrollPane.getViewportBounds();
@@ -4723,7 +4767,7 @@ public class PancakePlannerApp extends Application {
         return new Rectangle2D(0, 0, mapWidth, mapHeight);
     }
 
-    private String summaryText() {
+    private String summaryText(ReportExportScope reportScope) {
         String lineSeparator = System.lineSeparator();
         StringBuilder builder = new StringBuilder();
         builder.append(plan.name()).append(lineSeparator);
@@ -4753,7 +4797,7 @@ public class PancakePlannerApp extends Application {
 
                 for (int index = 0; index < source.outlets().size(); index++) {
                     PowerOutlet outlet = source.outlets().get(index);
-                    appendOutletReport(builder, source, outlet, index, lineSeparator);
+                    appendOutletReport(builder, source, outlet, index, reportScope, lineSeparator);
                 }
                 builder.append(lineSeparator);
             }
@@ -4781,8 +4825,19 @@ public class PancakePlannerApp extends Application {
         builder.append(lineSeparator);
     }
 
-    private void appendOutletReport(StringBuilder builder, PowerSource source, PowerOutlet outlet, int index, String lineSeparator) {
+    private void appendOutletReport(
+            StringBuilder builder,
+            PowerSource source,
+            PowerOutlet outlet,
+            int index,
+            ReportExportScope reportScope,
+            String lineSeparator
+    ) {
         int usedWatts = usedWatts(outlet.id());
+        List<Tent> tents = connectedTents(source.id(), outlet.id());
+        if (reportScope == ReportExportScope.COMPACT && usedWatts == 0 && tents.isEmpty()) {
+            return;
+        }
         builder.append("  ")
                 .append(outletDisplayName(outlet, outletTypeIndex(source, outlet, index)))
                 .append(": ")
@@ -4793,7 +4848,6 @@ public class PancakePlannerApp extends Application {
                 .append(remainingWattsText(outlet.capacityWatts() - usedWatts))
                 .append(lineSeparator);
 
-        List<Tent> tents = connectedTents(source.id(), outlet.id());
         if (tents.isEmpty()) {
             builder.append("    Tarbijaid pole").append(lineSeparator);
             return;
@@ -5245,6 +5299,25 @@ public class PancakePlannerApp extends Application {
         public String toString() {
             return label;
         }
+    }
+
+    private enum ReportExportScope {
+        COMPACT("Lühike raport"),
+        FULL("Täielik raport");
+
+        private final String label;
+
+        ReportExportScope(String label) {
+            this.label = label;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
+    }
+
+    private record PdfExportOptions(MapImageExportScope mapScope, ReportExportScope reportScope) {
     }
 
     private record PdfReportLineStyle(PDType1Font font, float fontSize, float indent, float extraSpaceBefore) {
