@@ -16,6 +16,10 @@ final class ExportFileNames {
         return ensureExtension(file, ".pdf");
     }
 
+    static File ensureTxtExtension(File file) {
+        return ensureExtension(file, ".txt");
+    }
+
     static String mapImageFileName(String planName, File currentPlanFile) {
         return safeExportBaseName(planName, currentPlanFile) + "-kaart.png";
     }

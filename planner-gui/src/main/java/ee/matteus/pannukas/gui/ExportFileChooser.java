@@ -17,7 +17,7 @@ final class ExportFileChooser {
                 "Ekspordi kokkuvõte",
                 ExportFileNames.summaryFileName(planName, currentPlanFile),
                 new FileChooser.ExtensionFilter("Tekstifail", "*.txt")
-        );
+        ).map(ExportFileNames::ensureTxtExtension);
     }
 
     static Optional<File> chooseMapImageFile(Stage owner, File initialDirectory, String planName, File currentPlanFile) {
