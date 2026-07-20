@@ -523,6 +523,11 @@ public class PancakePlannerApp extends Application {
     }
 
     private VBox createMapLayersPanel() {
+        Button showAllLayersButton = new Button("Kõik sisse");
+        showAllLayersButton.setOnAction(event -> setAllMapLayersVisible(true));
+        Button hideAllLayersButton = new Button("Kõik välja");
+        hideAllLayersButton.setOnAction(event -> setAllMapLayersVisible(false));
+        FlowPane bulkActionsRow = new FlowPane(8, 6, showAllLayersButton, hideAllLayersButton);
         FlowPane cableVisibilityRow = new FlowPane(8, 6, showCablesButton, showCableLabelsButton);
         FlowPane cableTypeRow = new FlowPane(
                 8,
@@ -543,12 +548,28 @@ public class PancakePlannerApp extends Application {
         );
         return new VBox(
                 8,
+                bulkActionsRow,
                 new Label("Kaablid"),
                 cableVisibilityRow,
                 cableTypeRow,
                 new Label("Objektid"),
                 objectTypeRow
         );
+    }
+
+    private void setAllMapLayersVisible(boolean visible) {
+        showCablesButton.setSelected(visible);
+        showCableLabelsButton.setSelected(visible);
+        show230VCablesButton.setSelected(visible);
+        show16ACablesButton.setSelected(visible);
+        show32ACablesButton.setSelected(visible);
+        show63ACablesButton.setSelected(visible);
+        showTentsButton.setSelected(visible);
+        showPowerSourcesButton.setSelected(visible);
+        showCustomObjectsButton.setSelected(visible);
+        showTextObjectsButton.setSelected(visible);
+        showMarkerObjectsButton.setSelected(visible);
+        updateMapLayerVisibility();
     }
 
     private void changeZoom(double factor) {
