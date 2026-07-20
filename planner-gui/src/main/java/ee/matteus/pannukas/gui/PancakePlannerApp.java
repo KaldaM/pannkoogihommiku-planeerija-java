@@ -183,6 +183,7 @@ public class PancakePlannerApp extends Application {
     private VBox equipmentPanel;
     private VBox outletPanel;
     private Button deleteObjectButton;
+    private Button duplicateObjectButton;
     private Button choosePowerSourceButton;
     private ToggleButton measureButton;
     private ToggleButton addCablePointButton;
@@ -651,6 +652,8 @@ public class PancakePlannerApp extends Application {
         applyButton.setOnAction(event -> applyDetails());
         choosePowerSourceButton = new Button("Vali kapp kaardilt");
         choosePowerSourceButton.setOnAction(event -> startPowerSourceSelectionFromMap());
+        duplicateObjectButton = new Button("Dubleeri objekt");
+        duplicateObjectButton.setOnAction(event -> duplicateSelectedObject());
         deleteObjectButton = new Button("Kustuta objekt");
         deleteObjectButton.setOnAction(event -> deleteSelectedObject());
 
@@ -687,6 +690,7 @@ public class PancakePlannerApp extends Application {
                 new VBox(8, sectionLabel("Märkmed"), notesForm),
                 applyButton,
                 choosePowerSourceButton,
+                duplicateObjectButton,
                 deleteObjectButton
         );
         detailPanel.setPadding(new Insets(0, 0, 12, 0));
@@ -2298,6 +2302,7 @@ public class PancakePlannerApp extends Application {
         resetMapLabelButton.setDisable(!customMapLabelPosition);
         resetMapLabelButton.setTooltip(new Tooltip(mapLabelResetTooltip(hasSelection, textObjectSelected, customMapLabelPosition)));
         boolean lockedSelection = selectedObject != null && selectedObject.locked();
+        duplicateObjectButton.setDisable(!hasSelection);
         deleteObjectButton.setDisable(!hasSelection || lockedSelection);
         deleteObjectButton.setTooltip(lockedSelection
                 ? new Tooltip("Lukustatud objekti kustutamiseks eemalda enne lukustus")
@@ -2694,6 +2699,88 @@ public class PancakePlannerApp extends Application {
         redrawMap();
         refreshSummary();
         markDirty();
+    }
+
+    private void duplicateSelectedObject() {
+        if (selectedObject == null) {
+            return;
+        }
+
+        PlannerObject copy = duplicateObject(selectedObject);
+        if (copy == null) {
+            return;
+        }
+
+        plan.addObject(copy);
+        refreshGroupFilters();
+        selectObject(copy);
+        refreshSummary();
+        markDirty();
+    }
+
+    private PlannerObject duplicateObject(PlannerObject original) {
+        Position copyPosition = new Position(original.position().x() + 32, original.position().y() + 32);
+        PlannerObject copy;
+        if (original instanceof Tent tent) {
+            Tent tentCopy = new Tent(planFactory.newId(), duplicateName(tent), copyPosition);
+            tentCopy.setSizeMeters(tent.widthMeters(), tent.heightMeters());
+            tentCopy.setRotationDegrees(tent.rotationDegrees());
+            tentCopy.setColorHex(tent.colorHex());
+            for (Equipment item : tent.equipment()) {
+                tentCopy.addEquipment(new Equipment(item.name(), item.requiredWatts()));
+            }
+            copy = tentCopy;
+        } else if (original instanceof PowerSource source) {
+            PowerSource sourceCopy = new PowerSource(planFactory.newId(), duplicateName(source), copyPosition);
+            for (PowerOutlet outlet : source.outlets()) {
+                sourceCopy.addOutlet(new PowerOutlet(
+                        planFactory.newId(),
+                        outlet.name(),
+                        outlet.type(),
+                        outlet.capacityWatts()
+                ));
+            }
+            copy = sourceCopy;
+        } else if (original instanceof CustomObject customObject) {
+            CustomObject objectCopy = new CustomObject(planFactory.newId(), duplicateName(customObject), copyPosition);
+            objectCopy.setShape(customObject.shape());
+            objectCopy.setColorHex(customObject.colorHex());
+            objectCopy.setSizeMeters(customObject.widthMeters(), customObject.heightMeters());
+            objectCopy.setRotationDegrees(customObject.rotationDegrees());
+            copy = objectCopy;
+        } else if (original instanceof TextObject textObject) {
+            TextObject textCopy = new TextObject(planFactory.newId(), duplicateName(textObject), copyPosition);
+            textCopy.setColorHex(textObject.colorHex());
+            copy = textCopy;
+        } else if (original instanceof MarkerObject markerObject) {
+            MarkerObject markerCopy = new MarkerObject(planFactory.newId(), duplicateName(markerObject), copyPosition);
+            markerCopy.setMarkerType(markerObject.markerType());
+            markerCopy.setColorHex(markerObject.colorHex());
+            copy = markerCopy;
+        } else {
+            return null;
+        }
+
+        copyCommonDetails(original, copy);
+        return copy;
+    }
+
+    private void copyCommonDetails(PlannerObject original, PlannerObject copy) {
+        copy.setGroupName(original.groupName());
+        copy.setNotes(original.notes());
+        copy.setShowMapLabel(original.showMapLabel());
+        copy.setLocked(false);
+        if (original.customMapLabelPosition()) {
+            copy.setMapLabelOffset(original.mapLabelOffset());
+        }
+    }
+
+    private String duplicateName(PlannerObject object) {
+        String name = object.name() == null ? "" : object.name().trim();
+        if (name.isBlank()) {
+            return "Koopia";
+        }
+        return name + " koopia";
     }
 
     private void deleteSelectedObject() {
