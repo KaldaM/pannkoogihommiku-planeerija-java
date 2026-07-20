@@ -22,6 +22,7 @@ import ee.matteus.pannukas.core.service.PowerSummaryService;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -99,6 +100,9 @@ public class PancakePlannerApp extends Application {
     private static final double MIN_MAP_WIDTH = 760.0;
     private static final double MIN_MAP_HEIGHT = 560.0;
     private static final double MAP_CLICK_DRAG_TOLERANCE_PX = 6.0;
+    private static final double MIN_OBJECT_LIST_HEIGHT = 90.0;
+    private static final double MAX_OBJECT_LIST_HEIGHT = 800.0;
+    private static final double DEFAULT_OBJECT_LIST_HEIGHT = 180.0;
 
     private final PlanFactory planFactory = new PlanFactory();
     private final PowerSummaryService powerSummaryService = new PowerSummaryService();
@@ -114,6 +118,7 @@ public class PancakePlannerApp extends Application {
     private double zoomLevel = 1.0;
     private double mapWidth = MIN_MAP_WIDTH;
     private double mapHeight = MIN_MAP_HEIGHT;
+    private double objectListHeight = DEFAULT_OBJECT_LIST_HEIGHT;
     private boolean measuringActive;
     private boolean addingCablePoint;
     private boolean mapDraggedSincePress;
@@ -533,7 +538,7 @@ public class PancakePlannerApp extends Application {
         objectSearchField.setPromptText("Otsi nime, tüübi või grupi järgi");
         objectSearchField.textProperty().addListener((observable, oldValue, newValue) -> refreshObjectList());
         objectList = new ListView<>();
-        objectList.setPrefHeight(180);
+        objectList.setPrefHeight(objectListHeight);
         objectList.setCellFactory(list -> new ListCell<>() {
             @Override
             protected void updateItem(ObjectListItem item, boolean empty) {
@@ -574,7 +579,41 @@ public class PancakePlannerApp extends Application {
         revealObjectButton.setOnAction(event -> revealSelectedObjectOnMap());
         updateRevealObjectButton();
         refreshObjectList();
-        return new VBox(8, objectSearchField, objectList, revealObjectButton);
+        return new VBox(8, objectSearchField, objectList, createObjectListResizeHandle(), revealObjectButton);
+    }
+
+    private Label createObjectListResizeHandle() {
+        Label handle = new Label("|||");
+        handle.setMaxWidth(Double.MAX_VALUE);
+        handle.setAlignment(javafx.geometry.Pos.CENTER);
+        handle.setCursor(Cursor.V_RESIZE);
+        handle.setTooltip(new Tooltip("Lohista objektide nimekirja kõrguse muutmiseks"));
+        handle.setStyle("""
+                -fx-background-color: #e5e7eb;
+                -fx-text-fill: #6b7280;
+                -fx-font-size: 9;
+                -fx-padding: 1 0 1 0;
+                """);
+        Delta dragStart = new Delta();
+        handle.setOnMousePressed(event -> {
+            dragStart.x = event.getSceneY();
+            dragStart.y = objectList.getPrefHeight();
+            event.consume();
+        });
+        handle.setOnMouseDragged(event -> {
+            objectListHeight = clamp(
+                    dragStart.y + event.getSceneY() - dragStart.x,
+                    MIN_OBJECT_LIST_HEIGHT,
+                    MAX_OBJECT_LIST_HEIGHT
+            );
+            objectList.setPrefHeight(objectListHeight);
+            event.consume();
+        });
+        return handle;
+    }
+
+    private double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     private VBox createMapLayersPanel() {
