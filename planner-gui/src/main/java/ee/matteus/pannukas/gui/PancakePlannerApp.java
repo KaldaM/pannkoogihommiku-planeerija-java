@@ -479,8 +479,8 @@ public class PancakePlannerApp extends Application {
 
         VBox sidebar = new VBox(10);
         sidebar.setPadding(new Insets(12));
-        sidebar.getChildren().add(collapsibleSection(SELECTED_OBJECT_SECTION, "Valitud objekt", createDetailPanel(), true));
         sidebar.getChildren().add(collapsibleSection(OBJECT_LIST_SECTION, "Objektid", createObjectListPanel(), false));
+        sidebar.getChildren().add(collapsibleSection(SELECTED_OBJECT_SECTION, "Valitud objekt", createDetailPanel(), true));
         sidebar.getChildren().add(collapsibleSection(MAP_LAYERS_SECTION, "Kaardi kihid", createMapLayersPanel(), false));
 
         showPowerSummaryCheckBox = new CheckBox("Vool");
