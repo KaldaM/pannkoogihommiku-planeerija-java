@@ -286,12 +286,12 @@ public class PancakePlannerApp extends Application {
         showCablesButton = new ToggleButton("Kaablid");
         showCablesButton.setSelected(true);
         showCablesButton.setTooltip(new Tooltip("Näitab või peidab kaardil voolukaablid"));
-        showCablesButton.setOnAction(event -> redrawMap());
+        showCablesButton.setOnAction(event -> updateMapLayerVisibility());
 
         showCableLabelsButton = new ToggleButton("Sildid");
         showCableLabelsButton.setSelected(true);
         showCableLabelsButton.setTooltip(new Tooltip("Näitab või peidab kaablite tekstisildid"));
-        showCableLabelsButton.setOnAction(event -> redrawMap());
+        showCableLabelsButton.setOnAction(event -> updateMapLayerVisibility());
 
         show230VCablesButton = cableTypeToggle("230V", ConnectorType.SCHUKO_230V);
         show16ACablesButton = cableTypeToggle("16A", ConnectorType.INDUSTRIAL_16A);
@@ -302,6 +302,7 @@ public class PancakePlannerApp extends Application {
         showCustomObjectsButton = objectTypeToggle("Objektid", "Näitab või peidab kaardil tavalised objektid");
         showTextObjectsButton = objectTypeToggle("Tekstid", "Näitab või peidab kaardil tekstobjektid");
         showMarkerObjectsButton = objectTypeToggle("Markerid", "Näitab või peidab kaardil markerid");
+        applyMapLayerControlsFromPlan();
 
         measureButton = new ToggleButton("Mõõdulint");
         measureButton.setTooltip(new Tooltip("Mõõda kaardil vahemaid"));
@@ -360,7 +361,7 @@ public class PancakePlannerApp extends Application {
         ToggleButton button = new ToggleButton(text);
         button.setSelected(true);
         button.setTooltip(new Tooltip("Näitab või peidab kaardil %s kaablid".formatted(shortCableTypeName(connectorType))));
-        button.setOnAction(event -> redrawMap());
+        button.setOnAction(event -> updateMapLayerVisibility());
         return button;
     }
 
@@ -368,8 +369,44 @@ public class PancakePlannerApp extends Application {
         ToggleButton button = new ToggleButton(text);
         button.setSelected(true);
         button.setTooltip(new Tooltip(tooltip));
-        button.setOnAction(event -> redrawMap());
+        button.setOnAction(event -> updateMapLayerVisibility());
         return button;
+    }
+
+    private void applyMapLayerControlsFromPlan() {
+        if (plan == null || showCablesButton == null) {
+            return;
+        }
+        showCablesButton.setSelected(plan.showCables());
+        showCableLabelsButton.setSelected(plan.showCableLabels());
+        show230VCablesButton.setSelected(plan.showCableType(ConnectorType.SCHUKO_230V));
+        show16ACablesButton.setSelected(plan.showCableType(ConnectorType.INDUSTRIAL_16A));
+        show32ACablesButton.setSelected(plan.showCableType(ConnectorType.INDUSTRIAL_32A));
+        show63ACablesButton.setSelected(plan.showCableType(ConnectorType.INDUSTRIAL_63A));
+        showTentsButton.setSelected(plan.showTents());
+        showPowerSourcesButton.setSelected(plan.showPowerSources());
+        showCustomObjectsButton.setSelected(plan.showCustomObjects());
+        showTextObjectsButton.setSelected(plan.showTextObjects());
+        showMarkerObjectsButton.setSelected(plan.showMarkerObjects());
+    }
+
+    private void updateMapLayerVisibility() {
+        if (plan == null || showCablesButton == null) {
+            return;
+        }
+        plan.setShowCables(showCablesButton.isSelected());
+        plan.setShowCableLabels(showCableLabelsButton.isSelected());
+        plan.setShowCableType(ConnectorType.SCHUKO_230V, show230VCablesButton.isSelected());
+        plan.setShowCableType(ConnectorType.INDUSTRIAL_16A, show16ACablesButton.isSelected());
+        plan.setShowCableType(ConnectorType.INDUSTRIAL_32A, show32ACablesButton.isSelected());
+        plan.setShowCableType(ConnectorType.INDUSTRIAL_63A, show63ACablesButton.isSelected());
+        plan.setShowTents(showTentsButton.isSelected());
+        plan.setShowPowerSources(showPowerSourcesButton.isSelected());
+        plan.setShowCustomObjects(showCustomObjectsButton.isSelected());
+        plan.setShowTextObjects(showTextObjectsButton.isSelected());
+        plan.setShowMarkerObjects(showMarkerObjectsButton.isSelected());
+        redrawMap();
+        markDirty();
     }
 
     private void updateMapDragState(double sceneX, double sceneY) {
@@ -1332,6 +1369,7 @@ public class PancakePlannerApp extends Application {
         if (pixelsPerMeterField != null) {
             pixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
         }
+        applyMapLayerControlsFromPlan();
         refreshPlacementButtons();
         updateMapToolStatus();
         refreshGroupFilters();

@@ -30,6 +30,17 @@ public class PlanFileService {
         properties.setProperty("plan.name", plan.name());
         properties.setProperty("plan.mapImagePath", plan.mapImagePath());
         properties.setProperty("plan.pixelsPerMeter", Double.toString(plan.pixelsPerMeter()));
+        properties.setProperty("layers.showCables", Boolean.toString(plan.showCables()));
+        properties.setProperty("layers.showCableLabels", Boolean.toString(plan.showCableLabels()));
+        properties.setProperty("layers.show230VCables", Boolean.toString(plan.showCableType(ConnectorType.SCHUKO_230V)));
+        properties.setProperty("layers.show16ACables", Boolean.toString(plan.showCableType(ConnectorType.INDUSTRIAL_16A)));
+        properties.setProperty("layers.show32ACables", Boolean.toString(plan.showCableType(ConnectorType.INDUSTRIAL_32A)));
+        properties.setProperty("layers.show63ACables", Boolean.toString(plan.showCableType(ConnectorType.INDUSTRIAL_63A)));
+        properties.setProperty("layers.showTents", Boolean.toString(plan.showTents()));
+        properties.setProperty("layers.showPowerSources", Boolean.toString(plan.showPowerSources()));
+        properties.setProperty("layers.showCustomObjects", Boolean.toString(plan.showCustomObjects()));
+        properties.setProperty("layers.showTextObjects", Boolean.toString(plan.showTextObjects()));
+        properties.setProperty("layers.showMarkerObjects", Boolean.toString(plan.showMarkerObjects()));
         properties.setProperty("hiddenGroups.count", Integer.toString(plan.hiddenGroups().size()));
 
         int hiddenGroupIndex = 0;
@@ -81,6 +92,17 @@ public class PlanFileService {
         EventPlan plan = new EventPlan(properties.getProperty("plan.name", "Pannkoogihommik"));
         plan.setMapImagePath(properties.getProperty("plan.mapImagePath", ""));
         plan.setPixelsPerMeter(doubleValue(properties, "plan.pixelsPerMeter", EventPlan.DEFAULT_PIXELS_PER_METER));
+        plan.setShowCables(booleanValue(properties, "layers.showCables", true));
+        plan.setShowCableLabels(booleanValue(properties, "layers.showCableLabels", true));
+        plan.setShowCableType(ConnectorType.SCHUKO_230V, booleanValue(properties, "layers.show230VCables", true));
+        plan.setShowCableType(ConnectorType.INDUSTRIAL_16A, booleanValue(properties, "layers.show16ACables", true));
+        plan.setShowCableType(ConnectorType.INDUSTRIAL_32A, booleanValue(properties, "layers.show32ACables", true));
+        plan.setShowCableType(ConnectorType.INDUSTRIAL_63A, booleanValue(properties, "layers.show63ACables", true));
+        plan.setShowTents(booleanValue(properties, "layers.showTents", true));
+        plan.setShowPowerSources(booleanValue(properties, "layers.showPowerSources", true));
+        plan.setShowCustomObjects(booleanValue(properties, "layers.showCustomObjects", true));
+        plan.setShowTextObjects(booleanValue(properties, "layers.showTextObjects", true));
+        plan.setShowMarkerObjects(booleanValue(properties, "layers.showMarkerObjects", true));
 
         int objectCount = intValue(properties, "objects.count", 0);
         for (int index = 0; index < objectCount; index++) {
@@ -330,5 +352,9 @@ public class PlanFileService {
 
     private double doubleValue(Properties properties, String key, double fallback) {
         return Double.parseDouble(properties.getProperty(key, Double.toString(fallback)));
+    }
+
+    private boolean booleanValue(Properties properties, String key, boolean fallback) {
+        return Boolean.parseBoolean(properties.getProperty(key, Boolean.toString(fallback)));
     }
 }

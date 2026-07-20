@@ -16,6 +16,17 @@ public class EventPlan {
     private final List<PlannerObject> objects = new ArrayList<>();
     private final List<PowerConnection> powerConnections = new ArrayList<>();
     private final Set<String> hiddenGroups = new HashSet<>();
+    private boolean showCables = true;
+    private boolean showCableLabels = true;
+    private boolean show230VCables = true;
+    private boolean show16ACables = true;
+    private boolean show32ACables = true;
+    private boolean show63ACables = true;
+    private boolean showTents = true;
+    private boolean showPowerSources = true;
+    private boolean showCustomObjects = true;
+    private boolean showTextObjects = true;
+    private boolean showMarkerObjects = true;
 
     public EventPlan(String name) {
         this.name = name;
@@ -79,6 +90,80 @@ public class EventPlan {
 
     public Optional<PlannerObject> findObject(String id) {
         return objects.stream().filter(object -> object.id().equals(id)).findFirst();
+    }
+
+    public boolean showCables() {
+        return showCables;
+    }
+
+    public void setShowCables(boolean showCables) {
+        this.showCables = showCables;
+    }
+
+    public boolean showCableLabels() {
+        return showCableLabels;
+    }
+
+    public void setShowCableLabels(boolean showCableLabels) {
+        this.showCableLabels = showCableLabels;
+    }
+
+    public boolean showCableType(ConnectorType connectorType) {
+        return switch (connectorType) {
+            case SCHUKO_230V -> show230VCables;
+            case INDUSTRIAL_16A -> show16ACables;
+            case INDUSTRIAL_32A -> show32ACables;
+            case INDUSTRIAL_63A -> show63ACables;
+        };
+    }
+
+    public void setShowCableType(ConnectorType connectorType, boolean visible) {
+        switch (connectorType) {
+            case SCHUKO_230V -> show230VCables = visible;
+            case INDUSTRIAL_16A -> show16ACables = visible;
+            case INDUSTRIAL_32A -> show32ACables = visible;
+            case INDUSTRIAL_63A -> show63ACables = visible;
+        }
+    }
+
+    public boolean showTents() {
+        return showTents;
+    }
+
+    public void setShowTents(boolean showTents) {
+        this.showTents = showTents;
+    }
+
+    public boolean showPowerSources() {
+        return showPowerSources;
+    }
+
+    public void setShowPowerSources(boolean showPowerSources) {
+        this.showPowerSources = showPowerSources;
+    }
+
+    public boolean showCustomObjects() {
+        return showCustomObjects;
+    }
+
+    public void setShowCustomObjects(boolean showCustomObjects) {
+        this.showCustomObjects = showCustomObjects;
+    }
+
+    public boolean showTextObjects() {
+        return showTextObjects;
+    }
+
+    public void setShowTextObjects(boolean showTextObjects) {
+        this.showTextObjects = showTextObjects;
+    }
+
+    public boolean showMarkerObjects() {
+        return showMarkerObjects;
+    }
+
+    public void setShowMarkerObjects(boolean showMarkerObjects) {
+        this.showMarkerObjects = showMarkerObjects;
     }
 
     public Optional<PowerConnection> connectToPower(String sourceId, String consumerId, ConnectorType connectorType) {
