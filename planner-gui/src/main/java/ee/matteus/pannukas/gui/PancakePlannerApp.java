@@ -1912,7 +1912,7 @@ public class PancakePlannerApp extends Application {
         boolean selectedCable = isSelected(cable.tent());
         double strokeWidth = CableDisplayHelper.width(cable.connection().connectorType()) + (selectedCable ? 2.0 : 0.0);
 
-        Polyline line = createCablePolyline(path);
+        Polyline line = CablePolylineHelper.create(path);
         line.setStroke(cableColor);
         line.setStrokeWidth(strokeWidth);
         line.setOpacity(selectedCable ? 1.0 : 0.85);
@@ -1921,7 +1921,7 @@ public class PancakePlannerApp extends Application {
             line.getStrokeDashArray().addAll(8.0, 6.0);
         }
 
-        Polyline highlightLine = createCablePolyline(path);
+        Polyline highlightLine = CablePolylineHelper.create(path);
         highlightLine.setStroke(Color.web("#111827"));
         highlightLine.setStrokeWidth(strokeWidth + 4.0);
         highlightLine.setOpacity(selectedCable ? 0.28 : 0);
@@ -1930,7 +1930,7 @@ public class PancakePlannerApp extends Application {
             highlightLine.getStrokeDashArray().addAll(8.0, 6.0);
         }
 
-        Polyline hitLine = createCablePolyline(path);
+        Polyline hitLine = CablePolylineHelper.create(path);
         hitLine.setStroke(Color.TRANSPARENT);
         hitLine.setStrokeWidth(Math.max(12.0, strokeWidth + 8.0));
         makeCableSelectable(hitLine, cable);
@@ -1976,14 +1976,6 @@ public class PancakePlannerApp extends Application {
 
     private List<Position> cablePath(Tent tent, PowerSource source, PowerConnection connection) {
         return cablePath(new PowerCableView(tent, source, connection));
-    }
-
-    private Polyline createCablePolyline(List<Position> path) {
-        Polyline polyline = new Polyline();
-        for (Position point : path) {
-            polyline.getPoints().addAll(point.x(), point.y());
-        }
-        return polyline;
     }
 
     private void makeCableSelectable(Node node, Tent tent) {
@@ -2131,9 +2123,9 @@ public class PancakePlannerApp extends Application {
             }
             marker.setCenterX(mapPoint.getX());
             marker.setCenterY(mapPoint.getY());
-            updateCablePolylineRoutePoint(line, routePointIndex, mapPoint);
-            updateCablePolylineRoutePoint(highlightLine, routePointIndex, mapPoint);
-            updateCablePolylineRoutePoint(hitLine, routePointIndex, mapPoint);
+            CablePolylineHelper.updateRoutePoint(line, routePointIndex, mapPoint);
+            CablePolylineHelper.updateRoutePoint(highlightLine, routePointIndex, mapPoint);
+            CablePolylineHelper.updateRoutePoint(hitLine, routePointIndex, mapPoint);
             updateCableLabel(distanceLabel, cable, routePoints);
             dragged[0] = true;
             event.consume();
@@ -2166,17 +2158,6 @@ public class PancakePlannerApp extends Application {
         redrawMap();
         refreshSummary();
         markDirty();
-    }
-
-    private void updateCablePolylineRoutePoint(Polyline polyline, int routePointIndex, Point2D mapPoint) {
-        int pointIndex = routePointIndex + 1;
-        int xCoordinateIndex = pointIndex * 2;
-        int yCoordinateIndex = xCoordinateIndex + 1;
-        if (yCoordinateIndex >= polyline.getPoints().size()) {
-            return;
-        }
-        polyline.getPoints().set(xCoordinateIndex, mapPoint.getX());
-        polyline.getPoints().set(yCoordinateIndex, mapPoint.getY());
     }
 
     private void updateCableLabel(Label distanceLabel, PowerCableView cable, List<Position> routePoints) {
