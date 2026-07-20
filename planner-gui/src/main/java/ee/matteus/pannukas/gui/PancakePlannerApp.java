@@ -5141,20 +5141,18 @@ public class PancakePlannerApp extends Application {
     }
 
     private String exportMapImageFileName() {
-        String baseName = currentPlanFile == null
-                ? plan.name()
-                : currentPlanFile.getName().replaceFirst("\\.pplan$", "");
-        String safeName = baseName.trim()
-                .replaceAll("[\\\\/:*?\"<>|]+", "-")
-                .replaceAll("\\s+", "-")
-                .toLowerCase();
-        if (safeName.isBlank()) {
-            safeName = "pannkoogihommik";
-        }
-        return safeName + "-kaart.png";
+        return safeExportBaseName() + "-kaart.png";
     }
 
     private String exportPdfFileName() {
+        return safeExportBaseName() + "-plaan.pdf";
+    }
+
+    private String exportSummaryFileName() {
+        return safeExportBaseName() + "-kokkuvõte.txt";
+    }
+
+    private String safeExportBaseName() {
         String baseName = currentPlanFile == null
                 ? plan.name()
                 : currentPlanFile.getName().replaceFirst("\\.pplan$", "");
@@ -5165,21 +5163,7 @@ public class PancakePlannerApp extends Application {
         if (safeName.isBlank()) {
             safeName = "pannkoogihommik";
         }
-        return safeName + "-plaan.pdf";
-    }
-
-    private String exportSummaryFileName() {
-        String baseName = currentPlanFile == null
-                ? plan.name()
-                : currentPlanFile.getName().replaceFirst("\\.pplan$", "");
-        String safeName = baseName.trim()
-                .replaceAll("[\\\\/:*?\"<>|]+", "-")
-                .replaceAll("\\s+", "-")
-                .toLowerCase();
-        if (safeName.isBlank()) {
-            safeName = "pannkoogihommiku-kokkuvõte";
-        }
-        return safeName + "-kokkuvõte.txt";
+        return safeName;
     }
 
     private void showError(String title, String message) {
