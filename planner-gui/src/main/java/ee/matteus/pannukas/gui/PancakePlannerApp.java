@@ -409,6 +409,7 @@ public class PancakePlannerApp extends Application {
         plan.setShowTextObjects(showTextObjectsButton.isSelected());
         plan.setShowMarkerObjects(showMarkerObjectsButton.isSelected());
         redrawMap();
+        refreshObjectList();
         markDirty();
     }
 
@@ -532,6 +533,21 @@ public class PancakePlannerApp extends Application {
         objectSearchField.textProperty().addListener((observable, oldValue, newValue) -> refreshObjectList());
         objectList = new ListView<>();
         objectList.setPrefHeight(180);
+        objectList.setCellFactory(list -> new ListCell<>() {
+            @Override
+            protected void updateItem(ObjectListItem item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                    return;
+                }
+                setText(item.toString());
+                setStyle(item.visible()
+                        ? ""
+                        : "-fx-text-fill: #6b7280; -fx-font-style: italic;");
+            }
+        });
         objectList.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == null) {
                 return;
@@ -602,7 +618,12 @@ public class PancakePlannerApp extends Application {
         String selectedId = selectedObject == null ? "" : selectedObject.id();
         String query = objectSearchField == null ? "" : objectSearchField.getText().trim().toLowerCase();
         List<ObjectListItem> items = plan.objects().stream()
-                .map(object -> new ObjectListItem(object, objectTypeName(object), groupNameForFilter(object)))
+                .map(object -> new ObjectListItem(
+                        object,
+                        objectTypeName(object),
+                        groupNameForFilter(object),
+                        isGroupVisible(object) && isObjectTypeVisible(object)
+                ))
                 .filter(item -> objectListItemMatches(item, query))
                 .sorted(Comparator
                         .comparing(ObjectListItem::type, String.CASE_INSENSITIVE_ORDER)
@@ -621,7 +642,8 @@ public class PancakePlannerApp extends Application {
         }
         return item.object().name().toLowerCase().contains(query)
                 || item.type().toLowerCase().contains(query)
-                || item.groupName().toLowerCase().contains(query);
+                || item.groupName().toLowerCase().contains(query)
+                || (!item.visible() && "peidetud".contains(query));
     }
 
     private void changeZoom(double factor) {
@@ -2424,6 +2446,7 @@ public class PancakePlannerApp extends Application {
                     plan.setGroupHidden(groupName, true);
                 }
                 redrawMap();
+                refreshObjectList();
                 markDirty();
             });
             groupFilterPanel.getChildren().add(groupCheckBox);
@@ -4574,10 +4597,11 @@ public class PancakePlannerApp extends Application {
         launch(args);
     }
 
-    private record ObjectListItem(PlannerObject object, String type, String groupName) {
+    private record ObjectListItem(PlannerObject object, String type, String groupName, boolean visible) {
         @Override
         public String toString() {
-            return "%s (%s, %s)".formatted(object.name(), type, groupName);
+            String visibilityText = visible ? "" : ", peidetud";
+            return "%s (%s, %s%s)".formatted(object.name(), type, groupName, visibilityText);
         }
     }
 
