@@ -540,10 +540,20 @@ public class PancakePlannerApp extends Application {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
                     setText(null);
+                    setGraphic(null);
                     setStyle("");
                     return;
                 }
-                setText(item.toString());
+                Label nameLabel = new Label(item.object().name());
+                nameLabel.setStyle(item.visible()
+                        ? "-fx-font-weight: bold;"
+                        : "-fx-font-weight: bold; -fx-text-fill: #6b7280; -fx-font-style: italic;");
+                Label detailLabel = new Label(item.detailText());
+                detailLabel.setStyle(item.visible()
+                        ? "-fx-text-fill: #6b7280; -fx-font-size: 11;"
+                        : "-fx-text-fill: #6b7280; -fx-font-size: 11; -fx-font-style: italic;");
+                setText(null);
+                setGraphic(new VBox(2, nameLabel, detailLabel));
                 setStyle(item.visible()
                         ? ""
                         : "-fx-text-fill: #6b7280; -fx-font-style: italic;");
@@ -4648,6 +4658,11 @@ public class PancakePlannerApp extends Application {
     }
 
     private record ObjectListItem(PlannerObject object, String type, String groupName, boolean visible) {
+        private String detailText() {
+            String visibilityText = visible ? "" : " · peidetud";
+            return "%s · %s%s".formatted(type, groupName, visibilityText);
+        }
+
         @Override
         public String toString() {
             String visibilityText = visible ? "" : ", peidetud";
