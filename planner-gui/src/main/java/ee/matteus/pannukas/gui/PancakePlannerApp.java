@@ -2309,16 +2309,37 @@ public class PancakePlannerApp extends Application {
     }
 
     private void drawTextObject(TextObject object) {
-        Label textLabel = new Label(object.name());
-        textLabel.setLayoutX(object.position().x());
-        textLabel.setLayoutY(object.position().y());
-        textLabel.setTextFill(Color.web(object.colorHex()));
-        textLabel.setStyle(isSelected(object)
-                ? "-fx-background-color: rgba(255,255,255,0.85); -fx-border-color: #111827; -fx-border-width: 2; -fx-padding: 3 6 3 6; -fx-font-weight: bold;"
-                : "-fx-background-color: rgba(255,255,255,0.7); -fx-padding: 3 6 3 6; -fx-font-weight: bold;");
-        makeSelectable(textLabel, object);
-        makeDraggable(textLabel, object);
-        mapPane.getChildren().add(textLabel);
+        VBox textBox = new VBox(3);
+        textBox.setLayoutX(object.position().x());
+        textBox.setLayoutY(object.position().y());
+        textBox.setMaxWidth(260);
+        textBox.setStyle("""
+                -fx-background-color: rgba(255,255,255,0.88);
+                -fx-border-color: %s;
+                -fx-border-width: %s;
+                -fx-background-radius: 4;
+                -fx-border-radius: 4;
+                -fx-padding: 4 7 5 7;
+                """.formatted(object.colorHex(), isSelected(object) ? "2" : "1"));
+
+        Label titleLabel = new Label(object.name());
+        titleLabel.setWrapText(true);
+        titleLabel.setMaxWidth(246);
+        titleLabel.setTextFill(Color.web(object.colorHex()));
+        titleLabel.setStyle("-fx-font-weight: bold;");
+        textBox.getChildren().add(titleLabel);
+
+        if (!object.notes().isBlank()) {
+            Label contentLabel = new Label(object.notes());
+            contentLabel.setWrapText(true);
+            contentLabel.setMaxWidth(246);
+            contentLabel.setTextFill(Color.web("#111827"));
+            textBox.getChildren().add(contentLabel);
+        }
+
+        makeSelectable(textBox, object);
+        makeDraggable(textBox, object);
+        mapPane.getChildren().add(textBox);
     }
 
     private void drawMarkerObject(MarkerObject object) {
@@ -2987,6 +3008,9 @@ public class PancakePlannerApp extends Application {
             return;
         }
         selectedObject.setNotes(notes);
+        if (selectedObject instanceof TextObject) {
+            redrawMap();
+        }
         markDirty();
     }
 
