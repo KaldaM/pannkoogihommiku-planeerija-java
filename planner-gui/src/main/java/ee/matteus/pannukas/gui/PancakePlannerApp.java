@@ -546,6 +546,7 @@ public class PancakePlannerApp extends Application {
         objectSearchField.textProperty().addListener((observable, oldValue, newValue) -> refreshObjectList());
         objectList = new ListView<>();
         objectList.setPrefHeight(objectListHeight);
+        objectList.setTooltip(new Tooltip("Topeltklõps viib kaardil objektini"));
         objectList.setCellFactory(list -> new ListCell<>() {
             @Override
             protected void updateItem(ObjectListItem item, boolean empty) {
