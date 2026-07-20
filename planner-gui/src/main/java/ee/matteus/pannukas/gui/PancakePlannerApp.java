@@ -4539,6 +4539,7 @@ public class PancakePlannerApp extends Application {
             try (PDDocument document = new PDDocument()) {
                 addMapPdfPage(document, mapImage);
                 addReportPdfPages(document, summaryText());
+                addPdfPageNumbers(document);
                 document.save(file);
             }
 
@@ -4584,7 +4585,8 @@ public class PancakePlannerApp extends Application {
         float margin = 50;
         float fontSize = 10;
         float leading = 14;
-        PDType1Font font = PDType1Font.HELVETICA;
+        PDType1Font regularFont = PDType1Font.HELVETICA;
+        PDType1Font boldFont = PDType1Font.HELVETICA_BOLD;
         PDRectangle pageSize = PDRectangle.A4;
         PDPage page = new PDPage(pageSize);
         document.addPage(page);
@@ -4592,11 +4594,12 @@ public class PancakePlannerApp extends Application {
         float y = pageSize.getHeight() - margin;
         try {
             content.beginText();
-            content.setFont(font, fontSize);
+            content.setFont(regularFont, fontSize);
             content.newLineAtOffset(margin, y);
             for (String originalLine : reportText.split("\\R", -1)) {
-                for (String line : wrapPdfLine(originalLine, font, fontSize, pageSize.getWidth() - margin * 2)) {
-                    if (y <= margin) {
+                PDType1Font lineFont = isPdfHeadingLine(originalLine) ? boldFont : regularFont;
+                for (String line : wrapPdfLine(originalLine, lineFont, fontSize, pageSize.getWidth() - margin * 2)) {
+                    if (y <= margin + 20) {
                         content.endText();
                         content.close();
                         page = new PDPage(pageSize);
@@ -4604,9 +4607,10 @@ public class PancakePlannerApp extends Application {
                         content = new PDPageContentStream(document, page);
                         y = pageSize.getHeight() - margin;
                         content.beginText();
-                        content.setFont(font, fontSize);
+                        content.setFont(regularFont, fontSize);
                         content.newLineAtOffset(margin, y);
                     }
+                    content.setFont(lineFont, fontSize);
                     content.showText(line);
                     content.newLineAtOffset(0, -leading);
                     y -= leading;
@@ -4615,6 +4619,37 @@ public class PancakePlannerApp extends Application {
             content.endText();
         } finally {
             content.close();
+        }
+    }
+
+    private boolean isPdfHeadingLine(String line) {
+        String trimmedLine = line.trim();
+        return !trimmedLine.isBlank()
+                && !line.startsWith(" ")
+                && !trimmedLine.chars().allMatch(character -> character == '=');
+    }
+
+    private void addPdfPageNumbers(PDDocument document) throws IOException {
+        int pageCount = document.getNumberOfPages();
+        for (int index = 0; index < pageCount; index++) {
+            PDPage page = document.getPage(index);
+            PDRectangle pageSize = page.getMediaBox();
+            String pageNumber = "lk %d / %d".formatted(index + 1, pageCount);
+            float fontSize = 9;
+            float textWidth = pdfTextWidth(pageNumber, PDType1Font.HELVETICA, fontSize);
+            try (PDPageContentStream content = new PDPageContentStream(
+                    document,
+                    page,
+                    PDPageContentStream.AppendMode.APPEND,
+                    true,
+                    true
+            )) {
+                content.beginText();
+                content.setFont(PDType1Font.HELVETICA, fontSize);
+                content.newLineAtOffset((pageSize.getWidth() - textWidth) / 2, 24);
+                content.showText(pageNumber);
+                content.endText();
+            }
         }
     }
 
