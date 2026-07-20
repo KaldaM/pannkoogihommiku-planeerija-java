@@ -34,6 +34,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -83,6 +84,7 @@ import java.util.HashSet;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.TreeMap;
@@ -4442,6 +4444,11 @@ public class PancakePlannerApp extends Application {
     private void exportMapImage() {
         redrawMap();
 
+        Optional<MapImageExportScope> selectedScope = chooseMapImageExportScope();
+        if (selectedScope.isEmpty()) {
+            return;
+        }
+
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Ekspordi kaart pildina");
         applyInitialDirectory(fileChooser);
@@ -4456,15 +4463,16 @@ public class PancakePlannerApp extends Application {
         double previousScaleX = mapScale.getX();
         double previousScaleY = mapScale.getY();
         try {
+            Rectangle2D viewport = mapImageExportViewport(selectedScope.get());
             mapScale.setX(1.0);
             mapScale.setY(1.0);
             mapPane.applyCss();
             mapPane.layout();
 
             SnapshotParameters parameters = new SnapshotParameters();
-            parameters.setViewport(new Rectangle2D(0, 0, mapWidth, mapHeight));
+            parameters.setViewport(viewport);
             parameters.setFill(Color.web("#eef1ec"));
-            WritableImage image = new WritableImage((int) Math.ceil(mapWidth), (int) Math.ceil(mapHeight));
+            WritableImage image = new WritableImage((int) Math.ceil(viewport.getWidth()), (int) Math.ceil(viewport.getHeight()));
             mapPane.snapshot(parameters, image);
 
             ImageIO.write(SwingFXUtils.fromFXImage(image, null), "png", file);
@@ -4478,6 +4486,32 @@ public class PancakePlannerApp extends Application {
             mapScale.setY(previousScaleY);
             updateZoomContentSize();
         }
+    }
+
+    private Optional<MapImageExportScope> chooseMapImageExportScope() {
+        ChoiceDialog<MapImageExportScope> dialog = new ChoiceDialog<>(
+                MapImageExportScope.FULL_MAP,
+                MapImageExportScope.FULL_MAP,
+                MapImageExportScope.CURRENT_VIEW
+        );
+        dialog.setTitle("Ekspordi kaart pildina");
+        dialog.setHeaderText("Vali eksporditav ala");
+        dialog.setContentText("Ala");
+        return dialog.showAndWait();
+    }
+
+    private Rectangle2D mapImageExportViewport(MapImageExportScope scope) {
+        if (scope == MapImageExportScope.CURRENT_VIEW && mapScrollPane != null) {
+            Bounds viewportBounds = mapScrollPane.getViewportBounds();
+            double visibleWidth = Math.min(mapWidth, viewportBounds.getWidth() / zoomLevel);
+            double visibleHeight = Math.min(mapHeight, viewportBounds.getHeight() / zoomLevel);
+            double horizontalRange = Math.max(0, mapWidth - visibleWidth);
+            double verticalRange = Math.max(0, mapHeight - visibleHeight);
+            double x = horizontalRange * mapScrollPane.getHvalue();
+            double y = verticalRange * mapScrollPane.getVvalue();
+            return new Rectangle2D(x, y, Math.max(1, visibleWidth), Math.max(1, visibleHeight));
+        }
+        return new Rectangle2D(0, 0, mapWidth, mapHeight);
     }
 
     private String summaryText() {
@@ -4943,6 +4977,22 @@ public class PancakePlannerApp extends Application {
 
     public static void main(String[] args) {
         launch(args);
+    }
+
+    private enum MapImageExportScope {
+        FULL_MAP("Kogu kaart"),
+        CURRENT_VIEW("Praegune vaade");
+
+        private final String label;
+
+        MapImageExportScope(String label) {
+            this.label = label;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
     }
 
     private record ObjectListItem(PlannerObject object, String type, String groupName, boolean visible) {
