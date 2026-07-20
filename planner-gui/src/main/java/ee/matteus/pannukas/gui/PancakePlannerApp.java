@@ -134,6 +134,7 @@ public class PancakePlannerApp extends Application {
     private Label saveStatusLabel;
     private TextField objectSearchField;
     private ListView<ObjectListItem> objectList;
+    private Button revealObjectButton;
     private VBox groupFilterPanel;
     private TitledPane equipmentSection;
     private TitledPane outletSection;
@@ -550,15 +551,20 @@ public class PancakePlannerApp extends Application {
         });
         objectList.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == null) {
+                updateRevealObjectButton();
                 return;
             }
             if (selectedObject != null && selectedObject.id().equals(newValue.object().id())) {
+                updateRevealObjectButton();
                 return;
             }
             selectObject(newValue.object());
         });
+        revealObjectButton = new Button("Näita kaardil");
+        revealObjectButton.setOnAction(event -> revealSelectedObjectOnMap());
+        updateRevealObjectButton();
         refreshObjectList();
-        return new VBox(8, objectSearchField, objectList);
+        return new VBox(8, objectSearchField, objectList, revealObjectButton);
     }
 
     private VBox createMapLayersPanel() {
@@ -634,6 +640,7 @@ public class PancakePlannerApp extends Application {
                 .filter(item -> item.object().id().equals(selectedId))
                 .findFirst()
                 .ifPresent(item -> objectList.getSelectionModel().select(item));
+        updateRevealObjectButton();
     }
 
     private boolean objectListItemMatches(ObjectListItem item, String query) {
@@ -644,6 +651,47 @@ public class PancakePlannerApp extends Application {
                 || item.type().toLowerCase().contains(query)
                 || item.groupName().toLowerCase().contains(query)
                 || (!item.visible() && "peidetud".contains(query));
+    }
+
+    private void updateRevealObjectButton() {
+        if (revealObjectButton == null) {
+            return;
+        }
+        boolean hiddenSelection = selectedObject != null
+                && (!isGroupVisible(selectedObject) || !isObjectTypeVisible(selectedObject));
+        revealObjectButton.setDisable(!hiddenSelection);
+        revealObjectButton.setTooltip(new Tooltip(hiddenSelection
+                ? "Lülitab valitud objekti grupi ja tüübi kaardil nähtavaks"
+                : "Valitud objekt on juba kaardil nähtav"));
+    }
+
+    private void revealSelectedObjectOnMap() {
+        if (selectedObject == null) {
+            return;
+        }
+        setObjectTypeVisible(selectedObject, true);
+        String groupName = groupNameForFilter(selectedObject);
+        visibleGroups.add(groupName);
+        plan.setGroupHidden(groupName, false);
+        updateMapLayerVisibility();
+        refreshGroupFilters();
+        refreshObjectList();
+        redrawMap();
+        markDirty();
+    }
+
+    private void setObjectTypeVisible(PlannerObject object, boolean visible) {
+        if (object instanceof Tent) {
+            showTentsButton.setSelected(visible);
+        } else if (object instanceof PowerSource) {
+            showPowerSourcesButton.setSelected(visible);
+        } else if (object instanceof TextObject) {
+            showTextObjectsButton.setSelected(visible);
+        } else if (object instanceof MarkerObject) {
+            showMarkerObjectsButton.setSelected(visible);
+        } else if (object instanceof CustomObject) {
+            showCustomObjectsButton.setSelected(visible);
+        }
     }
 
     private void changeZoom(double factor) {
