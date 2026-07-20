@@ -19,6 +19,14 @@ import ee.matteus.pannukas.core.service.PlanFactory;
 import ee.matteus.pannukas.core.service.PlanFileService;
 import ee.matteus.pannukas.core.service.PowerSummary;
 import ee.matteus.pannukas.core.service.PowerSummaryService;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
@@ -72,6 +80,7 @@ import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
 import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -296,6 +305,9 @@ public class PancakePlannerApp extends Application {
         Button exportMapImageButton = new Button("Ekspordi pilt");
         exportMapImageButton.setOnAction(event -> exportMapImage());
 
+        Button exportPdfButton = new Button("Ekspordi PDF");
+        exportPdfButton.setOnAction(event -> exportPdf());
+
         Button openButton = new Button("Ava");
         openButton.setOnAction(event -> openPlan());
 
@@ -366,6 +378,7 @@ public class PancakePlannerApp extends Application {
                 openButton,
                 exportSummaryButton,
                 exportMapImageButton,
+                exportPdfButton,
                 planSettingsButton,
                 new Separator(),
                 new Label("Lisa"),
@@ -4488,6 +4501,149 @@ public class PancakePlannerApp extends Application {
         }
     }
 
+    private void exportPdf() {
+        redrawMap();
+
+        Optional<MapImageExportScope> selectedScope = chooseMapImageExportScope();
+        if (selectedScope.isEmpty()) {
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Ekspordi PDF");
+        applyInitialDirectory(fileChooser);
+        fileChooser.setInitialFileName(exportPdfFileName());
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF fail", "*.pdf"));
+        File selectedFile = fileChooser.showSaveDialog(stage);
+        if (selectedFile == null) {
+            return;
+        }
+
+        File file = ensurePdfExtension(selectedFile);
+        double previousScaleX = mapScale.getX();
+        double previousScaleY = mapScale.getY();
+        try {
+            Rectangle2D viewport = mapImageExportViewport(selectedScope.get());
+            mapScale.setX(1.0);
+            mapScale.setY(1.0);
+            mapPane.applyCss();
+            mapPane.layout();
+
+            SnapshotParameters parameters = new SnapshotParameters();
+            parameters.setViewport(viewport);
+            parameters.setFill(Color.web("#eef1ec"));
+            WritableImage image = new WritableImage((int) Math.ceil(viewport.getWidth()), (int) Math.ceil(viewport.getHeight()));
+            mapPane.snapshot(parameters, image);
+            BufferedImage mapImage = SwingFXUtils.fromFXImage(image, null);
+
+            try (PDDocument document = new PDDocument()) {
+                addMapPdfPage(document, mapImage);
+                addReportPdfPages(document, summaryText());
+                document.save(file);
+            }
+
+            rememberDirectory(file);
+            saveStatusLabel.setText("PDF eksporditud");
+            saveStatusLabel.setStyle("-fx-text-fill: #166534; -fx-font-weight: bold;");
+        } catch (IOException exception) {
+            showError("PDF eksportimine ebaõnnestus", exception.getMessage());
+        } finally {
+            mapScale.setX(previousScaleX);
+            mapScale.setY(previousScaleY);
+            updateZoomContentSize();
+        }
+    }
+
+    private void addMapPdfPage(PDDocument document, BufferedImage mapImage) throws IOException {
+        PDRectangle pageSize = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
+        PDPage page = new PDPage(pageSize);
+        document.addPage(page);
+
+        float margin = 36;
+        float titleSize = 16;
+        float availableWidth = pageSize.getWidth() - margin * 2;
+        float availableHeight = pageSize.getHeight() - margin * 2 - 28;
+        float scale = Math.min(availableWidth / mapImage.getWidth(), availableHeight / mapImage.getHeight());
+        float imageWidth = mapImage.getWidth() * scale;
+        float imageHeight = mapImage.getHeight() * scale;
+        float imageX = margin + (availableWidth - imageWidth) / 2;
+        float imageY = margin;
+
+        PDImageXObject pdfImage = LosslessFactory.createFromImage(document, mapImage);
+        try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+            content.beginText();
+            content.setFont(PDType1Font.HELVETICA_BOLD, titleSize);
+            content.newLineAtOffset(margin, pageSize.getHeight() - margin - titleSize);
+            content.showText(plan.name());
+            content.endText();
+            content.drawImage(pdfImage, imageX, imageY, imageWidth, imageHeight);
+        }
+    }
+
+    private void addReportPdfPages(PDDocument document, String reportText) throws IOException {
+        float margin = 50;
+        float fontSize = 10;
+        float leading = 14;
+        PDType1Font font = PDType1Font.HELVETICA;
+        PDRectangle pageSize = PDRectangle.A4;
+        PDPage page = new PDPage(pageSize);
+        document.addPage(page);
+        PDPageContentStream content = new PDPageContentStream(document, page);
+        float y = pageSize.getHeight() - margin;
+        try {
+            content.beginText();
+            content.setFont(font, fontSize);
+            content.newLineAtOffset(margin, y);
+            for (String originalLine : reportText.split("\\R", -1)) {
+                for (String line : wrapPdfLine(originalLine, font, fontSize, pageSize.getWidth() - margin * 2)) {
+                    if (y <= margin) {
+                        content.endText();
+                        content.close();
+                        page = new PDPage(pageSize);
+                        document.addPage(page);
+                        content = new PDPageContentStream(document, page);
+                        y = pageSize.getHeight() - margin;
+                        content.beginText();
+                        content.setFont(font, fontSize);
+                        content.newLineAtOffset(margin, y);
+                    }
+                    content.showText(line);
+                    content.newLineAtOffset(0, -leading);
+                    y -= leading;
+                }
+            }
+            content.endText();
+        } finally {
+            content.close();
+        }
+    }
+
+    private List<String> wrapPdfLine(String line, PDType1Font font, float fontSize, float maxWidth) throws IOException {
+        if (line.isBlank()) {
+            return List.of("");
+        }
+
+        List<String> lines = new ArrayList<>();
+        StringBuilder currentLine = new StringBuilder();
+        for (String word : line.split(" ")) {
+            String candidate = currentLine.isEmpty() ? word : currentLine + " " + word;
+            if (pdfTextWidth(candidate, font, fontSize) <= maxWidth || currentLine.isEmpty()) {
+                currentLine.setLength(0);
+                currentLine.append(candidate);
+            } else {
+                lines.add(currentLine.toString());
+                currentLine.setLength(0);
+                currentLine.append(word);
+            }
+        }
+        lines.add(currentLine.toString());
+        return lines;
+    }
+
+    private float pdfTextWidth(String text, PDType1Font font, float fontSize) throws IOException {
+        return font.getStringWidth(text) / 1000 * fontSize;
+    }
+
     private Optional<MapImageExportScope> chooseMapImageExportScope() {
         ChoiceDialog<MapImageExportScope> dialog = new ChoiceDialog<>(
                 MapImageExportScope.FULL_MAP,
@@ -4977,6 +5133,13 @@ public class PancakePlannerApp extends Application {
         return new File(file.getParentFile(), file.getName() + ".png");
     }
 
+    private File ensurePdfExtension(File file) {
+        if (file.getName().toLowerCase().endsWith(".pdf")) {
+            return file;
+        }
+        return new File(file.getParentFile(), file.getName() + ".pdf");
+    }
+
     private String exportMapImageFileName() {
         String baseName = currentPlanFile == null
                 ? plan.name()
@@ -4989,6 +5152,20 @@ public class PancakePlannerApp extends Application {
             safeName = "pannkoogihommik";
         }
         return safeName + "-kaart.png";
+    }
+
+    private String exportPdfFileName() {
+        String baseName = currentPlanFile == null
+                ? plan.name()
+                : currentPlanFile.getName().replaceFirst("\\.pplan$", "");
+        String safeName = baseName.trim()
+                .replaceAll("[\\\\/:*?\"<>|]+", "-")
+                .replaceAll("\\s+", "-")
+                .toLowerCase();
+        if (safeName.isBlank()) {
+            safeName = "pannkoogihommik";
+        }
+        return safeName + "-plaan.pdf";
     }
 
     private String exportSummaryFileName() {
