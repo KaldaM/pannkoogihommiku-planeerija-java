@@ -22,6 +22,7 @@ public class EventPlan {
     private boolean show16ACables = true;
     private boolean show32ACables = true;
     private boolean show63ACables = true;
+    private boolean showObjectLabels = true;
     private boolean showTents = true;
     private boolean showPowerSources = true;
     private boolean showCustomObjects = true;
@@ -124,6 +125,14 @@ public class EventPlan {
             case INDUSTRIAL_32A -> show32ACables = visible;
             case INDUSTRIAL_63A -> show63ACables = visible;
         }
+    }
+
+    public boolean showObjectLabels() {
+        return showObjectLabels;
+    }
+
+    public void setShowObjectLabels(boolean showObjectLabels) {
+        this.showObjectLabels = showObjectLabels;
     }
 
     public boolean showTents() {

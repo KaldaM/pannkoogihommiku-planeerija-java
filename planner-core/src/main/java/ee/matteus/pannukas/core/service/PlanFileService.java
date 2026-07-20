@@ -36,6 +36,7 @@ public class PlanFileService {
         properties.setProperty("layers.show16ACables", Boolean.toString(plan.showCableType(ConnectorType.INDUSTRIAL_16A)));
         properties.setProperty("layers.show32ACables", Boolean.toString(plan.showCableType(ConnectorType.INDUSTRIAL_32A)));
         properties.setProperty("layers.show63ACables", Boolean.toString(plan.showCableType(ConnectorType.INDUSTRIAL_63A)));
+        properties.setProperty("layers.showObjectLabels", Boolean.toString(plan.showObjectLabels()));
         properties.setProperty("layers.showTents", Boolean.toString(plan.showTents()));
         properties.setProperty("layers.showPowerSources", Boolean.toString(plan.showPowerSources()));
         properties.setProperty("layers.showCustomObjects", Boolean.toString(plan.showCustomObjects()));
@@ -98,6 +99,7 @@ public class PlanFileService {
         plan.setShowCableType(ConnectorType.INDUSTRIAL_16A, booleanValue(properties, "layers.show16ACables", true));
         plan.setShowCableType(ConnectorType.INDUSTRIAL_32A, booleanValue(properties, "layers.show32ACables", true));
         plan.setShowCableType(ConnectorType.INDUSTRIAL_63A, booleanValue(properties, "layers.show63ACables", true));
+        plan.setShowObjectLabels(booleanValue(properties, "layers.showObjectLabels", true));
         plan.setShowTents(booleanValue(properties, "layers.showTents", true));
         plan.setShowPowerSources(booleanValue(properties, "layers.showPowerSources", true));
         plan.setShowCustomObjects(booleanValue(properties, "layers.showCustomObjects", true));

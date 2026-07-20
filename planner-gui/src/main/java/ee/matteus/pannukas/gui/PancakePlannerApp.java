@@ -211,6 +211,7 @@ public class PancakePlannerApp extends Application {
     private ToggleButton show16ACablesButton;
     private ToggleButton show32ACablesButton;
     private ToggleButton show63ACablesButton;
+    private ToggleButton showObjectLabelsButton;
     private ToggleButton showTentsButton;
     private ToggleButton showPowerSourcesButton;
     private ToggleButton showCustomObjectsButton;
@@ -313,6 +314,7 @@ public class PancakePlannerApp extends Application {
         show16ACablesButton = cableTypeToggle("16A", ConnectorType.INDUSTRIAL_16A);
         show32ACablesButton = cableTypeToggle("32A", ConnectorType.INDUSTRIAL_32A);
         show63ACablesButton = cableTypeToggle("63A", ConnectorType.INDUSTRIAL_63A);
+        showObjectLabelsButton = objectTypeToggle("Nimed", "Naitab voi peidab kaardil objektide nimesildid");
         showTentsButton = objectTypeToggle("Telgid", "Näitab või peidab kaardil telgid");
         showPowerSourcesButton = objectTypeToggle("Kapid", "Näitab või peidab kaardil elektrikapid");
         showCustomObjectsButton = objectTypeToggle("Objektid", "Näitab või peidab kaardil tavalised objektid");
@@ -399,6 +401,7 @@ public class PancakePlannerApp extends Application {
         show16ACablesButton.setSelected(plan.showCableType(ConnectorType.INDUSTRIAL_16A));
         show32ACablesButton.setSelected(plan.showCableType(ConnectorType.INDUSTRIAL_32A));
         show63ACablesButton.setSelected(plan.showCableType(ConnectorType.INDUSTRIAL_63A));
+        showObjectLabelsButton.setSelected(plan.showObjectLabels());
         showTentsButton.setSelected(plan.showTents());
         showPowerSourcesButton.setSelected(plan.showPowerSources());
         showCustomObjectsButton.setSelected(plan.showCustomObjects());
@@ -416,6 +419,7 @@ public class PancakePlannerApp extends Application {
         plan.setShowCableType(ConnectorType.INDUSTRIAL_16A, show16ACablesButton.isSelected());
         plan.setShowCableType(ConnectorType.INDUSTRIAL_32A, show32ACablesButton.isSelected());
         plan.setShowCableType(ConnectorType.INDUSTRIAL_63A, show63ACablesButton.isSelected());
+        plan.setShowObjectLabels(showObjectLabelsButton.isSelected());
         plan.setShowTents(showTentsButton.isSelected());
         plan.setShowPowerSources(showPowerSourcesButton.isSelected());
         plan.setShowCustomObjects(showCustomObjectsButton.isSelected());
@@ -675,6 +679,7 @@ public class PancakePlannerApp extends Application {
         FlowPane objectTypeRow = new FlowPane(
                 8,
                 6,
+                showObjectLabelsButton,
                 showTentsButton,
                 showPowerSourcesButton,
                 showCustomObjectsButton,
@@ -699,6 +704,7 @@ public class PancakePlannerApp extends Application {
         show16ACablesButton.setSelected(visible);
         show32ACablesButton.setSelected(visible);
         show63ACablesButton.setSelected(visible);
+        showObjectLabelsButton.setSelected(visible);
         showTentsButton.setSelected(visible);
         showPowerSourcesButton.setSelected(visible);
         showCustomObjectsButton.setSelected(visible);
@@ -1804,6 +1810,10 @@ public class PancakePlannerApp extends Application {
         };
     }
 
+    private boolean showObjectLabels() {
+        return showObjectLabelsButton == null || showObjectLabelsButton.isSelected();
+    }
+
     private boolean isObjectTypeVisible(PlannerObject object) {
         if (object instanceof Tent) {
             return showTentsButton == null || showTentsButton.isSelected();
@@ -2327,7 +2337,7 @@ public class PancakePlannerApp extends Application {
     }
 
     private void addMapLabel(PlannerObject object, double x, double y) {
-        if (!object.showMapLabel()) {
+        if (!showObjectLabels() || !object.showMapLabel()) {
             return;
         }
         double labelX = object.customMapLabelPosition() ? x + object.mapLabelOffset().x() : x;
