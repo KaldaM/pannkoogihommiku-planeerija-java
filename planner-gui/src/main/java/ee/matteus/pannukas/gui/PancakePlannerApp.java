@@ -227,6 +227,8 @@ public class PancakePlannerApp extends Application {
     private ToggleButton showCustomObjectsButton;
     private ToggleButton showTextObjectsButton;
     private ToggleButton showMarkerObjectsButton;
+    private ToggleButton showAreaObjectsButton;
+    private ToggleButton showLineObjectsButton;
     private ComboBox<PlacementType> placementTypeComboBox;
     private Button addPlacementButton;
     private PlannerObject selectedObject;
@@ -339,6 +341,8 @@ public class PancakePlannerApp extends Application {
         showCustomObjectsButton = objectTypeToggle("Objektid", "Näitab või peidab kaardil tavalised objektid");
         showTextObjectsButton = objectTypeToggle("Tekstid", "Näitab või peidab kaardil tekstobjektid");
         showMarkerObjectsButton = objectTypeToggle("Markerid", "Näitab või peidab kaardil markerid");
+        showAreaObjectsButton = objectTypeToggle("Alad", "Näitab või peidab kaardil alaobjektid");
+        showLineObjectsButton = objectTypeToggle("Jooned", "Näitab või peidab kaardil jooneobjektid");
         applyMapLayerControlsFromPlan();
 
         measureButton = new ToggleButton("Mõõdulint");
@@ -428,6 +432,8 @@ public class PancakePlannerApp extends Application {
         showCustomObjectsButton.setSelected(plan.showCustomObjects());
         showTextObjectsButton.setSelected(plan.showTextObjects());
         showMarkerObjectsButton.setSelected(plan.showMarkerObjects());
+        showAreaObjectsButton.setSelected(plan.showAreaObjects());
+        showLineObjectsButton.setSelected(plan.showLineObjects());
     }
 
     private void updateMapLayerVisibility() {
@@ -446,6 +452,8 @@ public class PancakePlannerApp extends Application {
         plan.setShowCustomObjects(showCustomObjectsButton.isSelected());
         plan.setShowTextObjects(showTextObjectsButton.isSelected());
         plan.setShowMarkerObjects(showMarkerObjectsButton.isSelected());
+        plan.setShowAreaObjects(showAreaObjectsButton.isSelected());
+        plan.setShowLineObjects(showLineObjectsButton.isSelected());
         redrawMap();
         refreshObjectList();
         markDirty();
@@ -705,7 +713,9 @@ public class PancakePlannerApp extends Application {
                 showPowerSourcesButton,
                 showCustomObjectsButton,
                 showTextObjectsButton,
-                showMarkerObjectsButton
+                showMarkerObjectsButton,
+                showAreaObjectsButton,
+                showLineObjectsButton
         );
         return new VBox(
                 8,
@@ -731,6 +741,8 @@ public class PancakePlannerApp extends Application {
         showCustomObjectsButton.setSelected(visible);
         showTextObjectsButton.setSelected(visible);
         showMarkerObjectsButton.setSelected(visible);
+        showAreaObjectsButton.setSelected(visible);
+        showLineObjectsButton.setSelected(visible);
         updateMapLayerVisibility();
     }
 
@@ -856,6 +868,10 @@ public class PancakePlannerApp extends Application {
             showTextObjectsButton.setSelected(visible);
         } else if (object instanceof MarkerObject) {
             showMarkerObjectsButton.setSelected(visible);
+        } else if (object instanceof AreaObject) {
+            showAreaObjectsButton.setSelected(visible);
+        } else if (object instanceof LineObject) {
+            showLineObjectsButton.setSelected(visible);
         } else if (object instanceof CustomObject) {
             showCustomObjectsButton.setSelected(visible);
         }
@@ -1878,6 +1894,12 @@ public class PancakePlannerApp extends Application {
         }
         if (object instanceof MarkerObject) {
             return showMarkerObjectsButton == null || showMarkerObjectsButton.isSelected();
+        }
+        if (object instanceof AreaObject) {
+            return showAreaObjectsButton == null || showAreaObjectsButton.isSelected();
+        }
+        if (object instanceof LineObject) {
+            return showLineObjectsButton == null || showLineObjectsButton.isSelected();
         }
         if (object instanceof CustomObject) {
             return showCustomObjectsButton == null || showCustomObjectsButton.isSelected();
