@@ -34,9 +34,11 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SplitPane;
@@ -1962,7 +1964,7 @@ public class PancakePlannerApp extends Application {
                 marker.setFill(Color.WHITE);
                 marker.setStroke(cableColor);
                 marker.setStrokeWidth(2);
-                Tooltip.install(marker, new Tooltip("Lohista punkti muutmiseks, paremklõps eemaldab punkti"));
+                Tooltip.install(marker, new Tooltip("Lohista punkti muutmiseks, paremklõps avab valikud"));
                 makeCableSelectable(marker, cable.tent());
                 makeCableRoutePointDraggable(marker, cable, index, line, highlightLine, hitLine, distanceLabel);
                 mapPane.getChildren().add(marker);
@@ -2140,7 +2142,7 @@ public class PancakePlannerApp extends Application {
         });
         marker.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.SECONDARY) {
-                removeCableRoutePoint(cable, routePointIndex);
+                showCableRoutePointContextMenu(marker, cable, routePointIndex, event.getScreenX(), event.getScreenY());
                 event.consume();
                 return;
             }
@@ -2149,6 +2151,20 @@ public class PancakePlannerApp extends Application {
             }
             event.consume();
         });
+    }
+
+    private void showCableRoutePointContextMenu(
+            Circle marker,
+            PowerCableView cable,
+            int routePointIndex,
+            double screenX,
+            double screenY
+    ) {
+        MenuItem removePointItem = new MenuItem("Eemalda punkt");
+        removePointItem.setOnAction(event -> removeCableRoutePoint(cable, routePointIndex));
+
+        ContextMenu contextMenu = new ContextMenu(removePointItem);
+        contextMenu.show(marker, screenX, screenY);
     }
 
     private void removeCableRoutePoint(PowerCableView cable, int routePointIndex) {
