@@ -30,6 +30,20 @@ public class LineObject extends PlannerObject {
         }
     }
 
+    @Override
+    public void moveTo(Position position) {
+        if (locked()) {
+            return;
+        }
+        double deltaX = position.x() - position().x();
+        double deltaY = position.y() - position().y();
+        super.moveTo(position);
+        for (int index = 0; index < points.size(); index++) {
+            Position point = points.get(index);
+            points.set(index, new Position(point.x() + deltaX, point.y() + deltaY));
+        }
+    }
+
     public String colorHex() {
         return colorHex;
     }

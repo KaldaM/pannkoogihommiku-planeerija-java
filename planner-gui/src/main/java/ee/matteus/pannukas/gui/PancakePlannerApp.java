@@ -1829,6 +1829,11 @@ public class PancakePlannerApp extends Application {
             drawPowerConnections();
         }
         for (PlannerObject object : plan.objects()) {
+            if (object instanceof AreaObject areaObject && isGroupVisible(object) && isObjectTypeVisible(object)) {
+                drawAreaObject(areaObject);
+            }
+        }
+        for (PlannerObject object : plan.objects()) {
             if (!isGroupVisible(object) || !isObjectTypeVisible(object)) {
                 continue;
             }
@@ -1840,6 +1845,8 @@ public class PancakePlannerApp extends Application {
                 drawTextObject(textObject);
             } else if (object instanceof MarkerObject markerObject) {
                 drawMarkerObject(markerObject);
+            } else if (object instanceof LineObject lineObject) {
+                drawLineObject(lineObject);
             } else if (object instanceof CustomObject customObject) {
                 drawCustomObject(customObject);
             }
@@ -2316,6 +2323,44 @@ public class PancakePlannerApp extends Application {
 
         mapPane.getChildren().add(shape);
         addMapLabel(object, object.position().x() + 16, object.position().y() - 12);
+    }
+
+    private void drawAreaObject(AreaObject object) {
+        if (object.points().size() < 3) {
+            return;
+        }
+        Polygon polygon = new Polygon();
+        for (Position point : object.points()) {
+            polygon.getPoints().addAll(point.x(), point.y());
+        }
+        polygon.setFill(Color.web(object.colorHex(), object.opacity()));
+        polygon.setStroke(Color.web(object.colorHex()));
+        polygon.setStrokeWidth(isSelected(object) ? 4 : 1.5);
+        applyLockedStroke(polygon, object);
+        makeSelectable(polygon, object);
+        makeDraggable(polygon, object);
+
+        mapPane.getChildren().add(polygon);
+        Position labelPosition = averagePosition(object.points());
+        addMapLabel(object, labelPosition.x() + 8, labelPosition.y() + 8);
+    }
+
+    private void drawLineObject(LineObject object) {
+        if (object.points().size() < 2) {
+            return;
+        }
+        Polyline polyline = CablePolylineHelper.create(object.points());
+        polyline.setFill(null);
+        polyline.setStroke(Color.web(object.colorHex()));
+        polyline.setStrokeWidth(object.widthPixels() + (isSelected(object) ? 2.0 : 0.0));
+        polyline.setOpacity(isSelected(object) ? 1.0 : 0.9);
+        applyLockedStroke(polyline, object);
+        makeSelectable(polyline, object);
+        makeDraggable(polyline, object);
+
+        mapPane.getChildren().add(polyline);
+        Position labelPosition = averagePosition(object.points());
+        addMapLabel(object, labelPosition.x() + 8, labelPosition.y() + 8);
     }
 
     private void drawTextObject(TextObject object) {
@@ -3619,6 +3664,19 @@ public class PancakePlannerApp extends Application {
             return "%.0f".formatted(value);
         }
         return "%.1f".formatted(value);
+    }
+
+    private Position averagePosition(List<Position> points) {
+        if (points.isEmpty()) {
+            return new Position(0, 0);
+        }
+        double totalX = 0;
+        double totalY = 0;
+        for (Position point : points) {
+            totalX += point.x();
+            totalY += point.y();
+        }
+        return new Position(totalX / points.size(), totalY / points.size());
     }
 
     private Position rotationOffset(double width, double height, double degrees) {
