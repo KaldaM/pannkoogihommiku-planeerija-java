@@ -1,8 +1,10 @@
 package ee.matteus.pannukas.gui;
 
 import ee.matteus.pannukas.core.model.ConnectorType;
+import ee.matteus.pannukas.core.model.AreaObject;
 import ee.matteus.pannukas.core.model.Equipment;
 import ee.matteus.pannukas.core.model.EventPlan;
+import ee.matteus.pannukas.core.model.LineObject;
 import ee.matteus.pannukas.core.model.MarkerObject;
 import ee.matteus.pannukas.core.model.PlannerObject;
 import ee.matteus.pannukas.core.model.PowerConnection;
@@ -445,6 +447,12 @@ final class ReportTextExporter {
         }
         if (object instanceof MarkerObject) {
             return "Marker";
+        }
+        if (object instanceof AreaObject) {
+            return "Ala";
+        }
+        if (object instanceof LineObject) {
+            return "Joon";
         }
         if (object instanceof CustomObject) {
             return "Objekt";

@@ -32,6 +32,8 @@ public class EventPlan {
     private boolean showCustomObjects = true;
     private boolean showTextObjects = true;
     private boolean showMarkerObjects = true;
+    private boolean showAreaObjects = true;
+    private boolean showLineObjects = true;
 
     public EventPlan(String name) {
         this.name = name;
@@ -112,6 +114,20 @@ public class EventPlan {
         return objects.stream()
                 .filter(Tent.class::isInstance)
                 .map(Tent.class::cast)
+                .toList();
+    }
+
+    public List<AreaObject> areaObjects() {
+        return objects.stream()
+                .filter(AreaObject.class::isInstance)
+                .map(AreaObject.class::cast)
+                .toList();
+    }
+
+    public List<LineObject> lineObjects() {
+        return objects.stream()
+                .filter(LineObject.class::isInstance)
+                .map(LineObject.class::cast)
                 .toList();
     }
 
@@ -199,6 +215,22 @@ public class EventPlan {
 
     public void setShowMarkerObjects(boolean showMarkerObjects) {
         this.showMarkerObjects = showMarkerObjects;
+    }
+
+    public boolean showAreaObjects() {
+        return showAreaObjects;
+    }
+
+    public void setShowAreaObjects(boolean showAreaObjects) {
+        this.showAreaObjects = showAreaObjects;
+    }
+
+    public boolean showLineObjects() {
+        return showLineObjects;
+    }
+
+    public void setShowLineObjects(boolean showLineObjects) {
+        this.showLineObjects = showLineObjects;
     }
 
     public Optional<PowerConnection> connectToPower(String sourceId, String consumerId, ConnectorType connectorType) {

@@ -1,10 +1,12 @@
 package ee.matteus.pannukas.gui;
 
 import ee.matteus.pannukas.core.model.ConnectorType;
+import ee.matteus.pannukas.core.model.AreaObject;
 import ee.matteus.pannukas.core.model.CustomObject;
 import ee.matteus.pannukas.core.model.CustomObjectShape;
 import ee.matteus.pannukas.core.model.Equipment;
 import ee.matteus.pannukas.core.model.EventPlan;
+import ee.matteus.pannukas.core.model.LineObject;
 import ee.matteus.pannukas.core.model.MarkerObject;
 import ee.matteus.pannukas.core.model.MarkerType;
 import ee.matteus.pannukas.core.model.PlannerObject;
@@ -785,6 +787,12 @@ public class PancakePlannerApp extends Application {
         }
         if (object instanceof MarkerObject markerObject) {
             return markerObject.colorHex();
+        }
+        if (object instanceof AreaObject areaObject) {
+            return areaObject.colorHex();
+        }
+        if (object instanceof LineObject lineObject) {
+            return lineObject.colorHex();
         }
         return "#9ca3af";
     }
@@ -3051,6 +3059,12 @@ public class PancakePlannerApp extends Application {
         }
         if (object instanceof MarkerObject) {
             return "Marker";
+        }
+        if (object instanceof AreaObject) {
+            return "Ala";
+        }
+        if (object instanceof LineObject) {
+            return "Joon";
         }
         if (object instanceof CustomObject) {
             return "Objekt";

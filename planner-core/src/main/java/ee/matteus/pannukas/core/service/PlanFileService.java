@@ -1,10 +1,12 @@
 package ee.matteus.pannukas.core.service;
 
 import ee.matteus.pannukas.core.model.ConnectorType;
+import ee.matteus.pannukas.core.model.AreaObject;
 import ee.matteus.pannukas.core.model.CustomObject;
 import ee.matteus.pannukas.core.model.CustomObjectShape;
 import ee.matteus.pannukas.core.model.Equipment;
 import ee.matteus.pannukas.core.model.EventPlan;
+import ee.matteus.pannukas.core.model.LineObject;
 import ee.matteus.pannukas.core.model.MarkerObject;
 import ee.matteus.pannukas.core.model.MarkerType;
 import ee.matteus.pannukas.core.model.PlannerObject;
@@ -44,6 +46,8 @@ public class PlanFileService {
         properties.setProperty("layers.showCustomObjects", Boolean.toString(plan.showCustomObjects()));
         properties.setProperty("layers.showTextObjects", Boolean.toString(plan.showTextObjects()));
         properties.setProperty("layers.showMarkerObjects", Boolean.toString(plan.showMarkerObjects()));
+        properties.setProperty("layers.showAreaObjects", Boolean.toString(plan.showAreaObjects()));
+        properties.setProperty("layers.showLineObjects", Boolean.toString(plan.showLineObjects()));
         properties.setProperty("hiddenGroups.count", Integer.toString(plan.hiddenGroups().size()));
 
         int hiddenGroupIndex = 0;
@@ -109,6 +113,8 @@ public class PlanFileService {
         plan.setShowCustomObjects(booleanValue(properties, "layers.showCustomObjects", true));
         plan.setShowTextObjects(booleanValue(properties, "layers.showTextObjects", true));
         plan.setShowMarkerObjects(booleanValue(properties, "layers.showMarkerObjects", true));
+        plan.setShowAreaObjects(booleanValue(properties, "layers.showAreaObjects", true));
+        plan.setShowLineObjects(booleanValue(properties, "layers.showLineObjects", true));
 
         int objectCount = intValue(properties, "objects.count", 0);
         for (int index = 0; index < objectCount; index++) {
@@ -169,6 +175,10 @@ public class PlanFileService {
             writeMarkerObject(properties, prefix, markerObject);
         } else if (object instanceof TextObject textObject) {
             writeTextObject(properties, prefix, textObject);
+        } else if (object instanceof AreaObject areaObject) {
+            writeAreaObject(properties, prefix, areaObject);
+        } else if (object instanceof LineObject lineObject) {
+            writeLineObject(properties, prefix, lineObject);
         } else if (object instanceof CustomObject customObject) {
             writeCustomObject(properties, prefix, customObject);
         }
@@ -223,6 +233,20 @@ public class PlanFileService {
         properties.setProperty(prefix + "colorHex", object.colorHex());
     }
 
+    private void writeAreaObject(Properties properties, String prefix, AreaObject object) {
+        properties.setProperty(prefix + "type", "AREA_OBJECT");
+        properties.setProperty(prefix + "colorHex", object.colorHex());
+        properties.setProperty(prefix + "opacity", Double.toString(object.opacity()));
+        writePoints(properties, prefix, object.points());
+    }
+
+    private void writeLineObject(Properties properties, String prefix, LineObject object) {
+        properties.setProperty(prefix + "type", "LINE_OBJECT");
+        properties.setProperty(prefix + "colorHex", object.colorHex());
+        properties.setProperty(prefix + "widthPixels", Double.toString(object.widthPixels()));
+        writePoints(properties, prefix, object.points());
+    }
+
     private PlannerObject readObject(Properties properties, String prefix) {
         String type = properties.getProperty(prefix + "type", "TENT");
         PlannerObject object;
@@ -232,6 +256,10 @@ public class PlanFileService {
             object = readMarkerObject(properties, prefix);
         } else if ("TEXT_OBJECT".equals(type)) {
             object = readTextObject(properties, prefix);
+        } else if ("AREA_OBJECT".equals(type)) {
+            object = readAreaObject(properties, prefix);
+        } else if ("LINE_OBJECT".equals(type)) {
+            object = readLineObject(properties, prefix);
         } else if ("CUSTOM_OBJECT".equals(type)) {
             object = readCustomObject(properties, prefix);
         } else {
@@ -338,6 +366,30 @@ public class PlanFileService {
         return object;
     }
 
+    private AreaObject readAreaObject(Properties properties, String prefix) {
+        AreaObject object = new AreaObject(
+                properties.getProperty(prefix + "id", ""),
+                properties.getProperty(prefix + "name", "Ala"),
+                readPosition(properties, prefix)
+        );
+        object.setColorHex(properties.getProperty(prefix + "colorHex", "#f59e0b"));
+        object.setOpacity(doubleValue(properties, prefix + "opacity", AreaObject.DEFAULT_OPACITY));
+        object.setPoints(readPoints(properties, prefix));
+        return object;
+    }
+
+    private LineObject readLineObject(Properties properties, String prefix) {
+        LineObject object = new LineObject(
+                properties.getProperty(prefix + "id", ""),
+                properties.getProperty(prefix + "name", "Joon"),
+                readPosition(properties, prefix)
+        );
+        object.setColorHex(properties.getProperty(prefix + "colorHex", "#0f766e"));
+        object.setWidthPixels(doubleValue(properties, prefix + "widthPixels", LineObject.DEFAULT_WIDTH_PIXELS));
+        object.setPoints(readPoints(properties, prefix));
+        return object;
+    }
+
     private Position readPosition(Properties properties, String prefix) {
         return new Position(
                 doubleValue(properties, prefix + "x", 0),
@@ -352,6 +404,25 @@ public class PlanFileService {
             routePoints.add(readPosition(properties, prefix + "routePoint." + index + "."));
         }
         return routePoints;
+    }
+
+    private void writePoints(Properties properties, String prefix, List<Position> points) {
+        properties.setProperty(prefix + "points.count", Integer.toString(points.size()));
+        for (int index = 0; index < points.size(); index++) {
+            Position point = points.get(index);
+            String pointPrefix = prefix + "point." + index + ".";
+            properties.setProperty(pointPrefix + "x", Double.toString(point.x()));
+            properties.setProperty(pointPrefix + "y", Double.toString(point.y()));
+        }
+    }
+
+    private List<Position> readPoints(Properties properties, String prefix) {
+        List<Position> points = new java.util.ArrayList<>();
+        int pointCount = intValue(properties, prefix + "points.count", 0);
+        for (int index = 0; index < pointCount; index++) {
+            points.add(readPosition(properties, prefix + "point." + index + "."));
+        }
+        return points;
     }
 
     private int intValue(Properties properties, String key, int fallback) {
