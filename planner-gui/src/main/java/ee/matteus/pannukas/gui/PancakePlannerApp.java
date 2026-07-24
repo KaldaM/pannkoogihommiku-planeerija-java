@@ -60,6 +60,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -142,6 +143,7 @@ public class PancakePlannerApp extends Application {
     private Position measurementStart;
     private final List<Node> measurementNodes = new ArrayList<>();
     private final List<MeasurementView> measurements = new ArrayList<>();
+    private final List<Position> pendingShapePoints = new ArrayList<>();
     private final Set<String> visibleGroups = new HashSet<>();
     private final Map<String, Boolean> sidebarSectionStates = new HashMap<>();
     private Set<String> knownGroups = new HashSet<>();
@@ -270,6 +272,15 @@ public class PancakePlannerApp extends Application {
         refreshDetails();
 
         Scene scene = new Scene(root, 1200, 760);
+        scene.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ENTER && isShapePlacementPending()) {
+                finishPendingShapePlacement();
+                event.consume();
+            } else if (event.getCode() == KeyCode.ESCAPE && isPlacementPending()) {
+                cancelPlacement();
+                event.consume();
+            }
+        });
         stage.setScene(scene);
         stage.setMaximized(true);
         stage.setOnCloseRequest(event -> {
@@ -512,11 +523,11 @@ public class PancakePlannerApp extends Application {
                 return;
             }
             if (pendingLineObjectPlacement && !mapDraggedSincePress) {
-                placeLineObject(new Position(event.getX(), event.getY()));
+                addPendingShapePoint(new Position(event.getX(), event.getY()));
                 return;
             }
             if (pendingAreaObjectPlacement && !mapDraggedSincePress) {
-                placeAreaObject(new Position(event.getX(), event.getY()));
+                addPendingShapePoint(new Position(event.getX(), event.getY()));
                 return;
             }
             if (addingCablePoint && !mapDraggedSincePress) {
@@ -1155,7 +1166,11 @@ public class PancakePlannerApp extends Application {
 
     private void toggleSelectedPlacement() {
         if (isPlacementPending()) {
-            cancelPlacement();
+            if (isShapePlacementPending() && canFinishPendingShapePlacement()) {
+                finishPendingShapePlacement();
+            } else {
+                cancelPlacement();
+            }
             return;
         }
 
@@ -1551,22 +1566,21 @@ public class PancakePlannerApp extends Application {
         pendingMarkerPlacement = false;
         pendingAreaObjectPlacement = false;
         pendingPowerSourceTent = null;
+        pendingShapePoints.clear();
         refreshPlacementButtons();
         updateMapToolStatus();
+        redrawMap();
     }
 
-    private void placeLineObject(Position position) {
-        LineObject object = new LineObject(planFactory.newId(), placementNameOrDefault(PlacementType.LINE_OBJECT), position);
+    private void placeLineObject(List<Position> points) {
+        LineObject object = new LineObject(planFactory.newId(), placementNameOrDefault(PlacementType.LINE_OBJECT), points.getFirst());
         object.setGroupName(placementGroupNameOrDefault());
         object.setColorHex(placementColorHexOrDefault(PlacementType.LINE_OBJECT));
-        double defaultLengthPixels = metersToPixels(3.5);
-        object.setPoints(List.of(
-                position,
-                new Position(position.x() + defaultLengthPixels, position.y())
-        ));
+        object.setPoints(points);
         plan.addObject(object);
         clearPendingPlacementDetails();
         pendingLineObjectPlacement = false;
+        pendingShapePoints.clear();
         refreshPlacementButtons();
         updateMapToolStatus();
         refreshGroupFilters();
@@ -1584,32 +1598,57 @@ public class PancakePlannerApp extends Application {
         pendingMarkerPlacement = false;
         pendingLineObjectPlacement = false;
         pendingPowerSourceTent = null;
+        pendingShapePoints.clear();
         refreshPlacementButtons();
         updateMapToolStatus();
+        redrawMap();
     }
 
-    private void placeAreaObject(Position position) {
-        AreaObject object = new AreaObject(planFactory.newId(), placementNameOrDefault(PlacementType.AREA_OBJECT), position);
+    private void placeAreaObject(List<Position> points) {
+        AreaObject object = new AreaObject(planFactory.newId(), placementNameOrDefault(PlacementType.AREA_OBJECT), points.getFirst());
         object.setGroupName(placementGroupNameOrDefault());
         object.setColorHex(placementColorHexOrDefault(PlacementType.AREA_OBJECT));
         object.setOpacity(pendingPlacementOpacityOrDefault());
-        double widthPixels = metersToPixels(6.0);
-        double heightPixels = metersToPixels(4.0);
-        object.setPoints(List.of(
-                position,
-                new Position(position.x() + widthPixels, position.y()),
-                new Position(position.x() + widthPixels, position.y() + heightPixels),
-                new Position(position.x(), position.y() + heightPixels)
-        ));
+        object.setPoints(points);
         plan.addObject(object);
         clearPendingPlacementDetails();
         pendingAreaObjectPlacement = false;
+        pendingShapePoints.clear();
         refreshPlacementButtons();
         updateMapToolStatus();
         refreshGroupFilters();
         selectObject(object);
         refreshSummary();
         markDirty();
+    }
+
+    private void addPendingShapePoint(Position point) {
+        pendingShapePoints.add(point);
+        redrawMap();
+        refreshPlacementButtons();
+        updateMapToolStatus();
+    }
+
+    private boolean isShapePlacementPending() {
+        return pendingLineObjectPlacement || pendingAreaObjectPlacement;
+    }
+
+    private boolean canFinishPendingShapePlacement() {
+        return pendingLineObjectPlacement && pendingShapePoints.size() >= 2
+                || pendingAreaObjectPlacement && pendingShapePoints.size() >= 3;
+    }
+
+    private void finishPendingShapePlacement() {
+        if (!canFinishPendingShapePlacement()) {
+            updateMapToolStatus();
+            return;
+        }
+        List<Position> points = List.copyOf(pendingShapePoints);
+        if (pendingLineObjectPlacement) {
+            placeLineObject(points);
+        } else if (pendingAreaObjectPlacement) {
+            placeAreaObject(points);
+        }
     }
 
     private String placementNameOrDefault(PlacementType placementType) {
@@ -1670,6 +1709,7 @@ public class PancakePlannerApp extends Application {
         pendingPlacementOpacity = null;
         pendingPlacementShape = null;
         pendingPlacementMarkerType = null;
+        pendingShapePoints.clear();
     }
 
     private void applyPlanName() {
@@ -1927,11 +1967,15 @@ public class PancakePlannerApp extends Application {
             return;
         }
         if (pendingLineObjectPlacement) {
-            mapToolStatusLabel.setText("Paiguta joon kaardile");
+            mapToolStatusLabel.setText(canFinishPendingShapePlacement()
+                    ? "Lisa joone punkte või lõpeta Enteriga"
+                    : "Lisa joone punkte kaardile (vähemalt 2)");
             return;
         }
         if (pendingAreaObjectPlacement) {
-            mapToolStatusLabel.setText("Paiguta ala kaardile");
+            mapToolStatusLabel.setText(canFinishPendingShapePlacement()
+                    ? "Lisa ala punkte või lõpeta Enteriga"
+                    : "Lisa ala punkte kaardile (vähemalt 3)");
             return;
         }
         if (addingCablePoint) {
@@ -1993,7 +2037,43 @@ public class PancakePlannerApp extends Application {
                 drawCustomObject(customObject);
             }
         }
+        drawPendingShapePreview();
         mapPane.getChildren().addAll(measurementNodes);
+    }
+
+    private void drawPendingShapePreview() {
+        if (!isShapePlacementPending() || pendingShapePoints.isEmpty()) {
+            return;
+        }
+        Color color = Color.web(placementColorHexOrDefault(
+                pendingAreaObjectPlacement ? PlacementType.AREA_OBJECT : PlacementType.LINE_OBJECT
+        ));
+        if (pendingAreaObjectPlacement && pendingShapePoints.size() >= 3) {
+            Polygon polygon = new Polygon();
+            for (Position point : pendingShapePoints) {
+                polygon.getPoints().addAll(point.x(), point.y());
+            }
+            polygon.setFill(Color.web(toHex(color), pendingPlacementOpacityOrDefault()));
+            polygon.setStroke(color);
+            polygon.setStrokeWidth(2);
+            polygon.getStrokeDashArray().addAll(8.0, 6.0);
+            polygon.setMouseTransparent(true);
+            mapPane.getChildren().add(polygon);
+        }
+        if (pendingShapePoints.size() >= 2) {
+            Polyline line = CablePolylineHelper.create(pendingShapePoints);
+            line.setFill(null);
+            line.setStroke(color);
+            line.setStrokeWidth(pendingLineObjectPlacement ? LineObject.DEFAULT_WIDTH_PIXELS : 2.0);
+            line.getStrokeDashArray().addAll(8.0, 6.0);
+            line.setMouseTransparent(true);
+            mapPane.getChildren().add(line);
+        }
+        for (Position point : pendingShapePoints) {
+            Circle marker = shapePointHandle(point, color);
+            marker.setMouseTransparent(true);
+            mapPane.getChildren().add(marker);
+        }
     }
 
     private void addMapImage() {
@@ -2198,13 +2278,13 @@ public class PancakePlannerApp extends Application {
             }
             if (pendingLineObjectPlacement) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
-                placeLineObject(new Position(mapPoint.getX(), mapPoint.getY()));
+                addPendingShapePoint(new Position(mapPoint.getX(), mapPoint.getY()));
                 event.consume();
                 return;
             }
             if (pendingAreaObjectPlacement) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
-                placeAreaObject(new Position(mapPoint.getX(), mapPoint.getY()));
+                addPendingShapePoint(new Position(mapPoint.getX(), mapPoint.getY()));
                 event.consume();
                 return;
             }
@@ -2498,6 +2578,7 @@ public class PancakePlannerApp extends Application {
         Position labelPosition = averagePosition(object.points());
         addMapLabel(object, labelPosition.x() + 8, labelPosition.y() + 8);
         if (isSelected(object)) {
+            addAreaEdgePointInserter(object);
             addAreaPointHandles(object, polygon);
         }
     }
@@ -2519,8 +2600,48 @@ public class PancakePlannerApp extends Application {
         Position labelPosition = averagePosition(object.points());
         addMapLabel(object, labelPosition.x() + 8, labelPosition.y() + 8);
         if (isSelected(object)) {
+            addLineEdgePointInserter(object);
             addLinePointHandles(object, polyline);
         }
+    }
+
+    private void addAreaEdgePointInserter(AreaObject object) {
+        List<Position> closedPoints = new ArrayList<>(object.points());
+        closedPoints.add(object.points().getFirst());
+        Polyline hitLine = shapeEdgeHitLine(closedPoints);
+        hitLine.setOnMouseClicked(event -> {
+            if (event.getButton() != MouseButton.PRIMARY || object.locked() || isPlacementPending()) {
+                event.consume();
+                return;
+            }
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            addPointOnAreaEdge(object, new Position(mapPoint.getX(), mapPoint.getY()));
+            event.consume();
+        });
+        mapPane.getChildren().add(hitLine);
+    }
+
+    private void addLineEdgePointInserter(LineObject object) {
+        Polyline hitLine = shapeEdgeHitLine(object.points());
+        hitLine.setOnMouseClicked(event -> {
+            if (event.getButton() != MouseButton.PRIMARY || object.locked() || isPlacementPending()) {
+                event.consume();
+                return;
+            }
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            addPointOnLineEdge(object, new Position(mapPoint.getX(), mapPoint.getY()));
+            event.consume();
+        });
+        mapPane.getChildren().add(hitLine);
+    }
+
+    private Polyline shapeEdgeHitLine(List<Position> points) {
+        Polyline hitLine = CablePolylineHelper.create(points);
+        hitLine.setFill(null);
+        hitLine.setStroke(Color.TRANSPARENT);
+        hitLine.setStrokeWidth(14);
+        hitLine.setCursor(Cursor.CROSSHAIR);
+        return hitLine;
     }
 
     private void addAreaPointHandles(AreaObject object, Polygon polygon) {
@@ -2583,6 +2704,14 @@ public class PancakePlannerApp extends Application {
             }
             event.consume();
         });
+        marker.setOnMouseClicked(event -> {
+            if (event.getButton() == MouseButton.SECONDARY) {
+                showAreaPointContextMenu(marker, object, pointIndex, event.getScreenX(), event.getScreenY());
+                event.consume();
+                return;
+            }
+            event.consume();
+        });
     }
 
     private void makeLinePointDraggable(Circle marker, LineObject object, int pointIndex, Polyline polyline) {
@@ -2617,6 +2746,76 @@ public class PancakePlannerApp extends Application {
             }
             event.consume();
         });
+        marker.setOnMouseClicked(event -> {
+            if (event.getButton() == MouseButton.SECONDARY) {
+                showLinePointContextMenu(marker, object, pointIndex, event.getScreenX(), event.getScreenY());
+                event.consume();
+                return;
+            }
+            event.consume();
+        });
+    }
+
+    private void showAreaPointContextMenu(
+            Circle marker,
+            AreaObject object,
+            int pointIndex,
+            double screenX,
+            double screenY
+    ) {
+        MenuItem removePointItem = new MenuItem("Eemalda punkt");
+        removePointItem.setOnAction(event -> removeAreaPoint(object, pointIndex));
+        removePointItem.setDisable(object.locked() || object.points().size() <= 3);
+
+        ContextMenu contextMenu = new ContextMenu(removePointItem);
+        contextMenu.show(marker, screenX, screenY);
+    }
+
+    private void showLinePointContextMenu(
+            Circle marker,
+            LineObject object,
+            int pointIndex,
+            double screenX,
+            double screenY
+    ) {
+        MenuItem removePointItem = new MenuItem("Eemalda punkt");
+        removePointItem.setOnAction(event -> removeLinePoint(object, pointIndex));
+        removePointItem.setDisable(object.locked() || object.points().size() <= 2);
+
+        ContextMenu contextMenu = new ContextMenu(removePointItem);
+        contextMenu.show(marker, screenX, screenY);
+    }
+
+    private void addPointOnAreaEdge(AreaObject object, Position point) {
+        object.setPoints(addPointOnNearestSegment(object.points(), point, true));
+        refreshEditedShapeObject();
+    }
+
+    private void addPointOnLineEdge(LineObject object, Position point) {
+        object.setPoints(addPointOnNearestSegment(object.points(), point, false));
+        refreshEditedShapeObject();
+    }
+
+    private void removeAreaPoint(AreaObject object, int pointIndex) {
+        if (object.points().size() <= 3) {
+            return;
+        }
+        object.setPoints(removePoint(object.points(), pointIndex));
+        refreshEditedShapeObject();
+    }
+
+    private void removeLinePoint(LineObject object, int pointIndex) {
+        if (object.points().size() <= 2) {
+            return;
+        }
+        object.setPoints(removePoint(object.points(), pointIndex));
+        refreshEditedShapeObject();
+    }
+
+    private void refreshEditedShapeObject() {
+        redrawMap();
+        refreshSummary();
+        markDirty();
     }
 
     private List<Position> replacePoint(List<Position> points, int pointIndex, Position updatedPoint) {
@@ -2625,6 +2824,53 @@ public class PancakePlannerApp extends Application {
             updatedPoints.set(pointIndex, updatedPoint);
         }
         return updatedPoints;
+    }
+
+    private List<Position> addPointOnNearestSegment(List<Position> points, Position point, boolean closedShape) {
+        if (points.size() < 2) {
+            return points;
+        }
+        int segmentCount = closedShape ? points.size() : points.size() - 1;
+        int nearestSegmentIndex = 0;
+        double nearestDistance = Double.MAX_VALUE;
+        for (int index = 0; index < segmentCount; index++) {
+            Position start = points.get(index);
+            Position end = points.get((index + 1) % points.size());
+            double distance = distanceToSegment(point, start, end);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestSegmentIndex = index;
+            }
+        }
+        List<Position> updatedPoints = new ArrayList<>(points);
+        updatedPoints.add(nearestSegmentIndex + 1, point);
+        return updatedPoints;
+    }
+
+    private List<Position> removePoint(List<Position> points, int pointIndex) {
+        List<Position> updatedPoints = new ArrayList<>(points);
+        if (pointIndex >= 0 && pointIndex < updatedPoints.size()) {
+            updatedPoints.remove(pointIndex);
+        }
+        return updatedPoints;
+    }
+
+    private double distanceToSegment(Position point, Position start, Position end) {
+        double segmentX = end.x() - start.x();
+        double segmentY = end.y() - start.y();
+        double lengthSquared = segmentX * segmentX + segmentY * segmentY;
+        if (lengthSquared == 0) {
+            double deltaX = point.x() - start.x();
+            double deltaY = point.y() - start.y();
+            return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        }
+        double projection = ((point.x() - start.x()) * segmentX + (point.y() - start.y()) * segmentY) / lengthSquared;
+        double clampedProjection = Math.max(0.0, Math.min(1.0, projection));
+        double closestX = start.x() + clampedProjection * segmentX;
+        double closestY = start.y() + clampedProjection * segmentY;
+        double deltaX = point.x() - closestX;
+        double deltaY = point.y() - closestY;
+        return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     }
 
     private void updatePolygonPoint(Polygon polygon, int pointIndex, Position point) {
@@ -2872,13 +3118,13 @@ public class PancakePlannerApp extends Application {
             }
             if (pendingLineObjectPlacement) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
-                placeLineObject(new Position(mapPoint.getX(), mapPoint.getY()));
+                addPendingShapePoint(new Position(mapPoint.getX(), mapPoint.getY()));
                 event.consume();
                 return;
             }
             if (pendingAreaObjectPlacement) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
-                placeAreaObject(new Position(mapPoint.getX(), mapPoint.getY()));
+                addPendingShapePoint(new Position(mapPoint.getX(), mapPoint.getY()));
                 event.consume();
                 return;
             }
@@ -3793,8 +4039,18 @@ public class PancakePlannerApp extends Application {
             }
         }
         if (addPlacementButton != null) {
-            addPlacementButton.setText(placementPending ? "Tühista" : "Lisa");
+            addPlacementButton.setText(placementButtonText(placementPending));
         }
+    }
+
+    private String placementButtonText(boolean placementPending) {
+        if (!placementPending) {
+            return "Lisa";
+        }
+        if (isShapePlacementPending() && canFinishPendingShapePlacement()) {
+            return "Lõpeta";
+        }
+        return "Tühista";
     }
 
     private boolean isPlacementPending() {
@@ -3819,6 +4075,7 @@ public class PancakePlannerApp extends Application {
         clearPendingPlacementDetails();
         refreshPlacementButtons();
         updateMapToolStatus();
+        redrawMap();
     }
 
     private void handleMeasureClick(Position point) {
