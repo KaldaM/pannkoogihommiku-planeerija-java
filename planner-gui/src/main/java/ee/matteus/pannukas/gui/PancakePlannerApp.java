@@ -244,6 +244,7 @@ public class PancakePlannerApp extends Application {
     private boolean pendingCustomObjectPlacement;
     private boolean pendingTextObjectPlacement;
     private boolean pendingMarkerPlacement;
+    private boolean pendingLineObjectPlacement;
     private MarkerType pendingPlacementMarkerType;
     private boolean unsavedChanges;
     private Stage stage;
@@ -503,6 +504,10 @@ public class PancakePlannerApp extends Application {
             }
             if (pendingMarkerPlacement && !mapDraggedSincePress) {
                 placeMarkerObject(new Position(event.getX(), event.getY()));
+                return;
+            }
+            if (pendingLineObjectPlacement && !mapDraggedSincePress) {
+                placeLineObject(new Position(event.getX(), event.getY()));
                 return;
             }
             if (addingCablePoint && !mapDraggedSincePress) {
@@ -1159,6 +1164,7 @@ public class PancakePlannerApp extends Application {
             case CUSTOM_OBJECT -> addCustomObject();
             case TEXT_OBJECT -> addTextObject();
             case MARKER_OBJECT -> addMarkerObject();
+            case LINE_OBJECT -> addLineObject();
         }
     }
 
@@ -1243,7 +1249,7 @@ public class PancakePlannerApp extends Application {
                 case TENT -> 4;
                 case CUSTOM_OBJECT -> 5;
                 case MARKER_OBJECT -> 3;
-                case POWER_SOURCE, TEXT_OBJECT -> 2;
+                case POWER_SOURCE, TEXT_OBJECT, LINE_OBJECT -> 2;
             };
             form.addRow(colorRow, new Label("Värv"), colorPicker);
         }
@@ -1358,6 +1364,7 @@ public class PancakePlannerApp extends Application {
         pendingCustomObjectPlacement = false;
         pendingTextObjectPlacement = false;
         pendingMarkerPlacement = false;
+        pendingLineObjectPlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -1385,6 +1392,7 @@ public class PancakePlannerApp extends Application {
         pendingCustomObjectPlacement = false;
         pendingTextObjectPlacement = false;
         pendingMarkerPlacement = false;
+        pendingLineObjectPlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -1415,6 +1423,7 @@ public class PancakePlannerApp extends Application {
         pendingPowerSourcePlacement = false;
         pendingTextObjectPlacement = false;
         pendingMarkerPlacement = false;
+        pendingLineObjectPlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -1430,6 +1439,7 @@ public class PancakePlannerApp extends Application {
         clearPendingPlacementDetails();
         pendingCustomObjectPlacement = false;
         pendingMarkerPlacement = false;
+        pendingLineObjectPlacement = false;
         refreshPlacementButtons();
         updateMapToolStatus();
         refreshGroupFilters();
@@ -1443,6 +1453,8 @@ public class PancakePlannerApp extends Application {
         pendingTentPlacement = false;
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
+        pendingMarkerPlacement = false;
+        pendingLineObjectPlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -1469,6 +1481,7 @@ public class PancakePlannerApp extends Application {
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
         pendingTextObjectPlacement = false;
+        pendingLineObjectPlacement = false;
         pendingPowerSourceTent = null;
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -1482,6 +1495,38 @@ public class PancakePlannerApp extends Application {
         plan.addObject(object);
         clearPendingPlacementDetails();
         pendingMarkerPlacement = false;
+        refreshPlacementButtons();
+        updateMapToolStatus();
+        refreshGroupFilters();
+        selectObject(object);
+        refreshSummary();
+        markDirty();
+    }
+
+    private void addLineObject() {
+        pendingLineObjectPlacement = !pendingLineObjectPlacement;
+        pendingTentPlacement = false;
+        pendingPowerSourcePlacement = false;
+        pendingCustomObjectPlacement = false;
+        pendingTextObjectPlacement = false;
+        pendingMarkerPlacement = false;
+        pendingPowerSourceTent = null;
+        refreshPlacementButtons();
+        updateMapToolStatus();
+    }
+
+    private void placeLineObject(Position position) {
+        LineObject object = new LineObject(planFactory.newId(), placementNameOrDefault(PlacementType.LINE_OBJECT), position);
+        object.setGroupName(placementGroupNameOrDefault());
+        object.setColorHex(placementColorHexOrDefault(PlacementType.LINE_OBJECT));
+        double defaultLengthPixels = metersToPixels(3.5);
+        object.setPoints(List.of(
+                position,
+                new Position(position.x() + defaultLengthPixels, position.y())
+        ));
+        plan.addObject(object);
+        clearPendingPlacementDetails();
+        pendingLineObjectPlacement = false;
         refreshPlacementButtons();
         updateMapToolStatus();
         refreshGroupFilters();
@@ -1701,6 +1746,8 @@ public class PancakePlannerApp extends Application {
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
         pendingTextObjectPlacement = false;
+        pendingMarkerPlacement = false;
+        pendingLineObjectPlacement = false;
         measuringActive = false;
         addingCablePoint = false;
         if (measureButton != null) {
@@ -1790,6 +1837,14 @@ public class PancakePlannerApp extends Application {
         }
         if (pendingTextObjectPlacement) {
             mapToolStatusLabel.setText("Paiguta tekst kaardile");
+            return;
+        }
+        if (pendingMarkerPlacement) {
+            mapToolStatusLabel.setText("Paiguta marker kaardile");
+            return;
+        }
+        if (pendingLineObjectPlacement) {
+            mapToolStatusLabel.setText("Paiguta joon kaardile");
             return;
         }
         if (addingCablePoint) {
@@ -2051,6 +2106,12 @@ public class PancakePlannerApp extends Application {
             if (pendingMarkerPlacement) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
                 placeMarkerObject(new Position(mapPoint.getX(), mapPoint.getY()));
+                event.consume();
+                return;
+            }
+            if (pendingLineObjectPlacement) {
+                Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                placeLineObject(new Position(mapPoint.getX(), mapPoint.getY()));
                 event.consume();
                 return;
             }
@@ -2588,6 +2649,12 @@ public class PancakePlannerApp extends Application {
                 event.consume();
                 return;
             }
+            if (pendingLineObjectPlacement) {
+                Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                placeLineObject(new Position(mapPoint.getX(), mapPoint.getY()));
+                event.consume();
+                return;
+            }
             if (addingCablePoint) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
                 addCableRoutePoint(new Position(mapPoint.getX(), mapPoint.getY()));
@@ -3002,6 +3069,8 @@ public class PancakePlannerApp extends Application {
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
         pendingTextObjectPlacement = false;
+        pendingMarkerPlacement = false;
+        pendingLineObjectPlacement = false;
         clearPendingPlacementDetails();
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -3340,6 +3409,8 @@ public class PancakePlannerApp extends Application {
             pendingPowerSourcePlacement = false;
             pendingCustomObjectPlacement = false;
             pendingTextObjectPlacement = false;
+            pendingMarkerPlacement = false;
+            pendingLineObjectPlacement = false;
             clearPendingPlacementDetails();
             refreshPlacementButtons();
         }
@@ -3358,6 +3429,8 @@ public class PancakePlannerApp extends Application {
             pendingPowerSourcePlacement = false;
             pendingCustomObjectPlacement = false;
             pendingTextObjectPlacement = false;
+            pendingMarkerPlacement = false;
+            pendingLineObjectPlacement = false;
             clearPendingPlacementDetails();
             pendingPowerSourceTent = null;
             refreshPlacementButtons();
@@ -3434,6 +3507,10 @@ public class PancakePlannerApp extends Application {
                 placementTypeComboBox.getSelectionModel().select(PlacementType.CUSTOM_OBJECT);
             } else if (pendingTextObjectPlacement) {
                 placementTypeComboBox.getSelectionModel().select(PlacementType.TEXT_OBJECT);
+            } else if (pendingMarkerPlacement) {
+                placementTypeComboBox.getSelectionModel().select(PlacementType.MARKER_OBJECT);
+            } else if (pendingLineObjectPlacement) {
+                placementTypeComboBox.getSelectionModel().select(PlacementType.LINE_OBJECT);
             }
         }
         if (addPlacementButton != null) {
@@ -3442,7 +3519,12 @@ public class PancakePlannerApp extends Application {
     }
 
     private boolean isPlacementPending() {
-        return pendingTentPlacement || pendingPowerSourcePlacement || pendingCustomObjectPlacement || pendingTextObjectPlacement;
+        return pendingTentPlacement
+                || pendingPowerSourcePlacement
+                || pendingCustomObjectPlacement
+                || pendingTextObjectPlacement
+                || pendingMarkerPlacement
+                || pendingLineObjectPlacement;
     }
 
     private void cancelPlacement() {
@@ -3450,6 +3532,8 @@ public class PancakePlannerApp extends Application {
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
         pendingTextObjectPlacement = false;
+        pendingMarkerPlacement = false;
+        pendingLineObjectPlacement = false;
         pendingPowerSourceTent = null;
         clearPendingPlacementDetails();
         refreshPlacementButtons();
@@ -4802,7 +4886,8 @@ public class PancakePlannerApp extends Application {
         POWER_SOURCE("Elektrikapp", "Uus kapp", "#2563eb", false),
         CUSTOM_OBJECT("Objekt", "Uus objekt", "#9ca3af", true),
         TEXT_OBJECT("Tekst", "Uus tekst", "#111827", true),
-        MARKER_OBJECT("Marker", "Uus marker", MarkerType.WC.defaultColorHex(), true);
+        MARKER_OBJECT("Marker", "Uus marker", MarkerType.WC.defaultColorHex(), true),
+        LINE_OBJECT("Joon", "Uus joon", "#0f766e", true);
 
         private final String label;
         private final String defaultName;
