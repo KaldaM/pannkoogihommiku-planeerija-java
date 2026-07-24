@@ -2497,6 +2497,9 @@ public class PancakePlannerApp extends Application {
         mapPane.getChildren().add(polygon);
         Position labelPosition = averagePosition(object.points());
         addMapLabel(object, labelPosition.x() + 8, labelPosition.y() + 8);
+        if (isSelected(object)) {
+            addAreaPointHandles(object, polygon);
+        }
     }
 
     private void drawLineObject(LineObject object) {
@@ -2515,6 +2518,131 @@ public class PancakePlannerApp extends Application {
         mapPane.getChildren().add(polyline);
         Position labelPosition = averagePosition(object.points());
         addMapLabel(object, labelPosition.x() + 8, labelPosition.y() + 8);
+        if (isSelected(object)) {
+            addLinePointHandles(object, polyline);
+        }
+    }
+
+    private void addAreaPointHandles(AreaObject object, Polygon polygon) {
+        for (int index = 0; index < object.points().size(); index++) {
+            Position point = object.points().get(index);
+            Circle marker = shapePointHandle(point, Color.web(object.colorHex()));
+            Tooltip.install(marker, new Tooltip("Lohista ala punkti muutmiseks"));
+            makeAreaPointDraggable(marker, object, index, polygon);
+            mapPane.getChildren().add(marker);
+        }
+    }
+
+    private void addLinePointHandles(LineObject object, Polyline polyline) {
+        for (int index = 0; index < object.points().size(); index++) {
+            Position point = object.points().get(index);
+            Circle marker = shapePointHandle(point, Color.web(object.colorHex()));
+            Tooltip.install(marker, new Tooltip("Lohista joone punkti muutmiseks"));
+            makeLinePointDraggable(marker, object, index, polyline);
+            mapPane.getChildren().add(marker);
+        }
+    }
+
+    private Circle shapePointHandle(Position point, Color color) {
+        Circle marker = new Circle(point.x(), point.y(), 5);
+        marker.setFill(Color.WHITE);
+        marker.setStroke(color);
+        marker.setStrokeWidth(2.5);
+        return marker;
+    }
+
+    private void makeAreaPointDraggable(Circle marker, AreaObject object, int pointIndex, Polygon polygon) {
+        final boolean[] dragged = {false};
+        marker.setOnMousePressed(event -> {
+            if (measuringActive || addingCablePoint) {
+                event.consume();
+                return;
+            }
+            dragged[0] = false;
+            event.consume();
+        });
+        marker.setOnMouseDragged(event -> {
+            if (measuringActive || addingCablePoint || object.locked()) {
+                event.consume();
+                return;
+            }
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            Position updatedPoint = new Position(mapPoint.getX(), mapPoint.getY());
+            object.setPoints(replacePoint(object.points(), pointIndex, updatedPoint));
+            marker.setCenterX(updatedPoint.x());
+            marker.setCenterY(updatedPoint.y());
+            updatePolygonPoint(polygon, pointIndex, updatedPoint);
+            dragged[0] = true;
+            event.consume();
+        });
+        marker.setOnMouseReleased(event -> {
+            if (dragged[0]) {
+                redrawMap();
+                refreshSummary();
+                markDirty();
+            }
+            event.consume();
+        });
+    }
+
+    private void makeLinePointDraggable(Circle marker, LineObject object, int pointIndex, Polyline polyline) {
+        final boolean[] dragged = {false};
+        marker.setOnMousePressed(event -> {
+            if (measuringActive || addingCablePoint) {
+                event.consume();
+                return;
+            }
+            dragged[0] = false;
+            event.consume();
+        });
+        marker.setOnMouseDragged(event -> {
+            if (measuringActive || addingCablePoint || object.locked()) {
+                event.consume();
+                return;
+            }
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            Position updatedPoint = new Position(mapPoint.getX(), mapPoint.getY());
+            object.setPoints(replacePoint(object.points(), pointIndex, updatedPoint));
+            marker.setCenterX(updatedPoint.x());
+            marker.setCenterY(updatedPoint.y());
+            updatePolylinePoint(polyline, pointIndex, updatedPoint);
+            dragged[0] = true;
+            event.consume();
+        });
+        marker.setOnMouseReleased(event -> {
+            if (dragged[0]) {
+                redrawMap();
+                refreshSummary();
+                markDirty();
+            }
+            event.consume();
+        });
+    }
+
+    private List<Position> replacePoint(List<Position> points, int pointIndex, Position updatedPoint) {
+        List<Position> updatedPoints = new ArrayList<>(points);
+        if (pointIndex >= 0 && pointIndex < updatedPoints.size()) {
+            updatedPoints.set(pointIndex, updatedPoint);
+        }
+        return updatedPoints;
+    }
+
+    private void updatePolygonPoint(Polygon polygon, int pointIndex, Position point) {
+        int coordinateIndex = pointIndex * 2;
+        if (coordinateIndex + 1 >= polygon.getPoints().size()) {
+            return;
+        }
+        polygon.getPoints().set(coordinateIndex, point.x());
+        polygon.getPoints().set(coordinateIndex + 1, point.y());
+    }
+
+    private void updatePolylinePoint(Polyline polyline, int pointIndex, Position point) {
+        int coordinateIndex = pointIndex * 2;
+        if (coordinateIndex + 1 >= polyline.getPoints().size()) {
+            return;
+        }
+        polyline.getPoints().set(coordinateIndex, point.x());
+        polyline.getPoints().set(coordinateIndex + 1, point.y());
     }
 
     private void drawTextObject(TextObject object) {
