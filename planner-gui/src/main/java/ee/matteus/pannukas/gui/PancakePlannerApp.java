@@ -2578,7 +2578,7 @@ public class PancakePlannerApp extends Application {
         Position labelPosition = averagePosition(object.points());
         addMapLabel(object, labelPosition.x() + 8, labelPosition.y() + 8);
         if (isSelected(object)) {
-            addAreaEdgePointInserter(object);
+            addAreaMidpointHandles(object, polygon);
             addAreaPointHandles(object, polygon);
         }
     }
@@ -2600,48 +2600,31 @@ public class PancakePlannerApp extends Application {
         Position labelPosition = averagePosition(object.points());
         addMapLabel(object, labelPosition.x() + 8, labelPosition.y() + 8);
         if (isSelected(object)) {
-            addLineEdgePointInserter(object);
+            addLineMidpointHandles(object, polyline);
             addLinePointHandles(object, polyline);
         }
     }
 
-    private void addAreaEdgePointInserter(AreaObject object) {
-        List<Position> closedPoints = new ArrayList<>(object.points());
-        closedPoints.add(object.points().getFirst());
-        Polyline hitLine = shapeEdgeHitLine(closedPoints);
-        hitLine.setOnMouseClicked(event -> {
-            if (event.getButton() != MouseButton.PRIMARY || object.locked() || isPlacementPending()) {
-                event.consume();
-                return;
-            }
-            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
-            addPointOnAreaEdge(object, new Position(mapPoint.getX(), mapPoint.getY()));
-            event.consume();
-        });
-        mapPane.getChildren().add(hitLine);
+    private void addAreaMidpointHandles(AreaObject object, Polygon polygon) {
+        for (int index = 0; index < object.points().size(); index++) {
+            Position start = object.points().get(index);
+            Position end = object.points().get((index + 1) % object.points().size());
+            Circle marker = shapeMidpointHandle(midpoint(start, end), Color.web(object.colorHex()));
+            Tooltip.install(marker, new Tooltip("Lohista siit uue ala punkti lisamiseks"));
+            makeAreaMidpointDraggable(marker, object, index + 1, polygon);
+            mapPane.getChildren().add(marker);
+        }
     }
 
-    private void addLineEdgePointInserter(LineObject object) {
-        Polyline hitLine = shapeEdgeHitLine(object.points());
-        hitLine.setOnMouseClicked(event -> {
-            if (event.getButton() != MouseButton.PRIMARY || object.locked() || isPlacementPending()) {
-                event.consume();
-                return;
-            }
-            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
-            addPointOnLineEdge(object, new Position(mapPoint.getX(), mapPoint.getY()));
-            event.consume();
-        });
-        mapPane.getChildren().add(hitLine);
-    }
-
-    private Polyline shapeEdgeHitLine(List<Position> points) {
-        Polyline hitLine = CablePolylineHelper.create(points);
-        hitLine.setFill(null);
-        hitLine.setStroke(Color.TRANSPARENT);
-        hitLine.setStrokeWidth(14);
-        hitLine.setCursor(Cursor.CROSSHAIR);
-        return hitLine;
+    private void addLineMidpointHandles(LineObject object, Polyline polyline) {
+        for (int index = 0; index < object.points().size() - 1; index++) {
+            Position start = object.points().get(index);
+            Position end = object.points().get(index + 1);
+            Circle marker = shapeMidpointHandle(midpoint(start, end), Color.web(object.colorHex()));
+            Tooltip.install(marker, new Tooltip("Lohista siit uue joone punkti lisamiseks"));
+            makeLineMidpointDraggable(marker, object, index + 1, polyline);
+            mapPane.getChildren().add(marker);
+        }
     }
 
     private void addAreaPointHandles(AreaObject object, Polygon polygon) {
@@ -2669,6 +2652,15 @@ public class PancakePlannerApp extends Application {
         marker.setFill(Color.WHITE);
         marker.setStroke(color);
         marker.setStrokeWidth(2.5);
+        return marker;
+    }
+
+    private Circle shapeMidpointHandle(Position point, Color color) {
+        Circle marker = new Circle(point.x(), point.y(), 4);
+        marker.setFill(Color.web(toHex(color), 0.45));
+        marker.setStroke(color);
+        marker.setStrokeWidth(1.5);
+        marker.setCursor(Cursor.CROSSHAIR);
         return marker;
     }
 
@@ -2714,6 +2706,49 @@ public class PancakePlannerApp extends Application {
         });
     }
 
+    private void makeAreaMidpointDraggable(Circle marker, AreaObject object, int insertIndex, Polygon polygon) {
+        final boolean[] inserted = {false};
+        final boolean[] dragged = {false};
+        marker.setOnMousePressed(event -> {
+            if (measuringActive || addingCablePoint || object.locked()) {
+                event.consume();
+                return;
+            }
+            inserted[0] = false;
+            dragged[0] = false;
+            event.consume();
+        });
+        marker.setOnMouseDragged(event -> {
+            if (measuringActive || addingCablePoint || object.locked()) {
+                event.consume();
+                return;
+            }
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            Position updatedPoint = new Position(mapPoint.getX(), mapPoint.getY());
+            if (!inserted[0]) {
+                object.setPoints(insertPoint(object.points(), insertIndex, updatedPoint));
+                insertPolygonPoint(polygon, insertIndex, updatedPoint);
+                inserted[0] = true;
+            } else {
+                object.setPoints(replacePoint(object.points(), insertIndex, updatedPoint));
+                updatePolygonPoint(polygon, insertIndex, updatedPoint);
+            }
+            marker.setCenterX(updatedPoint.x());
+            marker.setCenterY(updatedPoint.y());
+            dragged[0] = true;
+            event.consume();
+        });
+        marker.setOnMouseReleased(event -> {
+            if (dragged[0]) {
+                redrawMap();
+                refreshSummary();
+                markDirty();
+            }
+            event.consume();
+        });
+        marker.setOnMouseClicked(event -> event.consume());
+    }
+
     private void makeLinePointDraggable(Circle marker, LineObject object, int pointIndex, Polyline polyline) {
         final boolean[] dragged = {false};
         marker.setOnMousePressed(event -> {
@@ -2756,6 +2791,49 @@ public class PancakePlannerApp extends Application {
         });
     }
 
+    private void makeLineMidpointDraggable(Circle marker, LineObject object, int insertIndex, Polyline polyline) {
+        final boolean[] inserted = {false};
+        final boolean[] dragged = {false};
+        marker.setOnMousePressed(event -> {
+            if (measuringActive || addingCablePoint || object.locked()) {
+                event.consume();
+                return;
+            }
+            inserted[0] = false;
+            dragged[0] = false;
+            event.consume();
+        });
+        marker.setOnMouseDragged(event -> {
+            if (measuringActive || addingCablePoint || object.locked()) {
+                event.consume();
+                return;
+            }
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            Position updatedPoint = new Position(mapPoint.getX(), mapPoint.getY());
+            if (!inserted[0]) {
+                object.setPoints(insertPoint(object.points(), insertIndex, updatedPoint));
+                insertPolylinePoint(polyline, insertIndex, updatedPoint);
+                inserted[0] = true;
+            } else {
+                object.setPoints(replacePoint(object.points(), insertIndex, updatedPoint));
+                updatePolylinePoint(polyline, insertIndex, updatedPoint);
+            }
+            marker.setCenterX(updatedPoint.x());
+            marker.setCenterY(updatedPoint.y());
+            dragged[0] = true;
+            event.consume();
+        });
+        marker.setOnMouseReleased(event -> {
+            if (dragged[0]) {
+                redrawMap();
+                refreshSummary();
+                markDirty();
+            }
+            event.consume();
+        });
+        marker.setOnMouseClicked(event -> event.consume());
+    }
+
     private void showAreaPointContextMenu(
             Circle marker,
             AreaObject object,
@@ -2784,16 +2862,6 @@ public class PancakePlannerApp extends Application {
 
         ContextMenu contextMenu = new ContextMenu(removePointItem);
         contextMenu.show(marker, screenX, screenY);
-    }
-
-    private void addPointOnAreaEdge(AreaObject object, Position point) {
-        object.setPoints(addPointOnNearestSegment(object.points(), point, true));
-        refreshEditedShapeObject();
-    }
-
-    private void addPointOnLineEdge(LineObject object, Position point) {
-        object.setPoints(addPointOnNearestSegment(object.points(), point, false));
-        refreshEditedShapeObject();
     }
 
     private void removeAreaPoint(AreaObject object, int pointIndex) {
@@ -2826,24 +2894,10 @@ public class PancakePlannerApp extends Application {
         return updatedPoints;
     }
 
-    private List<Position> addPointOnNearestSegment(List<Position> points, Position point, boolean closedShape) {
-        if (points.size() < 2) {
-            return points;
-        }
-        int segmentCount = closedShape ? points.size() : points.size() - 1;
-        int nearestSegmentIndex = 0;
-        double nearestDistance = Double.MAX_VALUE;
-        for (int index = 0; index < segmentCount; index++) {
-            Position start = points.get(index);
-            Position end = points.get((index + 1) % points.size());
-            double distance = distanceToSegment(point, start, end);
-            if (distance < nearestDistance) {
-                nearestDistance = distance;
-                nearestSegmentIndex = index;
-            }
-        }
+    private List<Position> insertPoint(List<Position> points, int pointIndex, Position point) {
         List<Position> updatedPoints = new ArrayList<>(points);
-        updatedPoints.add(nearestSegmentIndex + 1, point);
+        int safeIndex = Math.max(0, Math.min(pointIndex, updatedPoints.size()));
+        updatedPoints.add(safeIndex, point);
         return updatedPoints;
     }
 
@@ -2855,22 +2909,11 @@ public class PancakePlannerApp extends Application {
         return updatedPoints;
     }
 
-    private double distanceToSegment(Position point, Position start, Position end) {
-        double segmentX = end.x() - start.x();
-        double segmentY = end.y() - start.y();
-        double lengthSquared = segmentX * segmentX + segmentY * segmentY;
-        if (lengthSquared == 0) {
-            double deltaX = point.x() - start.x();
-            double deltaY = point.y() - start.y();
-            return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        }
-        double projection = ((point.x() - start.x()) * segmentX + (point.y() - start.y()) * segmentY) / lengthSquared;
-        double clampedProjection = Math.max(0.0, Math.min(1.0, projection));
-        double closestX = start.x() + clampedProjection * segmentX;
-        double closestY = start.y() + clampedProjection * segmentY;
-        double deltaX = point.x() - closestX;
-        double deltaY = point.y() - closestY;
-        return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    private Position midpoint(Position first, Position second) {
+        return new Position(
+                (first.x() + second.x()) / 2.0,
+                (first.y() + second.y()) / 2.0
+        );
     }
 
     private void updatePolygonPoint(Polygon polygon, int pointIndex, Position point) {
@@ -2882,6 +2925,15 @@ public class PancakePlannerApp extends Application {
         polygon.getPoints().set(coordinateIndex + 1, point.y());
     }
 
+    private void insertPolygonPoint(Polygon polygon, int pointIndex, Position point) {
+        int coordinateIndex = pointIndex * 2;
+        if (coordinateIndex < 0 || coordinateIndex > polygon.getPoints().size()) {
+            return;
+        }
+        polygon.getPoints().add(coordinateIndex, point.x());
+        polygon.getPoints().add(coordinateIndex + 1, point.y());
+    }
+
     private void updatePolylinePoint(Polyline polyline, int pointIndex, Position point) {
         int coordinateIndex = pointIndex * 2;
         if (coordinateIndex + 1 >= polyline.getPoints().size()) {
@@ -2889,6 +2941,15 @@ public class PancakePlannerApp extends Application {
         }
         polyline.getPoints().set(coordinateIndex, point.x());
         polyline.getPoints().set(coordinateIndex + 1, point.y());
+    }
+
+    private void insertPolylinePoint(Polyline polyline, int pointIndex, Position point) {
+        int coordinateIndex = pointIndex * 2;
+        if (coordinateIndex < 0 || coordinateIndex > polyline.getPoints().size()) {
+            return;
+        }
+        polyline.getPoints().add(coordinateIndex, point.x());
+        polyline.getPoints().add(coordinateIndex + 1, point.y());
     }
 
     private void drawTextObject(TextObject object) {
