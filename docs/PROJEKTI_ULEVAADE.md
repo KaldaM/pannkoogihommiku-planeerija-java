@@ -211,7 +211,7 @@ Kasutaja laaditud kaart salvestatakse praegu failiteena. Seetõttu võib plaan k
 
 ### 6.3 Telgid ja seadmed
 
-- Telgi laius, pikkus, pööre, värv ja läbipaistvus on muudetavad.
+- Telgi laius, pikkus, pööre ja värv on muudetavad; läbipaistvust saab määrata slideriga.
 - Telki saab lisada nime ja võimsusega seadmeid ning neid eemaldada.
 - Telgi vooluvajadus arvutatakse seadmete summana.
 - Telgi dubleerimisel kopeeritakse seadmed, kuid mitte elektriühendus.
@@ -249,14 +249,14 @@ Kasutaja laaditud kaart salvestatakse praegu failiteena. Seetõttu võib plaan k
 - Olemasolevaid punkte saab lohistada ja paremklõpsuga eemaldada.
 - Punktide vahel kuvatakse väiksemad vahepunktid; nende lohistamisel lisatakse kujundisse uus pärispunkt.
 - Lukustatud joone või ala geomeetriat muuta ei saa.
-- Ala värvi ja läbipaistvust saab muuta.
+- Ala värvi saab muuta ning läbipaistvust saab määrata slideriga.
 - Joone värvi saab pärast loomist muuta.
 
 See funktsionaalsus on värskelt lisatud ja vajab enne uute objektitüüpide juurde liikumist veel terviklikku kasutuskatset.
 
 ### 6.7 Korraldaja objektid
 
-- Tavaobjekti saab näidata ristküliku või ringina ning muuta selle mõõtmeid, pööret, värvi ja läbipaistvust.
+- Tavaobjekti saab näidata ristküliku või ringina ning muuta selle mõõtmeid, pööret ja värvi; läbipaistvust saab määrata slideriga.
 - Tekstiobjektil on rasvases kirjas pealkiri, mitmerealised märkmed, värv ja muudetav kirjasuurus.
 - Markerid kasutavad teksti asemel eristatavaid ikoone.
 - Olemas on vähemalt WC, turva, start/finiš, saun/tünnisaun ja liikme tüübid.

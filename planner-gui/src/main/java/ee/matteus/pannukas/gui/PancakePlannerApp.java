@@ -44,6 +44,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
+import javafx.scene.control.Slider;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -174,16 +175,16 @@ public class PancakePlannerApp extends Application {
     private TextField tentHeightField;
     private TextField tentRotationField;
     private ColorPicker tentColorPicker;
-    private TextField tentOpacityField;
+    private Slider tentOpacitySlider;
     private ComboBox<CustomObjectShape> customObjectShapeComboBox;
     private ColorPicker customObjectColorPicker;
-    private TextField customObjectOpacityField;
+    private Slider customObjectOpacitySlider;
     private ColorPicker textObjectColorPicker;
     private TextField textObjectFontSizeField;
     private ComboBox<MarkerType> markerTypeComboBox;
     private ColorPicker markerColorPicker;
     private ColorPicker areaColorPicker;
-    private TextField areaOpacityField;
+    private Slider areaOpacitySlider;
     private Label areaSizeLabel;
     private Label areaPerimeterLabel;
     private ColorPicker lineColorPicker;
@@ -989,15 +990,13 @@ public class PancakePlannerApp extends Application {
         tentHeightField = new TextField();
         tentRotationField = new TextField();
         tentColorPicker = new ColorPicker();
-        tentOpacityField = new TextField();
-        tentOpacityField.setPromptText("100");
+        tentOpacitySlider = createOpacitySlider(Tent.DEFAULT_OPACITY * 100.0);
         customObjectShapeComboBox = new ComboBox<>();
         customObjectShapeComboBox.getItems().addAll(CustomObjectShape.values());
         customObjectShapeComboBox.setConverter(customObjectShapeConverter());
         customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
         customObjectColorPicker = new ColorPicker();
-        customObjectOpacityField = new TextField();
-        customObjectOpacityField.setPromptText("100");
+        customObjectOpacitySlider = createOpacitySlider(CustomObject.DEFAULT_OPACITY * 100.0);
         textObjectColorPicker = new ColorPicker();
         customObjectWidthLabel = new Label("Objekti laius m");
         customObjectHeightLabel = new Label("Objekti pikkus m");
@@ -1083,7 +1082,7 @@ public class PancakePlannerApp extends Application {
         GridPane customObjectForm = detailGrid();
         customObjectForm.addRow(0, new Label("Kuju"), customObjectShapeComboBox);
         customObjectForm.addRow(1, new Label("Värv"), customObjectColorPicker);
-        customObjectForm.addRow(2, new Label("Läbipaistvus %"), customObjectOpacityField);
+        customObjectForm.addRow(2, new Label("Läbipaistvus"), opacityControl(customObjectOpacitySlider));
         customObjectForm.addRow(3, customObjectWidthLabel, customObjectWidthField);
         customObjectForm.addRow(4, customObjectHeightLabel, customObjectHeightField);
         customObjectForm.addRow(5, customObjectRotationLabel, customObjectRotationField);
@@ -1107,13 +1106,12 @@ public class PancakePlannerApp extends Application {
         markerPanel = new VBox(8, sectionLabel("Marker"), markerForm);
 
         areaColorPicker = new ColorPicker();
-        areaOpacityField = new TextField();
-        areaOpacityField.setPromptText("35");
+        areaOpacitySlider = createOpacitySlider(AreaObject.DEFAULT_OPACITY * 100.0);
         areaSizeLabel = new Label("-");
         areaPerimeterLabel = new Label("-");
         GridPane areaForm = detailGrid();
         areaForm.addRow(0, new Label("Värv"), areaColorPicker);
-        areaForm.addRow(1, new Label("Läbipaistvus %"), areaOpacityField);
+        areaForm.addRow(1, new Label("Läbipaistvus"), opacityControl(areaOpacitySlider));
         areaForm.addRow(2, new Label("Pindala"), areaSizeLabel);
         areaForm.addRow(3, new Label("Ümbermõõt"), areaPerimeterLabel);
         areaPanel = new VBox(8, sectionLabel("Ala"), areaForm);
@@ -1133,7 +1131,7 @@ public class PancakePlannerApp extends Application {
         tentForm.addRow(1, new Label("Pikkus m"), tentHeightField);
         tentForm.addRow(2, new Label("Pööre °"), tentRotationField);
         tentForm.addRow(3, new Label("Värv"), tentColorPicker);
-        tentForm.addRow(4, new Label("Läbipaistvus %"), tentOpacityField);
+        tentForm.addRow(4, new Label("Läbipaistvus"), opacityControl(tentOpacitySlider));
         tentPanel = new VBox(8, sectionLabel("Telk"), tentForm);
 
         GridPane powerConnectionForm = detailGrid();
@@ -1212,6 +1210,33 @@ public class PancakePlannerApp extends Application {
         return grid;
     }
 
+    private Slider createOpacitySlider(double initialPercentage) {
+        Slider slider = new Slider(0, 100, initialPercentage);
+        slider.setMajorTickUnit(25);
+        slider.setMinorTickCount(4);
+        slider.setBlockIncrement(5);
+        slider.setShowTickLabels(true);
+        slider.setShowTickMarks(true);
+        slider.setSnapToTicks(true);
+        slider.setPrefWidth(210);
+        return slider;
+    }
+
+    private HBox opacityControl(Slider slider) {
+        Label valueLabel = new Label(opacityPercentageText(slider.getValue()));
+        valueLabel.setMinWidth(42);
+        slider.valueProperty().addListener((observable, oldValue, newValue) ->
+                valueLabel.setText(opacityPercentageText(newValue.doubleValue()))
+        );
+        HBox control = new HBox(8, slider, valueLabel);
+        control.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        return control;
+    }
+
+    private String opacityPercentageText(double percentage) {
+        return "%.0f%%".formatted(percentage);
+    }
+
     private TitledPane collapsibleSection(String stateKey, String title, Node content, boolean expandedByDefault) {
         TitledPane pane = new TitledPane(title, content);
         pane.setExpanded(sidebarSectionStates.getOrDefault(stateKey, expandedByDefault));
@@ -1278,7 +1303,10 @@ public class PancakePlannerApp extends Application {
         Label objectHeightLabel = new Label("Pikkus m");
         TextField objectWidthField = new TextField("1");
         TextField objectHeightField = new TextField("1");
-        TextField opacityField = new TextField(placementType == PlacementType.AREA_OBJECT ? "35" : "100");
+        Slider opacitySlider = createOpacitySlider(
+                placementType == PlacementType.AREA_OBJECT ? AreaObject.DEFAULT_OPACITY * 100.0 : 100.0
+        );
+        HBox opacityControl = opacityControl(opacitySlider);
         ComboBox<MarkerType> markerTypeComboBox = new ComboBox<>();
         markerTypeComboBox.getItems().addAll(MarkerType.values());
         markerTypeComboBox.setConverter(markerTypeConverter());
@@ -1331,16 +1359,16 @@ public class PancakePlannerApp extends Application {
         if (placementType == PlacementType.TENT) {
             form.addRow(2, new Label("Laius m"), tentWidthField);
             form.addRow(3, new Label("Pikkus m"), tentHeightField);
-            form.addRow(4, new Label("Läbipaistvus %"), opacityField);
+            form.addRow(4, new Label("Läbipaistvus"), opacityControl);
         } else if (placementType == PlacementType.CUSTOM_OBJECT) {
             form.addRow(2, new Label("Kuju"), shapeComboBox);
             form.addRow(3, objectWidthLabel, objectWidthField);
             form.addRow(4, objectHeightLabel, objectHeightField);
-            form.addRow(5, new Label("Läbipaistvus %"), opacityField);
+            form.addRow(5, new Label("Läbipaistvus"), opacityControl);
         } else if (placementType == PlacementType.MARKER_OBJECT) {
             form.addRow(2, new Label("Marker"), markerTypeComboBox);
         } else if (placementType == PlacementType.AREA_OBJECT) {
-            form.addRow(2, new Label("Läbipaistvus %"), opacityField);
+            form.addRow(2, new Label("Läbipaistvus"), opacityControl);
         }
         if (placementType.hasConfigurableColor()) {
             int colorRow = switch (placementType) {
@@ -1420,12 +1448,7 @@ public class PancakePlannerApp extends Application {
         if (placementType == PlacementType.AREA_OBJECT
                 || placementType == PlacementType.CUSTOM_OBJECT
                 || placementType == PlacementType.TENT) {
-            try {
-                opacity = parseOpacityPercentage(opacityField.getText());
-            } catch (IllegalArgumentException exception) {
-                showError("Objekti ei lisatud", exception.getMessage());
-                return null;
-            }
+            opacity = opacitySlider.getValue() / 100.0;
         }
         if (name.isBlank()) {
             name = placementType == PlacementType.MARKER_OBJECT
@@ -3456,20 +3479,20 @@ public class PancakePlannerApp extends Application {
                 : null);
         customObjectShapeComboBox.setDisable(!customObjectSelected);
         customObjectColorPicker.setDisable(!customObjectSelected);
-        customObjectOpacityField.setDisable(!customObjectSelected);
+        customObjectOpacitySlider.setDisable(!customObjectSelected);
         textObjectColorPicker.setDisable(!textObjectSelected);
         textObjectFontSizeField.setDisable(!textObjectSelected);
         markerTypeComboBox.setDisable(!markerSelected);
         markerColorPicker.setDisable(!markerSelected);
         areaColorPicker.setDisable(!areaSelected);
-        areaOpacityField.setDisable(!areaSelected);
+        areaOpacitySlider.setDisable(!areaSelected);
         lineColorPicker.setDisable(!lineSelected);
         lineWidthField.setDisable(!lineSelected);
         tentWidthField.setDisable(!tentSelected);
         tentHeightField.setDisable(!tentSelected);
         tentRotationField.setDisable(!tentSelected);
         tentColorPicker.setDisable(!tentSelected);
-        tentOpacityField.setDisable(!tentSelected);
+        tentOpacitySlider.setDisable(!tentSelected);
         powerSourceComboBox.setDisable(!tentSelected);
         connectionTypeComboBox.setDisable(!tentSelected);
         connectionOutletComboBox.setDisable(!tentSelected);
@@ -3538,7 +3561,7 @@ public class PancakePlannerApp extends Application {
             tentHeightField.clear();
             tentRotationField.clear();
             tentColorPicker.setValue(Color.web("#e74c3c"));
-            tentOpacityField.clear();
+            tentOpacitySlider.setValue(Tent.DEFAULT_OPACITY * 100.0);
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web("#111827"));
@@ -3546,7 +3569,7 @@ public class PancakePlannerApp extends Application {
             markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
             markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             areaColorPicker.setValue(Color.web("#f59e0b"));
-            areaOpacityField.clear();
+            areaOpacitySlider.setValue(AreaObject.DEFAULT_OPACITY * 100.0);
             areaSizeLabel.setText("-");
             areaPerimeterLabel.setText("-");
             lineColorPicker.setValue(Color.web("#0f766e"));
@@ -3555,7 +3578,7 @@ public class PancakePlannerApp extends Application {
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
-            customObjectOpacityField.clear();
+            customObjectOpacitySlider.setValue(CustomObject.DEFAULT_OPACITY * 100.0);
             customObjectAreaLabel.setText("-");
             customObjectPerimeterLabel.setText("-");
             cableLengthNotesField.clear();
@@ -3577,7 +3600,7 @@ public class PancakePlannerApp extends Application {
             tentHeightField.setText(formatMeters(tent.heightMeters()));
             tentRotationField.setText(formatDegrees(tent.rotationDegrees()));
             tentColorPicker.setValue(Color.web(tent.colorHex()));
-            tentOpacityField.setText(formatNumber(tent.opacity() * 100.0));
+            tentOpacitySlider.setValue(tent.opacity() * 100.0);
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web("#111827"));
@@ -3600,7 +3623,7 @@ public class PancakePlannerApp extends Application {
             tentColorPicker.setValue(Color.web("#2563eb"));
             customObjectShapeComboBox.getSelectionModel().select(customObject.shape());
             customObjectColorPicker.setValue(Color.web(customObject.colorHex()));
-            customObjectOpacityField.setText(formatNumber(customObject.opacity() * 100.0));
+            customObjectOpacitySlider.setValue(customObject.opacity() * 100.0);
             textObjectFontSizeField.clear();
             customObjectWidthField.setText(formatMeters(customObject.widthMeters()));
             customObjectHeightField.setText(formatMeters(customObject.heightMeters()));
@@ -3652,7 +3675,7 @@ public class PancakePlannerApp extends Application {
             markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
             markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             areaColorPicker.setValue(Color.web(areaObject.colorHex()));
-            areaOpacityField.setText(formatNumber(areaObject.opacity() * 100.0));
+            areaOpacitySlider.setValue(areaObject.opacity() * 100.0);
             refreshAreaMeasurements(areaObject);
             customObjectWidthField.clear();
             customObjectHeightField.clear();
@@ -3671,7 +3694,7 @@ public class PancakePlannerApp extends Application {
             markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
             markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             areaColorPicker.setValue(Color.web("#f59e0b"));
-            areaOpacityField.clear();
+            areaOpacitySlider.setValue(AreaObject.DEFAULT_OPACITY * 100.0);
             lineColorPicker.setValue(Color.web(lineObject.colorHex()));
             lineWidthField.setText(formatNumber(lineObject.widthPixels()));
             refreshLineLengthLabel(lineObject);
@@ -4429,13 +4452,8 @@ public class PancakePlannerApp extends Application {
     }
 
     private boolean applyTentOpacity(Tent tent) {
-        try {
-            tent.setOpacity(parseOpacityPercentage(tentOpacityField.getText()));
-            return true;
-        } catch (IllegalArgumentException exception) {
-            showError("Telgi läbipaistvust ei muudetud", exception.getMessage());
-            return false;
-        }
+        tent.setOpacity(tentOpacitySlider.getValue() / 100.0);
+        return true;
     }
 
     private boolean applyCustomObjectSize(CustomObject object) {
@@ -4493,23 +4511,13 @@ public class PancakePlannerApp extends Application {
     }
 
     private boolean applyAreaOpacity(AreaObject object) {
-        try {
-            object.setOpacity(parseOpacityPercentage(areaOpacityField.getText()));
-            return true;
-        } catch (IllegalArgumentException exception) {
-            showError("Ala läbipaistvust ei muudetud", exception.getMessage());
-            return false;
-        }
+        object.setOpacity(areaOpacitySlider.getValue() / 100.0);
+        return true;
     }
 
     private boolean applyCustomObjectOpacity(CustomObject object) {
-        try {
-            object.setOpacity(parseOpacityPercentage(customObjectOpacityField.getText()));
-            return true;
-        } catch (IllegalArgumentException exception) {
-            showError("Objekti läbipaistvust ei muudetud", exception.getMessage());
-            return false;
-        }
+        object.setOpacity(customObjectOpacitySlider.getValue() / 100.0);
+        return true;
     }
 
     private boolean applyLineWidth(LineObject object) {
@@ -4523,18 +4531,6 @@ public class PancakePlannerApp extends Application {
         } catch (IllegalArgumentException exception) {
             showError("Joone paksust ei muudetud", exception.getMessage());
             return false;
-        }
-    }
-
-    private double parseOpacityPercentage(String value) {
-        try {
-            double percentage = Double.parseDouble(value.trim().replace(',', '.'));
-            if (percentage < 0 || percentage > 100) {
-                throw new IllegalArgumentException("Sisesta läbipaistvus protsendina vahemikus 0 kuni 100.");
-            }
-            return percentage / 100.0;
-        } catch (NullPointerException | NumberFormatException exception) {
-            throw new IllegalArgumentException("Sisesta läbipaistvus protsendina vahemikus 0 kuni 100.");
         }
     }
 
