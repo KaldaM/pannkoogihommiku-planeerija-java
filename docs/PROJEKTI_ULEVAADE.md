@@ -145,7 +145,7 @@ Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi ab
 | `PowerSource` | Elektrikapp ja selle väljundite loetelu |
 | `PowerOutlet` | Nimi, ühenduse tüüp ja lubatud võimsus |
 | `PowerConnection` | Allikas, tarbija, väljund, kaabli tüüp, märkmed, jupid ja trajektoor |
-| `CustomObject` | Ristkülik või ring muudetava suuruse, pöörde ja värviga |
+| `CustomObject` | Ristkülik või ring muudetava suuruse, pöörde, värvi ja läbipaistvusega |
 | `TextObject` | Mitmerealine tekstikast, pealkiri, värv ja kirjasuurus |
 | `MarkerObject` | Ikooniga objekt, näiteks WC, saun, liige, turva või start/finiš |
 | `AreaObject` | Punktidest koosnev värviline ja läbipaistev ala |
@@ -256,7 +256,7 @@ See funktsionaalsus on värskelt lisatud ja vajab enne uute objektitüüpide juu
 
 ### 6.7 Korraldaja objektid
 
-- Tavaobjekti saab näidata ruudu või ringina ning muuta selle mõõtmeid, pööret ja värvi.
+- Tavaobjekti saab näidata ristküliku või ringina ning muuta selle mõõtmeid, pööret, värvi ja läbipaistvust.
 - Tekstiobjektil on rasvases kirjas pealkiri, mitmerealised märkmed, värv ja muudetav kirjasuurus.
 - Markerid kasutavad teksti asemel eristatavaid ikoone.
 - Olemas on vähemalt WC, turva, start/finiš, saun/tünnisaun ja liikme tüübid.
@@ -415,7 +415,6 @@ Seejärel saavad `Tent`, `AreaObject` ja `LineObject` kasutada sama ühenduste n
 ### 9.3 Juba otsustatud visuaalsed täiendused
 
 - Lisada läbipaistvuse muutmine telkidele.
-- Lisada läbipaistvuse muutmine ruudu- ja ringikujulistele tavaobjektidele.
 - Kontrollida, et joone paksus ja ala läbipaistvus salvestuvad ning avanevad vanades ja uutes plaanides korrektselt.
 
 ### 9.4 Kvaliteet ja arhitektuur
@@ -471,14 +470,14 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 - Windowsi installeri ja iseseisva runtime'iga väljalaset ei ole.
 - Ala- ja jooneobjektid ei ole veel elektritarbijad ega sisalda seadmeid.
 - Telgi ja tulevaste vabakujuliste tarbijate kaabli ühenduspunkti ei saa eraldi määrata.
-- Telgi ja tavaobjekti läbipaistvust ei saa veel muuta.
+- Telgi läbipaistvust ei saa veel muuta.
 - Rakendusel ei ole veel veebivaadet, kasutajakontosid, õigusi ega keskset andmehoidlat.
 - Tartu kaardiandmetega otseliidestust ei ole.
 
 ## 11. Soovituslik tööjärjekord
 
 1. Lõpeta joone paksuse muutmine ning testi joonte ja alade praegune tervik.
-2. Lisa telgi ja tavaobjekti läbipaistvus.
+2. Lisa telgi läbipaistvus.
 3. Kirjelda ja testi ühine seadmeid sisaldava elektritarbija mudel.
 4. Lisa elektriühenduse ankrupunkt telgile, joonele ja alale.
 5. Tee joon ja ala seadmeid sisaldavateks elektritarbijateks.

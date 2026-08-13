@@ -216,6 +216,7 @@ public class PlanFileService {
         properties.setProperty(prefix + "type", "CUSTOM_OBJECT");
         properties.setProperty(prefix + "shape", object.shape().name());
         properties.setProperty(prefix + "colorHex", object.colorHex());
+        properties.setProperty(prefix + "opacity", Double.toString(object.opacity()));
         properties.setProperty(prefix + "widthMeters", Double.toString(object.widthMeters()));
         properties.setProperty(prefix + "heightMeters", Double.toString(object.heightMeters()));
         properties.setProperty(prefix + "rotationDegrees", Double.toString(object.rotationDegrees()));
@@ -335,6 +336,7 @@ public class PlanFileService {
         );
         object.setShape(CustomObjectShape.valueOf(shapeName));
         object.setColorHex(properties.getProperty(prefix + "colorHex", "#9ca3af"));
+        object.setOpacity(doubleValue(properties, prefix + "opacity", CustomObject.DEFAULT_OPACITY));
         object.setSizeMeters(
                 doubleValue(properties, prefix + "widthMeters", 1.0),
                 doubleValue(properties, prefix + "heightMeters", 1.0)

@@ -1,8 +1,11 @@
 package ee.matteus.pannukas.core.model;
 
 public class CustomObject extends PlannerObject {
+    public static final double DEFAULT_OPACITY = 1.0;
+
     private CustomObjectShape shape;
     private String colorHex;
+    private double opacity;
     private double widthMeters;
     private double heightMeters;
     private double rotationDegrees;
@@ -11,6 +14,7 @@ public class CustomObject extends PlannerObject {
         super(id, name, position);
         this.shape = CustomObjectShape.SQUARE;
         this.colorHex = "#9ca3af";
+        this.opacity = DEFAULT_OPACITY;
         this.widthMeters = 1.0;
         this.heightMeters = 1.0;
         this.rotationDegrees = 0;
@@ -30,6 +34,14 @@ public class CustomObject extends PlannerObject {
 
     public void setColorHex(String colorHex) {
         this.colorHex = colorHex == null || colorHex.isBlank() ? "#9ca3af" : colorHex;
+    }
+
+    public double opacity() {
+        return opacity;
+    }
+
+    public void setOpacity(double opacity) {
+        this.opacity = Math.max(0.0, Math.min(1.0, opacity));
     }
 
     public double widthMeters() {
