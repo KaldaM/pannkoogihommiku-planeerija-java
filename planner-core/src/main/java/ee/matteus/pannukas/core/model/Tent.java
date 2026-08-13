@@ -5,10 +5,13 @@ import java.util.Collections;
 import java.util.List;
 
 public class Tent extends PlannerObject implements PowerConsumer {
+    public static final double DEFAULT_OPACITY = 1.0;
+
     private double widthMeters;
     private double heightMeters;
     private double rotationDegrees;
     private String colorHex;
+    private double opacity;
     private final List<Equipment> equipment = new ArrayList<>();
 
     public Tent(String id, String name, Position position) {
@@ -16,6 +19,7 @@ public class Tent extends PlannerObject implements PowerConsumer {
         this.widthMeters = 3.0;
         this.heightMeters = 3.0;
         this.colorHex = "#e74c3c";
+        this.opacity = DEFAULT_OPACITY;
     }
 
     public double widthMeters() {
@@ -48,6 +52,14 @@ public class Tent extends PlannerObject implements PowerConsumer {
 
     public void setColorHex(String colorHex) {
         this.colorHex = colorHex;
+    }
+
+    public double opacity() {
+        return opacity;
+    }
+
+    public void setOpacity(double opacity) {
+        this.opacity = Math.max(0.0, Math.min(1.0, opacity));
     }
 
     public List<Equipment> equipment() {

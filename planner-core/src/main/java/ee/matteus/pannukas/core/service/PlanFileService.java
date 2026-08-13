@@ -190,6 +190,7 @@ public class PlanFileService {
         properties.setProperty(prefix + "heightMeters", Double.toString(tent.heightMeters()));
         properties.setProperty(prefix + "rotationDegrees", Double.toString(tent.rotationDegrees()));
         properties.setProperty(prefix + "colorHex", tent.colorHex());
+        properties.setProperty(prefix + "opacity", Double.toString(tent.opacity()));
         properties.setProperty(prefix + "equipment.count", Integer.toString(tent.equipment().size()));
         for (int index = 0; index < tent.equipment().size(); index++) {
             Equipment item = tent.equipment().get(index);
@@ -292,6 +293,7 @@ public class PlanFileService {
         );
         tent.setRotationDegrees(doubleValue(properties, prefix + "rotationDegrees", 0));
         tent.setColorHex(properties.getProperty(prefix + "colorHex", "#e74c3c"));
+        tent.setOpacity(doubleValue(properties, prefix + "opacity", Tent.DEFAULT_OPACITY));
 
         int equipmentCount = intValue(properties, prefix + "equipment.count", 0);
         for (int index = 0; index < equipmentCount; index++) {

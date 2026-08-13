@@ -174,6 +174,7 @@ public class PancakePlannerApp extends Application {
     private TextField tentHeightField;
     private TextField tentRotationField;
     private ColorPicker tentColorPicker;
+    private TextField tentOpacityField;
     private ComboBox<CustomObjectShape> customObjectShapeComboBox;
     private ColorPicker customObjectColorPicker;
     private TextField customObjectOpacityField;
@@ -988,6 +989,8 @@ public class PancakePlannerApp extends Application {
         tentHeightField = new TextField();
         tentRotationField = new TextField();
         tentColorPicker = new ColorPicker();
+        tentOpacityField = new TextField();
+        tentOpacityField.setPromptText("100");
         customObjectShapeComboBox = new ComboBox<>();
         customObjectShapeComboBox.getItems().addAll(CustomObjectShape.values());
         customObjectShapeComboBox.setConverter(customObjectShapeConverter());
@@ -1130,6 +1133,7 @@ public class PancakePlannerApp extends Application {
         tentForm.addRow(1, new Label("Pikkus m"), tentHeightField);
         tentForm.addRow(2, new Label("Pööre °"), tentRotationField);
         tentForm.addRow(3, new Label("Värv"), tentColorPicker);
+        tentForm.addRow(4, new Label("Läbipaistvus %"), tentOpacityField);
         tentPanel = new VBox(8, sectionLabel("Telk"), tentForm);
 
         GridPane powerConnectionForm = detailGrid();
@@ -1327,6 +1331,7 @@ public class PancakePlannerApp extends Application {
         if (placementType == PlacementType.TENT) {
             form.addRow(2, new Label("Laius m"), tentWidthField);
             form.addRow(3, new Label("Pikkus m"), tentHeightField);
+            form.addRow(4, new Label("Läbipaistvus %"), opacityField);
         } else if (placementType == PlacementType.CUSTOM_OBJECT) {
             form.addRow(2, new Label("Kuju"), shapeComboBox);
             form.addRow(3, objectWidthLabel, objectWidthField);
@@ -1339,7 +1344,7 @@ public class PancakePlannerApp extends Application {
         }
         if (placementType.hasConfigurableColor()) {
             int colorRow = switch (placementType) {
-                case TENT -> 4;
+                case TENT -> 5;
                 case CUSTOM_OBJECT -> 6;
                 case MARKER_OBJECT -> 3;
                 case AREA_OBJECT -> 3;
@@ -1412,7 +1417,9 @@ public class PancakePlannerApp extends Application {
                 markerType = MarkerType.WC;
             }
         }
-        if (placementType == PlacementType.AREA_OBJECT || placementType == PlacementType.CUSTOM_OBJECT) {
+        if (placementType == PlacementType.AREA_OBJECT
+                || placementType == PlacementType.CUSTOM_OBJECT
+                || placementType == PlacementType.TENT) {
             try {
                 opacity = parseOpacityPercentage(opacityField.getText());
             } catch (IllegalArgumentException exception) {
@@ -1478,6 +1485,7 @@ public class PancakePlannerApp extends Application {
         Tent tent = new Tent(planFactory.newId(), placementNameOrDefault(PlacementType.TENT), position);
         tent.setGroupName(placementGroupNameOrDefault());
         tent.setColorHex(placementColorHexOrDefault(PlacementType.TENT));
+        tent.setOpacity(pendingTentOpacityOrDefault());
         tent.setSizeMeters(pendingPlacementWidthMetersOrDefault(), pendingPlacementHeightMetersOrDefault());
         plan.addObject(tent);
         clearPendingPlacementDetails();
@@ -1750,6 +1758,10 @@ public class PancakePlannerApp extends Application {
 
     private double pendingCustomObjectOpacityOrDefault() {
         return pendingPlacementOpacity == null ? CustomObject.DEFAULT_OPACITY : pendingPlacementOpacity;
+    }
+
+    private double pendingTentOpacityOrDefault() {
+        return pendingPlacementOpacity == null ? Tent.DEFAULT_OPACITY : pendingPlacementOpacity;
     }
 
     private CustomObjectShape placementShapeOrDefault() {
@@ -2570,7 +2582,7 @@ public class PancakePlannerApp extends Application {
         rectangle.setTranslateY(rotationOffset.y());
         rectangle.setArcWidth(4);
         rectangle.setArcHeight(4);
-        rectangle.setFill(Color.web(tent.colorHex()));
+        rectangle.setFill(Color.web(tent.colorHex(), tent.opacity()));
         rectangle.setStroke(Color.web("#222222"));
         rectangle.setStrokeWidth(isSelected(tent) ? 4 : 1);
         applyLockedStroke(rectangle, tent);
@@ -3457,6 +3469,7 @@ public class PancakePlannerApp extends Application {
         tentHeightField.setDisable(!tentSelected);
         tentRotationField.setDisable(!tentSelected);
         tentColorPicker.setDisable(!tentSelected);
+        tentOpacityField.setDisable(!tentSelected);
         powerSourceComboBox.setDisable(!tentSelected);
         connectionTypeComboBox.setDisable(!tentSelected);
         connectionOutletComboBox.setDisable(!tentSelected);
@@ -3525,6 +3538,7 @@ public class PancakePlannerApp extends Application {
             tentHeightField.clear();
             tentRotationField.clear();
             tentColorPicker.setValue(Color.web("#e74c3c"));
+            tentOpacityField.clear();
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web("#111827"));
@@ -3563,6 +3577,7 @@ public class PancakePlannerApp extends Application {
             tentHeightField.setText(formatMeters(tent.heightMeters()));
             tentRotationField.setText(formatDegrees(tent.rotationDegrees()));
             tentColorPicker.setValue(Color.web(tent.colorHex()));
+            tentOpacityField.setText(formatNumber(tent.opacity() * 100.0));
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web("#111827"));
@@ -3883,6 +3898,9 @@ public class PancakePlannerApp extends Application {
             if (!applyTentRotation(tent)) {
                 return;
             }
+            if (!applyTentOpacity(tent)) {
+                return;
+            }
             tent.setColorHex(toHex(tentColorPicker.getValue()));
             if (!applySelectedPowerSource(tent)) {
                 return;
@@ -3957,6 +3975,7 @@ public class PancakePlannerApp extends Application {
             tentCopy.setSizeMeters(tent.widthMeters(), tent.heightMeters());
             tentCopy.setRotationDegrees(tent.rotationDegrees());
             tentCopy.setColorHex(tent.colorHex());
+            tentCopy.setOpacity(tent.opacity());
             for (Equipment item : tent.equipment()) {
                 tentCopy.addEquipment(new Equipment(item.name(), item.requiredWatts()));
             }
@@ -4405,6 +4424,16 @@ public class PancakePlannerApp extends Application {
             return true;
         } catch (NumberFormatException exception) {
             showError("Pööret ei muudetud", "Sisesta telgi pööre arvuna kraadides.");
+            return false;
+        }
+    }
+
+    private boolean applyTentOpacity(Tent tent) {
+        try {
+            tent.setOpacity(parseOpacityPercentage(tentOpacityField.getText()));
+            return true;
+        } catch (IllegalArgumentException exception) {
+            showError("Telgi läbipaistvust ei muudetud", exception.getMessage());
             return false;
         }
     }
