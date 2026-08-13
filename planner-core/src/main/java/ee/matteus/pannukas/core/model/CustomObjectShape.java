@@ -1,7 +1,7 @@
 package ee.matteus.pannukas.core.model;
 
 public enum CustomObjectShape {
-    SQUARE("Ruut"),
+    SQUARE("Ristkülik"),
     CIRCLE("Ring");
 
     private final String displayName;

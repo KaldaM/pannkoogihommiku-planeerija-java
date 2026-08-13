@@ -19,6 +19,7 @@ import ee.matteus.pannukas.core.model.TextObject;
 import ee.matteus.pannukas.core.model.Tent;
 import ee.matteus.pannukas.core.service.PlanFactory;
 import ee.matteus.pannukas.core.service.PlanFileService;
+import ee.matteus.pannukas.core.service.GeometryCalculator;
 import ee.matteus.pannukas.core.service.PowerSummary;
 import ee.matteus.pannukas.core.service.PowerSummaryService;
 import javafx.application.Application;
@@ -182,6 +183,7 @@ public class PancakePlannerApp extends Application {
     private ColorPicker areaColorPicker;
     private TextField areaOpacityField;
     private Label areaSizeLabel;
+    private Label areaPerimeterLabel;
     private ColorPicker lineColorPicker;
     private TextField lineWidthField;
     private Label lineLengthLabel;
@@ -191,6 +193,8 @@ public class PancakePlannerApp extends Application {
     private TextField customObjectHeightField;
     private Label customObjectRotationLabel;
     private TextField customObjectRotationField;
+    private Label customObjectAreaLabel;
+    private Label customObjectPerimeterLabel;
     private ComboBox<PowerSourceChoice> powerSourceComboBox;
     private ComboBox<ConnectorType> connectionTypeComboBox;
     private ComboBox<OutletChoice> connectionOutletComboBox;
@@ -787,6 +791,7 @@ public class PancakePlannerApp extends Application {
                         object,
                         objectTypeName(object),
                         groupNameForFilter(object),
+                        objectMeasurementText(object),
                         isGroupVisible(object) && isObjectTypeVisible(object)
                 ))
                 .filter(item -> objectListItemMatches(item, query))
@@ -837,6 +842,27 @@ public class PancakePlannerApp extends Application {
             return lineObject.colorHex();
         }
         return "#9ca3af";
+    }
+
+    private String objectMeasurementText(PlannerObject object) {
+        if (object instanceof LineObject lineObject) {
+            return "pikkus %.1f m".formatted(
+                    GeometryCalculator.lineLengthMeters(lineObject.points(), pixelsPerMeter())
+            );
+        }
+        if (object instanceof AreaObject areaObject) {
+            return "pindala %.1f m² · ümbermõõt %.1f m".formatted(
+                    GeometryCalculator.polygonAreaSquareMeters(areaObject.points(), pixelsPerMeter()),
+                    GeometryCalculator.polygonPerimeterMeters(areaObject.points(), pixelsPerMeter())
+            );
+        }
+        if (object instanceof CustomObject customObject) {
+            return "pindala %.1f m² · ümbermõõt %.1f m".formatted(
+                    GeometryCalculator.customObjectAreaSquareMeters(customObject),
+                    GeometryCalculator.customObjectPerimeterMeters(customObject)
+            );
+        }
+        return "";
     }
 
     private void centerMapOnObject(PlannerObject object) {
@@ -973,6 +999,8 @@ public class PancakePlannerApp extends Application {
         customObjectHeightField = new TextField();
         customObjectRotationLabel = new Label("Objekti pööre °");
         customObjectRotationField = new TextField();
+        customObjectAreaLabel = new Label("-");
+        customObjectPerimeterLabel = new Label("-");
         customObjectShapeComboBox.setOnAction(event -> updateCustomObjectSizeFields());
         powerSourceComboBox = new ComboBox<>();
         powerSourceComboBox.setOnAction(event -> refreshConnectionTypeChoices(null));
@@ -1052,6 +1080,8 @@ public class PancakePlannerApp extends Application {
         customObjectForm.addRow(2, customObjectWidthLabel, customObjectWidthField);
         customObjectForm.addRow(3, customObjectHeightLabel, customObjectHeightField);
         customObjectForm.addRow(4, customObjectRotationLabel, customObjectRotationField);
+        customObjectForm.addRow(5, new Label("Pindala"), customObjectAreaLabel);
+        customObjectForm.addRow(6, new Label("Ümbermõõt"), customObjectPerimeterLabel);
         customObjectPanel = new VBox(8, sectionLabel("Objekt"), customObjectForm);
 
         GridPane textObjectForm = detailGrid();
@@ -1073,10 +1103,12 @@ public class PancakePlannerApp extends Application {
         areaOpacityField = new TextField();
         areaOpacityField.setPromptText("35");
         areaSizeLabel = new Label("-");
+        areaPerimeterLabel = new Label("-");
         GridPane areaForm = detailGrid();
         areaForm.addRow(0, new Label("Värv"), areaColorPicker);
         areaForm.addRow(1, new Label("Läbipaistvus %"), areaOpacityField);
         areaForm.addRow(2, new Label("Pindala"), areaSizeLabel);
+        areaForm.addRow(3, new Label("Ümbermõõt"), areaPerimeterLabel);
         areaPanel = new VBox(8, sectionLabel("Ala"), areaForm);
 
         lineColorPicker = new ColorPicker();
@@ -1752,6 +1784,7 @@ public class PancakePlannerApp extends Application {
             redrawMap();
             refreshSummary();
             refreshDetails();
+            refreshObjectList();
             markDirty();
         } catch (NumberFormatException exception) {
             showError("Mõõtkava ei muudetud", "Sisesta pikslite arv meetri kohta arvuna.");
@@ -1862,6 +1895,7 @@ public class PancakePlannerApp extends Application {
             redrawMap();
             refreshSummary();
             refreshDetails();
+            refreshObjectList();
             markDirty();
         } catch (NumberFormatException exception) {
             showError("Plaani andmeid ei muudetud", "Sisesta mõõtkava ja siltide suurused arvudena.");
@@ -2705,15 +2739,13 @@ public class PancakePlannerApp extends Application {
             marker.setCenterX(updatedPoint.x());
             marker.setCenterY(updatedPoint.y());
             updatePolygonPoint(polygon, pointIndex, updatedPoint);
-            refreshAreaSizeLabel(object);
+            refreshAreaMeasurements(object);
             dragged[0] = true;
             event.consume();
         });
         marker.setOnMouseReleased(event -> {
             if (dragged[0]) {
-                redrawMap();
-                refreshSummary();
-                markDirty();
+                refreshEditedShapeObject();
             }
             event.consume();
         });
@@ -2756,15 +2788,13 @@ public class PancakePlannerApp extends Application {
             }
             marker.setCenterX(updatedPoint.x());
             marker.setCenterY(updatedPoint.y());
-            refreshAreaSizeLabel(object);
+            refreshAreaMeasurements(object);
             dragged[0] = true;
             event.consume();
         });
         marker.setOnMouseReleased(event -> {
             if (dragged[0]) {
-                redrawMap();
-                refreshSummary();
-                markDirty();
+                refreshEditedShapeObject();
             }
             event.consume();
         });
@@ -2798,9 +2828,7 @@ public class PancakePlannerApp extends Application {
         });
         marker.setOnMouseReleased(event -> {
             if (dragged[0]) {
-                redrawMap();
-                refreshSummary();
-                markDirty();
+                refreshEditedShapeObject();
             }
             event.consume();
         });
@@ -2849,9 +2877,7 @@ public class PancakePlannerApp extends Application {
         });
         marker.setOnMouseReleased(event -> {
             if (dragged[0]) {
-                redrawMap();
-                refreshSummary();
-                markDirty();
+                refreshEditedShapeObject();
             }
             event.consume();
         });
@@ -2908,6 +2934,7 @@ public class PancakePlannerApp extends Application {
         redrawMap();
         refreshSummary();
         refreshDetails();
+        refreshObjectList();
         markDirty();
     }
 
@@ -3496,12 +3523,15 @@ public class PancakePlannerApp extends Application {
             areaColorPicker.setValue(Color.web("#f59e0b"));
             areaOpacityField.clear();
             areaSizeLabel.setText("-");
+            areaPerimeterLabel.setText("-");
             lineColorPicker.setValue(Color.web("#0f766e"));
             lineWidthField.clear();
             lineLengthLabel.setText("-");
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
+            customObjectAreaLabel.setText("-");
+            customObjectPerimeterLabel.setText("-");
             cableLengthNotesField.clear();
             cableNotesField.clear();
             refreshPowerSourceChoices();
@@ -3547,6 +3577,7 @@ public class PancakePlannerApp extends Application {
             customObjectWidthField.setText(formatMeters(customObject.widthMeters()));
             customObjectHeightField.setText(formatMeters(customObject.heightMeters()));
             customObjectRotationField.setText(formatDegrees(customObject.rotationDegrees()));
+            refreshCustomObjectMeasurements(customObject);
             cableLengthNotesField.clear();
             cableNotesField.clear();
         } else if (selectedObject instanceof TextObject textObject) {
@@ -3594,7 +3625,7 @@ public class PancakePlannerApp extends Application {
             markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             areaColorPicker.setValue(Color.web(areaObject.colorHex()));
             areaOpacityField.setText(formatNumber(areaObject.opacity() * 100.0));
-            refreshAreaSizeLabel(areaObject);
+            refreshAreaMeasurements(areaObject);
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
@@ -3881,6 +3912,7 @@ public class PancakePlannerApp extends Application {
         refreshObjectList();
         redrawMap();
         refreshSummary();
+        refreshDetails();
         markDirty();
     }
 
@@ -4267,6 +4299,7 @@ public class PancakePlannerApp extends Application {
             redrawMap();
             refreshSummary();
             refreshDetails();
+            refreshObjectList();
             markDirty();
             return true;
         } catch (NumberFormatException exception) {
@@ -4288,23 +4321,28 @@ public class PancakePlannerApp extends Application {
         return distancePixels(start, end) / pixelsPerMeter();
     }
 
-    private void refreshAreaSizeLabel(AreaObject object) {
-        double doubledAreaPixels = 0.0;
-        for (int index = 0; index < object.points().size(); index++) {
-            Position current = object.points().get(index);
-            Position next = object.points().get((index + 1) % object.points().size());
-            doubledAreaPixels += current.x() * next.y() - next.x() * current.y();
-        }
-        double areaSquareMeters = Math.abs(doubledAreaPixels) / 2.0 / Math.pow(pixelsPerMeter(), 2);
-        areaSizeLabel.setText("%.1f m²".formatted(areaSquareMeters));
+    private void refreshAreaMeasurements(AreaObject object) {
+        areaSizeLabel.setText("%.1f m²".formatted(
+                GeometryCalculator.polygonAreaSquareMeters(object.points(), pixelsPerMeter())
+        ));
+        areaPerimeterLabel.setText("%.1f m".formatted(
+                GeometryCalculator.polygonPerimeterMeters(object.points(), pixelsPerMeter())
+        ));
     }
 
     private void refreshLineLengthLabel(LineObject object) {
-        double lengthMeters = 0.0;
-        for (int index = 1; index < object.points().size(); index++) {
-            lengthMeters += distanceMeters(object.points().get(index - 1), object.points().get(index));
-        }
-        lineLengthLabel.setText("%.1f m".formatted(lengthMeters));
+        lineLengthLabel.setText("%.1f m".formatted(
+                GeometryCalculator.lineLengthMeters(object.points(), pixelsPerMeter())
+        ));
+    }
+
+    private void refreshCustomObjectMeasurements(CustomObject object) {
+        customObjectAreaLabel.setText("%.1f m²".formatted(
+                GeometryCalculator.customObjectAreaSquareMeters(object)
+        ));
+        customObjectPerimeterLabel.setText("%.1f m".formatted(
+                GeometryCalculator.customObjectPerimeterMeters(object)
+        ));
     }
 
     private double distancePixels(Position start, Position end) {
@@ -5550,16 +5588,24 @@ public class PancakePlannerApp extends Application {
         launch(args);
     }
 
-    private record ObjectListItem(PlannerObject object, String type, String groupName, boolean visible) {
+    private record ObjectListItem(
+            PlannerObject object,
+            String type,
+            String groupName,
+            String measurementText,
+            boolean visible
+    ) {
         private String detailText() {
+            String measurement = measurementText.isBlank() ? "" : " · " + measurementText;
             String visibilityText = visible ? "" : " · peidetud";
-            return "%s · %s%s".formatted(type, groupName, visibilityText);
+            return "%s · %s%s%s".formatted(type, groupName, measurement, visibilityText);
         }
 
         @Override
         public String toString() {
+            String measurement = measurementText.isBlank() ? "" : ", " + measurementText;
             String visibilityText = visible ? "" : ", peidetud";
-            return "%s (%s, %s%s)".formatted(object.name(), type, groupName, visibilityText);
+            return "%s (%s, %s%s%s)".formatted(object.name(), type, groupName, measurement, visibilityText);
         }
     }
 

@@ -145,7 +145,7 @@ Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi ab
 | `PowerSource` | Elektrikapp ja selle väljundite loetelu |
 | `PowerOutlet` | Nimi, ühenduse tüüp ja lubatud võimsus |
 | `PowerConnection` | Allikas, tarbija, väljund, kaabli tüüp, märkmed, jupid ja trajektoor |
-| `CustomObject` | Ruut või ring muudetava suuruse, pöörde ja värviga |
+| `CustomObject` | Ristkülik või ring muudetava suuruse, pöörde ja värviga |
 | `TextObject` | Mitmerealine tekstikast, pealkiri, värv ja kirjasuurus |
 | `MarkerObject` | Ikooniga objekt, näiteks WC, saun, liige, turva või start/finiš |
 | `AreaObject` | Punktidest koosnev värviline ja läbipaistev ala |
