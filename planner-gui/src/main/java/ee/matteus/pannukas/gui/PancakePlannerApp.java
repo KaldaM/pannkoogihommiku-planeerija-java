@@ -183,6 +183,7 @@ public class PancakePlannerApp extends Application {
     private TextField areaOpacityField;
     private ColorPicker lineColorPicker;
     private TextField lineWidthField;
+    private Label lineLengthLabel;
     private Label customObjectWidthLabel;
     private Label customObjectHeightLabel;
     private TextField customObjectWidthField;
@@ -1078,9 +1079,11 @@ public class PancakePlannerApp extends Application {
         lineColorPicker = new ColorPicker();
         lineWidthField = new TextField();
         lineWidthField.setPromptText("3");
+        lineLengthLabel = new Label("-");
         GridPane lineForm = detailGrid();
         lineForm.addRow(0, new Label("Värv"), lineColorPicker);
         lineForm.addRow(1, new Label("Paksus px"), lineWidthField);
+        lineForm.addRow(2, new Label("Pikkus"), lineLengthLabel);
         linePanel = new VBox(8, sectionLabel("Joon"), lineForm);
 
         GridPane tentForm = detailGrid();
@@ -1745,6 +1748,7 @@ public class PancakePlannerApp extends Application {
             refreshMeasurementLabels();
             redrawMap();
             refreshSummary();
+            refreshDetails();
             markDirty();
         } catch (NumberFormatException exception) {
             showError("Mõõtkava ei muudetud", "Sisesta pikslite arv meetri kohta arvuna.");
@@ -1854,6 +1858,7 @@ public class PancakePlannerApp extends Application {
             refreshMeasurementLabels();
             redrawMap();
             refreshSummary();
+            refreshDetails();
             markDirty();
         } catch (NumberFormatException exception) {
             showError("Plaani andmeid ei muudetud", "Sisesta mõõtkava ja siltide suurused arvudena.");
@@ -2782,6 +2787,7 @@ public class PancakePlannerApp extends Application {
             marker.setCenterX(updatedPoint.x());
             marker.setCenterY(updatedPoint.y());
             updatePolylinePoint(polyline, pointIndex, updatedPoint);
+            refreshLineLengthLabel(object);
             dragged[0] = true;
             event.consume();
         });
@@ -2832,6 +2838,7 @@ public class PancakePlannerApp extends Application {
             }
             marker.setCenterX(updatedPoint.x());
             marker.setCenterY(updatedPoint.y());
+            refreshLineLengthLabel(object);
             dragged[0] = true;
             event.consume();
         });
@@ -2895,6 +2902,7 @@ public class PancakePlannerApp extends Application {
     private void refreshEditedShapeObject() {
         redrawMap();
         refreshSummary();
+        refreshDetails();
         markDirty();
     }
 
@@ -3484,6 +3492,7 @@ public class PancakePlannerApp extends Application {
             areaOpacityField.clear();
             lineColorPicker.setValue(Color.web("#0f766e"));
             lineWidthField.clear();
+            lineLengthLabel.setText("-");
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
@@ -3599,6 +3608,7 @@ public class PancakePlannerApp extends Application {
             areaOpacityField.clear();
             lineColorPicker.setValue(Color.web(lineObject.colorHex()));
             lineWidthField.setText(formatNumber(lineObject.widthPixels()));
+            refreshLineLengthLabel(lineObject);
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
@@ -4249,6 +4259,7 @@ public class PancakePlannerApp extends Application {
             refreshMeasurementLabels();
             redrawMap();
             refreshSummary();
+            refreshDetails();
             markDirty();
             return true;
         } catch (NumberFormatException exception) {
@@ -4268,6 +4279,14 @@ public class PancakePlannerApp extends Application {
 
     private double distanceMeters(Position start, Position end) {
         return distancePixels(start, end) / pixelsPerMeter();
+    }
+
+    private void refreshLineLengthLabel(LineObject object) {
+        double lengthMeters = 0.0;
+        for (int index = 1; index < object.points().size(); index++) {
+            lengthMeters += distanceMeters(object.points().get(index - 1), object.points().get(index));
+        }
+        lineLengthLabel.setText("%.1f m".formatted(lengthMeters));
     }
 
     private double distancePixels(Position start, Position end) {
