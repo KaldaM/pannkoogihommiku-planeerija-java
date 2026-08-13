@@ -188,7 +188,7 @@ public class PancakePlannerApp extends Application {
     private Label areaSizeLabel;
     private Label areaPerimeterLabel;
     private ColorPicker lineColorPicker;
-    private TextField lineWidthField;
+    private Slider lineWidthSlider;
     private Label lineLengthLabel;
     private Label customObjectWidthLabel;
     private Label customObjectHeightLabel;
@@ -256,6 +256,7 @@ public class PancakePlannerApp extends Application {
     private Double pendingPlacementWidthMeters;
     private Double pendingPlacementHeightMeters;
     private Double pendingPlacementOpacity;
+    private Double pendingPlacementLineWidthPixels;
     private CustomObjectShape pendingPlacementShape;
     private boolean pendingTentPlacement;
     private boolean pendingPowerSourcePlacement;
@@ -1117,12 +1118,11 @@ public class PancakePlannerApp extends Application {
         areaPanel = new VBox(8, sectionLabel("Ala"), areaForm);
 
         lineColorPicker = new ColorPicker();
-        lineWidthField = new TextField();
-        lineWidthField.setPromptText("3");
+        lineWidthSlider = createPixelSlider(1, 50, LineObject.DEFAULT_WIDTH_PIXELS);
         lineLengthLabel = new Label("-");
         GridPane lineForm = detailGrid();
         lineForm.addRow(0, new Label("Värv"), lineColorPicker);
-        lineForm.addRow(1, new Label("Paksus px"), lineWidthField);
+        lineForm.addRow(1, new Label("Paksus"), pixelControl(lineWidthSlider));
         lineForm.addRow(2, new Label("Pikkus"), lineLengthLabel);
         linePanel = new VBox(8, sectionLabel("Joon"), lineForm);
 
@@ -1237,6 +1237,31 @@ public class PancakePlannerApp extends Application {
         return "%.0f%%".formatted(percentage);
     }
 
+    private Slider createPixelSlider(double min, double max, double initialValue) {
+        Slider slider = new Slider(min, max, initialValue);
+        slider.setMajorTickUnit(1);
+        slider.setMinorTickCount(0);
+        slider.setBlockIncrement(1);
+        slider.setSnapToTicks(true);
+        slider.setPrefWidth(210);
+        return slider;
+    }
+
+    private HBox pixelControl(Slider slider) {
+        Label valueLabel = new Label(pixelValueText(slider.getValue()));
+        valueLabel.setMinWidth(46);
+        slider.valueProperty().addListener((observable, oldValue, newValue) ->
+                valueLabel.setText(pixelValueText(newValue.doubleValue()))
+        );
+        HBox control = new HBox(8, slider, valueLabel);
+        control.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        return control;
+    }
+
+    private String pixelValueText(double value) {
+        return "%.0f px".formatted(value);
+    }
+
     private TitledPane collapsibleSection(String stateKey, String title, Node content, boolean expandedByDefault) {
         TitledPane pane = new TitledPane(title, content);
         pane.setExpanded(sidebarSectionStates.getOrDefault(stateKey, expandedByDefault));
@@ -1272,6 +1297,7 @@ public class PancakePlannerApp extends Application {
         pendingPlacementWidthMeters = placementDetails.widthMeters();
         pendingPlacementHeightMeters = placementDetails.heightMeters();
         pendingPlacementOpacity = placementDetails.opacity();
+        pendingPlacementLineWidthPixels = placementDetails.lineWidthPixels();
         pendingPlacementShape = placementDetails.shape();
         pendingPlacementMarkerType = placementDetails.markerType();
 
@@ -1307,6 +1333,7 @@ public class PancakePlannerApp extends Application {
                 placementType == PlacementType.AREA_OBJECT ? AreaObject.DEFAULT_OPACITY * 100.0 : 100.0
         );
         HBox opacityControl = opacityControl(opacitySlider);
+        Slider lineWidthSlider = createPixelSlider(1, 50, LineObject.DEFAULT_WIDTH_PIXELS);
         ComboBox<MarkerType> markerTypeComboBox = new ComboBox<>();
         markerTypeComboBox.getItems().addAll(MarkerType.values());
         markerTypeComboBox.setConverter(markerTypeConverter());
@@ -1369,6 +1396,8 @@ public class PancakePlannerApp extends Application {
             form.addRow(2, new Label("Marker"), markerTypeComboBox);
         } else if (placementType == PlacementType.AREA_OBJECT) {
             form.addRow(2, new Label("Läbipaistvus"), opacityControl);
+        } else if (placementType == PlacementType.LINE_OBJECT) {
+            form.addRow(2, new Label("Paksus"), pixelControl(lineWidthSlider));
         }
         if (placementType.hasConfigurableColor()) {
             int colorRow = switch (placementType) {
@@ -1376,7 +1405,8 @@ public class PancakePlannerApp extends Application {
                 case CUSTOM_OBJECT -> 6;
                 case MARKER_OBJECT -> 3;
                 case AREA_OBJECT -> 3;
-                case POWER_SOURCE, TEXT_OBJECT, LINE_OBJECT -> 2;
+                case LINE_OBJECT -> 3;
+                case POWER_SOURCE, TEXT_OBJECT -> 2;
             };
             form.addRow(colorRow, new Label("Värv"), colorPicker);
         }
@@ -1455,7 +1485,17 @@ public class PancakePlannerApp extends Application {
                     ? markerType.displayName()
                     : placementType.defaultName();
         }
-        return new PlacementDetails(name, groupName, toHex(colorPicker.getValue()), widthMeters, heightMeters, opacity, shape, markerType);
+        return new PlacementDetails(
+                name,
+                groupName,
+                toHex(colorPicker.getValue()),
+                widthMeters,
+                heightMeters,
+                opacity,
+                lineWidthSlider.getValue(),
+                shape,
+                markerType
+        );
     }
 
     private void updatePlacementObjectSizeFields(
@@ -1663,6 +1703,7 @@ public class PancakePlannerApp extends Application {
         LineObject object = new LineObject(planFactory.newId(), placementNameOrDefault(PlacementType.LINE_OBJECT), points.getFirst());
         object.setGroupName(placementGroupNameOrDefault());
         object.setColorHex(placementColorHexOrDefault(PlacementType.LINE_OBJECT));
+        object.setWidthPixels(pendingLineWidthPixelsOrDefault());
         object.setPoints(points);
         plan.addObject(object);
         clearPendingPlacementDetails();
@@ -1787,6 +1828,12 @@ public class PancakePlannerApp extends Application {
         return pendingPlacementOpacity == null ? Tent.DEFAULT_OPACITY : pendingPlacementOpacity;
     }
 
+    private double pendingLineWidthPixelsOrDefault() {
+        return pendingPlacementLineWidthPixels == null
+                ? LineObject.DEFAULT_WIDTH_PIXELS
+                : pendingPlacementLineWidthPixels;
+    }
+
     private CustomObjectShape placementShapeOrDefault() {
         return pendingPlacementShape == null ? CustomObjectShape.SQUARE : pendingPlacementShape;
     }
@@ -1802,6 +1849,7 @@ public class PancakePlannerApp extends Application {
         pendingPlacementWidthMeters = null;
         pendingPlacementHeightMeters = null;
         pendingPlacementOpacity = null;
+        pendingPlacementLineWidthPixels = null;
         pendingPlacementShape = null;
         pendingPlacementMarkerType = null;
         pendingShapePoints.clear();
@@ -2163,7 +2211,7 @@ public class PancakePlannerApp extends Application {
             Polyline line = CablePolylineHelper.create(pendingShapePoints);
             line.setFill(null);
             line.setStroke(color);
-            line.setStrokeWidth(pendingLineObjectPlacement ? LineObject.DEFAULT_WIDTH_PIXELS : 2.0);
+            line.setStrokeWidth(pendingLineObjectPlacement ? pendingLineWidthPixelsOrDefault() : 2.0);
             line.getStrokeDashArray().addAll(8.0, 6.0);
             line.setMouseTransparent(true);
             mapPane.getChildren().add(line);
@@ -3487,7 +3535,7 @@ public class PancakePlannerApp extends Application {
         areaColorPicker.setDisable(!areaSelected);
         areaOpacitySlider.setDisable(!areaSelected);
         lineColorPicker.setDisable(!lineSelected);
-        lineWidthField.setDisable(!lineSelected);
+        lineWidthSlider.setDisable(!lineSelected);
         tentWidthField.setDisable(!tentSelected);
         tentHeightField.setDisable(!tentSelected);
         tentRotationField.setDisable(!tentSelected);
@@ -3573,7 +3621,7 @@ public class PancakePlannerApp extends Application {
             areaSizeLabel.setText("-");
             areaPerimeterLabel.setText("-");
             lineColorPicker.setValue(Color.web("#0f766e"));
-            lineWidthField.clear();
+            lineWidthSlider.setValue(LineObject.DEFAULT_WIDTH_PIXELS);
             lineLengthLabel.setText("-");
             customObjectWidthField.clear();
             customObjectHeightField.clear();
@@ -3696,7 +3744,7 @@ public class PancakePlannerApp extends Application {
             areaColorPicker.setValue(Color.web("#f59e0b"));
             areaOpacitySlider.setValue(AreaObject.DEFAULT_OPACITY * 100.0);
             lineColorPicker.setValue(Color.web(lineObject.colorHex()));
-            lineWidthField.setText(formatNumber(lineObject.widthPixels()));
+            lineWidthSlider.setValue(lineObject.widthPixels());
             refreshLineLengthLabel(lineObject);
             customObjectWidthField.clear();
             customObjectHeightField.clear();
@@ -4521,17 +4569,8 @@ public class PancakePlannerApp extends Application {
     }
 
     private boolean applyLineWidth(LineObject object) {
-        try {
-            double widthPixels = Double.parseDouble(lineWidthField.getText().trim().replace(',', '.'));
-            object.setWidthPixels(widthPixels);
-            return true;
-        } catch (NumberFormatException exception) {
-            showError("Joone paksust ei muudetud", "Sisesta joone paksus arvuna pikslites.");
-            return false;
-        } catch (IllegalArgumentException exception) {
-            showError("Joone paksust ei muudetud", exception.getMessage());
-            return false;
-        }
+        object.setWidthPixels(lineWidthSlider.getValue());
+        return true;
     }
 
     private String formatMeters(double meters) {
@@ -5690,6 +5729,7 @@ public class PancakePlannerApp extends Application {
             double widthMeters,
             double heightMeters,
             double opacity,
+            double lineWidthPixels,
             CustomObjectShape shape,
             MarkerType markerType
     ) {

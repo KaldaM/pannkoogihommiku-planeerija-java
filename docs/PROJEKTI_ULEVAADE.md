@@ -250,7 +250,7 @@ Kasutaja laaditud kaart salvestatakse praegu failiteena. Seetõttu võib plaan k
 - Punktide vahel kuvatakse väiksemad vahepunktid; nende lohistamisel lisatakse kujundisse uus pärispunkt.
 - Lukustatud joone või ala geomeetriat muuta ei saa.
 - Ala värvi saab muuta ning läbipaistvust saab määrata slideriga.
-- Joone värvi saab pärast loomist muuta.
+- Joone värvi ja paksust saab määrata nii loomisel kui hiljem; paksust muudetakse slideriga.
 
 See funktsionaalsus on värskelt lisatud ja vajab enne uute objektitüüpide juurde liikumist veel terviklikku kasutuskatset.
 
