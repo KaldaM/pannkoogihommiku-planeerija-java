@@ -181,6 +181,7 @@ public class PancakePlannerApp extends Application {
     private ColorPicker markerColorPicker;
     private ColorPicker areaColorPicker;
     private TextField areaOpacityField;
+    private Label areaSizeLabel;
     private ColorPicker lineColorPicker;
     private TextField lineWidthField;
     private Label lineLengthLabel;
@@ -1071,9 +1072,11 @@ public class PancakePlannerApp extends Application {
         areaColorPicker = new ColorPicker();
         areaOpacityField = new TextField();
         areaOpacityField.setPromptText("35");
+        areaSizeLabel = new Label("-");
         GridPane areaForm = detailGrid();
         areaForm.addRow(0, new Label("Värv"), areaColorPicker);
         areaForm.addRow(1, new Label("Läbipaistvus %"), areaOpacityField);
+        areaForm.addRow(2, new Label("Pindala"), areaSizeLabel);
         areaPanel = new VBox(8, sectionLabel("Ala"), areaForm);
 
         lineColorPicker = new ColorPicker();
@@ -2702,6 +2705,7 @@ public class PancakePlannerApp extends Application {
             marker.setCenterX(updatedPoint.x());
             marker.setCenterY(updatedPoint.y());
             updatePolygonPoint(polygon, pointIndex, updatedPoint);
+            refreshAreaSizeLabel(object);
             dragged[0] = true;
             event.consume();
         });
@@ -2752,6 +2756,7 @@ public class PancakePlannerApp extends Application {
             }
             marker.setCenterX(updatedPoint.x());
             marker.setCenterY(updatedPoint.y());
+            refreshAreaSizeLabel(object);
             dragged[0] = true;
             event.consume();
         });
@@ -3490,6 +3495,7 @@ public class PancakePlannerApp extends Application {
             markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             areaColorPicker.setValue(Color.web("#f59e0b"));
             areaOpacityField.clear();
+            areaSizeLabel.setText("-");
             lineColorPicker.setValue(Color.web("#0f766e"));
             lineWidthField.clear();
             lineLengthLabel.setText("-");
@@ -3588,6 +3594,7 @@ public class PancakePlannerApp extends Application {
             markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             areaColorPicker.setValue(Color.web(areaObject.colorHex()));
             areaOpacityField.setText(formatNumber(areaObject.opacity() * 100.0));
+            refreshAreaSizeLabel(areaObject);
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
@@ -4279,6 +4286,17 @@ public class PancakePlannerApp extends Application {
 
     private double distanceMeters(Position start, Position end) {
         return distancePixels(start, end) / pixelsPerMeter();
+    }
+
+    private void refreshAreaSizeLabel(AreaObject object) {
+        double doubledAreaPixels = 0.0;
+        for (int index = 0; index < object.points().size(); index++) {
+            Position current = object.points().get(index);
+            Position next = object.points().get((index + 1) % object.points().size());
+            doubledAreaPixels += current.x() * next.y() - next.x() * current.y();
+        }
+        double areaSquareMeters = Math.abs(doubledAreaPixels) / 2.0 / Math.pow(pixelsPerMeter(), 2);
+        areaSizeLabel.setText("%.1f m²".formatted(areaSquareMeters));
     }
 
     private void refreshLineLengthLabel(LineObject object) {
