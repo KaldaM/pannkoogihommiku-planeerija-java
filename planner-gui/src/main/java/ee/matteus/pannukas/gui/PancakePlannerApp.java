@@ -117,6 +117,8 @@ public class PancakePlannerApp extends Application {
     private static final double MIN_OBJECT_LIST_HEIGHT = 90.0;
     private static final double MAX_OBJECT_LIST_HEIGHT = 800.0;
     private static final double DEFAULT_OBJECT_LIST_HEIGHT = 180.0;
+    private static final double MIN_FONT_SIZE_PIXELS = 6.0;
+    private static final double MAX_FONT_SIZE_PIXELS = 120.0;
     private static final String OBJECT_LIST_HEIGHT_PREFERENCE = "objectListHeight";
 
     private final PlanFactory planFactory = new PlanFactory();
@@ -180,7 +182,7 @@ public class PancakePlannerApp extends Application {
     private ColorPicker customObjectColorPicker;
     private Slider customObjectOpacitySlider;
     private ColorPicker textObjectColorPicker;
-    private TextField textObjectFontSizeField;
+    private Slider textObjectFontSizeSlider;
     private ComboBox<MarkerType> markerTypeComboBox;
     private ColorPicker markerColorPicker;
     private ColorPicker areaColorPicker;
@@ -257,6 +259,7 @@ public class PancakePlannerApp extends Application {
     private Double pendingPlacementHeightMeters;
     private Double pendingPlacementOpacity;
     private Double pendingPlacementLineWidthPixels;
+    private Double pendingPlacementFontSizePixels;
     private CustomObjectShape pendingPlacementShape;
     private boolean pendingTentPlacement;
     private boolean pendingPowerSourcePlacement;
@@ -1032,8 +1035,11 @@ public class PancakePlannerApp extends Application {
         });
         resetCableLabelButton = new Button("Lähtesta kaablisilt");
         resetCableLabelButton.setOnAction(event -> resetSelectedCableLabelPosition());
-        textObjectFontSizeField = new TextField();
-        textObjectFontSizeField.setPromptText("14");
+        textObjectFontSizeSlider = createPixelSlider(
+                MIN_FONT_SIZE_PIXELS,
+                MAX_FONT_SIZE_PIXELS,
+                TextObject.DEFAULT_FONT_SIZE
+        );
         notesArea = new TextArea();
         notesArea.setPrefRowCount(3);
         notesArea.focusedProperty().addListener((observable, wasFocused, isFocused) -> {
@@ -1093,7 +1099,7 @@ public class PancakePlannerApp extends Application {
 
         GridPane textObjectForm = detailGrid();
         textObjectForm.addRow(0, new Label("Värv"), textObjectColorPicker);
-        textObjectForm.addRow(1, new Label("Suurus px"), textObjectFontSizeField);
+        textObjectForm.addRow(1, new Label("Suurus"), pixelControl(textObjectFontSizeSlider));
         textObjectPanel = new VBox(8, sectionLabel("Tekst"), textObjectForm);
 
         markerTypeComboBox = new ComboBox<>();
@@ -1298,6 +1304,7 @@ public class PancakePlannerApp extends Application {
         pendingPlacementHeightMeters = placementDetails.heightMeters();
         pendingPlacementOpacity = placementDetails.opacity();
         pendingPlacementLineWidthPixels = placementDetails.lineWidthPixels();
+        pendingPlacementFontSizePixels = placementDetails.fontSizePixels();
         pendingPlacementShape = placementDetails.shape();
         pendingPlacementMarkerType = placementDetails.markerType();
 
@@ -1334,6 +1341,11 @@ public class PancakePlannerApp extends Application {
         );
         HBox opacityControl = opacityControl(opacitySlider);
         Slider lineWidthSlider = createPixelSlider(1, 50, LineObject.DEFAULT_WIDTH_PIXELS);
+        Slider fontSizeSlider = createPixelSlider(
+                MIN_FONT_SIZE_PIXELS,
+                MAX_FONT_SIZE_PIXELS,
+                TextObject.DEFAULT_FONT_SIZE
+        );
         ComboBox<MarkerType> markerTypeComboBox = new ComboBox<>();
         markerTypeComboBox.getItems().addAll(MarkerType.values());
         markerTypeComboBox.setConverter(markerTypeConverter());
@@ -1398,6 +1410,8 @@ public class PancakePlannerApp extends Application {
             form.addRow(2, new Label("Läbipaistvus"), opacityControl);
         } else if (placementType == PlacementType.LINE_OBJECT) {
             form.addRow(2, new Label("Paksus"), pixelControl(lineWidthSlider));
+        } else if (placementType == PlacementType.TEXT_OBJECT) {
+            form.addRow(2, new Label("Suurus"), pixelControl(fontSizeSlider));
         }
         if (placementType.hasConfigurableColor()) {
             int colorRow = switch (placementType) {
@@ -1406,7 +1420,8 @@ public class PancakePlannerApp extends Application {
                 case MARKER_OBJECT -> 3;
                 case AREA_OBJECT -> 3;
                 case LINE_OBJECT -> 3;
-                case POWER_SOURCE, TEXT_OBJECT -> 2;
+                case POWER_SOURCE -> 2;
+                case TEXT_OBJECT -> 3;
             };
             form.addRow(colorRow, new Label("Värv"), colorPicker);
         }
@@ -1493,6 +1508,7 @@ public class PancakePlannerApp extends Application {
                 heightMeters,
                 opacity,
                 lineWidthSlider.getValue(),
+                fontSizeSlider.getValue(),
                 shape,
                 markerType
         );
@@ -1644,6 +1660,7 @@ public class PancakePlannerApp extends Application {
         TextObject object = new TextObject(planFactory.newId(), placementNameOrDefault(PlacementType.TEXT_OBJECT), position);
         object.setGroupName(placementGroupNameOrDefault());
         object.setColorHex(placementColorHexOrDefault(PlacementType.TEXT_OBJECT));
+        object.setFontSize(pendingPlacementFontSizePixelsOrDefault());
         plan.addObject(object);
         clearPendingPlacementDetails();
         pendingTextObjectPlacement = false;
@@ -1834,6 +1851,12 @@ public class PancakePlannerApp extends Application {
                 : pendingPlacementLineWidthPixels;
     }
 
+    private double pendingPlacementFontSizePixelsOrDefault() {
+        return pendingPlacementFontSizePixels == null
+                ? TextObject.DEFAULT_FONT_SIZE
+                : pendingPlacementFontSizePixels;
+    }
+
     private CustomObjectShape placementShapeOrDefault() {
         return pendingPlacementShape == null ? CustomObjectShape.SQUARE : pendingPlacementShape;
     }
@@ -1850,6 +1873,7 @@ public class PancakePlannerApp extends Application {
         pendingPlacementHeightMeters = null;
         pendingPlacementOpacity = null;
         pendingPlacementLineWidthPixels = null;
+        pendingPlacementFontSizePixels = null;
         pendingPlacementShape = null;
         pendingPlacementMarkerType = null;
         pendingShapePoints.clear();
@@ -1892,10 +1916,16 @@ public class PancakePlannerApp extends Application {
         TextField dialogPlanNameField = new TextField(plan.name());
         TextField dialogPixelsPerMeterField = new TextField(formatMeters(plan.pixelsPerMeter()));
         dialogPixelsPerMeterField.setPromptText("px/m");
-        TextField dialogObjectLabelFontSizeField = new TextField(formatNumber(plan.objectLabelFontSize()));
-        dialogObjectLabelFontSizeField.setPromptText("px");
-        TextField dialogCableLabelFontSizeField = new TextField(formatNumber(plan.cableLabelFontSize()));
-        dialogCableLabelFontSizeField.setPromptText("px");
+        Slider dialogObjectLabelFontSizeSlider = createPixelSlider(
+                MIN_FONT_SIZE_PIXELS,
+                MAX_FONT_SIZE_PIXELS,
+                plan.objectLabelFontSize()
+        );
+        Slider dialogCableLabelFontSizeSlider = createPixelSlider(
+                MIN_FONT_SIZE_PIXELS,
+                MAX_FONT_SIZE_PIXELS,
+                plan.cableLabelFontSize()
+        );
         Label mapLabel = new Label(plan.mapImagePath().isBlank() ? "Kaarti pole valitud" : plan.mapImagePath());
 
         final String[] selectedMapPath = {plan.mapImagePath()};
@@ -1933,8 +1963,8 @@ public class PancakePlannerApp extends Application {
         GridPane form = detailGrid();
         form.addRow(0, new Label("Plaani nimi"), dialogPlanNameField);
         form.addRow(1, new Label("Piksleid meetri kohta"), new HBox(8, dialogPixelsPerMeterField, setScaleFromMeasurementButton));
-        form.addRow(2, new Label("Objektisildi suurus px"), dialogObjectLabelFontSizeField);
-        form.addRow(3, new Label("Kaablisildi suurus px"), dialogCableLabelFontSizeField);
+        form.addRow(2, new Label("Objektisildi suurus"), pixelControl(dialogObjectLabelFontSizeSlider));
+        form.addRow(3, new Label("Kaablisildi suurus"), pixelControl(dialogCableLabelFontSizeSlider));
         form.addRow(4, new Label("Kaart"), new HBox(8, defaultMapButton, orthophotoButton, loadMapButton));
         form.addRow(5, new Label("Valitud kaart"), mapLabel);
 
@@ -1949,8 +1979,8 @@ public class PancakePlannerApp extends Application {
             applyPlanSettings(
                     dialogPlanNameField.getText(),
                     dialogPixelsPerMeterField.getText(),
-                    dialogObjectLabelFontSizeField.getText(),
-                    dialogCableLabelFontSizeField.getText(),
+                    dialogObjectLabelFontSizeSlider.getValue(),
+                    dialogCableLabelFontSizeSlider.getValue(),
                     selectedMapPath[0]
             );
         });
@@ -1959,8 +1989,8 @@ public class PancakePlannerApp extends Application {
     private void applyPlanSettings(
             String planName,
             String pixelsPerMeterText,
-            String objectLabelFontSizeText,
-            String cableLabelFontSizeText,
+            double objectLabelFontSize,
+            double cableLabelFontSize,
             String mapImagePath
     ) {
         String trimmedPlanName = planName == null ? "" : planName.trim();
@@ -1971,8 +2001,6 @@ public class PancakePlannerApp extends Application {
 
         try {
             double pixelsPerMeter = Double.parseDouble(pixelsPerMeterText.trim().replace(',', '.'));
-            double objectLabelFontSize = Double.parseDouble(objectLabelFontSizeText.trim().replace(',', '.'));
-            double cableLabelFontSize = Double.parseDouble(cableLabelFontSizeText.trim().replace(',', '.'));
             plan.rename(trimmedPlanName);
             plan.setPixelsPerMeter(pixelsPerMeter);
             plan.setObjectLabelFontSize(objectLabelFontSize);
@@ -1991,7 +2019,7 @@ public class PancakePlannerApp extends Application {
             refreshObjectList();
             markDirty();
         } catch (NumberFormatException exception) {
-            showError("Plaani andmeid ei muudetud", "Sisesta mõõtkava ja siltide suurused arvudena.");
+            showError("Plaani andmeid ei muudetud", "Sisesta mõõtkava arvuna.");
         } catch (IllegalArgumentException exception) {
             showError("Plaani andmeid ei muudetud", exception.getMessage());
         }
@@ -3529,7 +3557,7 @@ public class PancakePlannerApp extends Application {
         customObjectColorPicker.setDisable(!customObjectSelected);
         customObjectOpacitySlider.setDisable(!customObjectSelected);
         textObjectColorPicker.setDisable(!textObjectSelected);
-        textObjectFontSizeField.setDisable(!textObjectSelected);
+        textObjectFontSizeSlider.setDisable(!textObjectSelected);
         markerTypeComboBox.setDisable(!markerSelected);
         markerColorPicker.setDisable(!markerSelected);
         areaColorPicker.setDisable(!areaSelected);
@@ -3613,7 +3641,7 @@ public class PancakePlannerApp extends Application {
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web("#111827"));
-            textObjectFontSizeField.clear();
+            textObjectFontSizeSlider.setValue(TextObject.DEFAULT_FONT_SIZE);
             markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
             markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             areaColorPicker.setValue(Color.web("#f59e0b"));
@@ -3652,7 +3680,7 @@ public class PancakePlannerApp extends Application {
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web("#111827"));
-            textObjectFontSizeField.clear();
+            textObjectFontSizeSlider.setValue(TextObject.DEFAULT_FONT_SIZE);
             markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
             markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             customObjectWidthField.clear();
@@ -3672,7 +3700,7 @@ public class PancakePlannerApp extends Application {
             customObjectShapeComboBox.getSelectionModel().select(customObject.shape());
             customObjectColorPicker.setValue(Color.web(customObject.colorHex()));
             customObjectOpacitySlider.setValue(customObject.opacity() * 100.0);
-            textObjectFontSizeField.clear();
+            textObjectFontSizeSlider.setValue(TextObject.DEFAULT_FONT_SIZE);
             customObjectWidthField.setText(formatMeters(customObject.widthMeters()));
             customObjectHeightField.setText(formatMeters(customObject.heightMeters()));
             customObjectRotationField.setText(formatDegrees(customObject.rotationDegrees()));
@@ -3687,7 +3715,7 @@ public class PancakePlannerApp extends Application {
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web(textObject.colorHex()));
-            textObjectFontSizeField.setText(formatNumber(textObject.fontSize()));
+            textObjectFontSizeSlider.setValue(textObject.fontSize());
             markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
             markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             customObjectWidthField.clear();
@@ -3703,7 +3731,7 @@ public class PancakePlannerApp extends Application {
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web("#111827"));
-            textObjectFontSizeField.clear();
+            textObjectFontSizeSlider.setValue(TextObject.DEFAULT_FONT_SIZE);
             markerTypeComboBox.getSelectionModel().select(markerObject.markerType());
             markerColorPicker.setValue(Color.web(markerObject.colorHex()));
             customObjectWidthField.clear();
@@ -3719,7 +3747,7 @@ public class PancakePlannerApp extends Application {
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web("#111827"));
-            textObjectFontSizeField.clear();
+            textObjectFontSizeSlider.setValue(TextObject.DEFAULT_FONT_SIZE);
             markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
             markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             areaColorPicker.setValue(Color.web(areaObject.colorHex()));
@@ -3738,7 +3766,7 @@ public class PancakePlannerApp extends Application {
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web("#111827"));
-            textObjectFontSizeField.clear();
+            textObjectFontSizeSlider.setValue(TextObject.DEFAULT_FONT_SIZE);
             markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
             markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             areaColorPicker.setValue(Color.web("#f59e0b"));
@@ -3759,7 +3787,7 @@ public class PancakePlannerApp extends Application {
             customObjectShapeComboBox.getSelectionModel().select(CustomObjectShape.SQUARE);
             customObjectColorPicker.setValue(Color.web("#9ca3af"));
             textObjectColorPicker.setValue(Color.web("#111827"));
-            textObjectFontSizeField.clear();
+            textObjectFontSizeSlider.setValue(TextObject.DEFAULT_FONT_SIZE);
             markerTypeComboBox.getSelectionModel().select(MarkerType.WC);
             markerColorPicker.setValue(Color.web(MarkerType.WC.defaultColorHex()));
             customObjectWidthField.clear();
@@ -4545,17 +4573,8 @@ public class PancakePlannerApp extends Application {
     }
 
     private boolean applyTextObjectFontSize(TextObject object) {
-        try {
-            double fontSize = Double.parseDouble(textObjectFontSizeField.getText().trim().replace(',', '.'));
-            object.setFontSize(fontSize);
-            return true;
-        } catch (NumberFormatException exception) {
-            showError("Teksti suurust ei muudetud", "Sisesta teksti suurus arvuna pikslites.");
-            return false;
-        } catch (IllegalArgumentException exception) {
-            showError("Teksti suurust ei muudetud", exception.getMessage());
-            return false;
-        }
+        object.setFontSize(textObjectFontSizeSlider.getValue());
+        return true;
     }
 
     private boolean applyAreaOpacity(AreaObject object) {
@@ -5730,6 +5749,7 @@ public class PancakePlannerApp extends Application {
             double heightMeters,
             double opacity,
             double lineWidthPixels,
+            double fontSizePixels,
             CustomObjectShape shape,
             MarkerType markerType
     ) {

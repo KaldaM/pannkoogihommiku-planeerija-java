@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
-- Dokumendi viimane sisuline uuendus: 13. august 2026
-- Koodi viimane dokumenteeritud commit: `c051268` (`Allow editing line color`, 24. juuli 2026)
+- Dokumendi viimane sisuline uuendus: 14. august 2026
+- Koodi viimane dokumenteeritud commit: `79270aa` (`Use slider for line width`, 14. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -257,7 +257,8 @@ See funktsionaalsus on värskelt lisatud ja vajab enne uute objektitüüpide juu
 ### 6.7 Korraldaja objektid
 
 - Tavaobjekti saab näidata ristküliku või ringina ning muuta selle mõõtmeid, pööret ja värvi; läbipaistvust saab määrata slideriga.
-- Tekstiobjektil on rasvases kirjas pealkiri, mitmerealised märkmed, värv ja muudetav kirjasuurus.
+- Tekstiobjektil on rasvases kirjas pealkiri, mitmerealised märkmed, värv ja slideriga muudetav kirjasuurus.
+- Plaani objekti- ja kaablisiltide üldist kirjasuurust saab muuta slideritega „Plaani andmed” dialoogis.
 - Markerid kasutavad teksti asemel eristatavaid ikoone.
 - Olemas on vähemalt WC, turva, start/finiš, saun/tünnisaun ja liikme tüübid.
 - Objektide nimekiri näitab objektide värve ning toimib seetõttu ka lihtsa legendina.
@@ -385,13 +386,7 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 
 ### 9.1 Vahetu jätkamiskoht
 
-Viimane valminud muudatus võimaldas muuta olemasoleva joone värvi. Kõige väiksem loogiline järgmine commit on:
-
-1. lisada joone detailidesse muudetav paksus pikslites;
-2. kontrollida joone ja ala kogu töövoogu: loomine, lõpetamine, tühistamine, liigutamine, lukustamine, punktide lisamine, lohistamine, eemaldamine, salvestamine ja uuesti avamine;
-3. parandada ainult testimisel ilmnevad konkreetsed vead enne suuremat mudelimuudatust.
-
-Soovituslik esimese commiti nimi: `Allow editing line width`.
+Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Joone paksust, objektide läbipaistvust ning teksti- ja sildisuurusi saab muuta slideritega. Järgmine suurem samm on kavandada ühine elektritarbija mudel telgile, joonele ja alale ning katta see enne kasutajaliidese laiendamist testidega.
 
 ### 9.2 Joonte ja alade järgmine funktsionaalne etapp
 
@@ -474,8 +469,8 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 ## 11. Soovituslik tööjärjekord
 
-1. Lõpeta joone paksuse muutmine ning testi joonte ja alade praegune tervik.
-2. Kirjelda ja testi ühine seadmeid sisaldava elektritarbija mudel.
+1. Kirjelda ja testi ühine seadmeid sisaldava elektritarbija mudel.
+2. Kontrolli joone ja ala kogu töövoogu käsitsi ning paranda leitud konkreetsed vead.
 3. Lisa elektriühenduse ankrupunkt telgile, joonele ja alale.
 4. Tee joon ja ala seadmeid sisaldavateks elektritarbijateks.
 5. Alusta automaatteste salvestamisest ja vooluarvutusest, sest nende regressiooni mõju on suurim.
@@ -488,7 +483,7 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 Uuele arendajale või tehisintellekti vestlusele tuleks anda vähemalt järgmine info:
 
-> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. Järgmine kavandatud väike töö pärast committi `c051268` on olemasoleva joone paksuse muutmine.
+> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. Järgmine kavandatud suurem töö on ühise, seadmeid sisaldava elektritarbija mudeli loomine telgile, joonele ja alale.
 
 Tavaline kontroll enne muutmist:
 
