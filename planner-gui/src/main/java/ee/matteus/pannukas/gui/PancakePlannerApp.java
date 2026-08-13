@@ -182,6 +182,7 @@ public class PancakePlannerApp extends Application {
     private ColorPicker areaColorPicker;
     private TextField areaOpacityField;
     private ColorPicker lineColorPicker;
+    private TextField lineWidthField;
     private Label customObjectWidthLabel;
     private Label customObjectHeightLabel;
     private TextField customObjectWidthField;
@@ -1075,8 +1076,11 @@ public class PancakePlannerApp extends Application {
         areaPanel = new VBox(8, sectionLabel("Ala"), areaForm);
 
         lineColorPicker = new ColorPicker();
+        lineWidthField = new TextField();
+        lineWidthField.setPromptText("3");
         GridPane lineForm = detailGrid();
         lineForm.addRow(0, new Label("Värv"), lineColorPicker);
+        lineForm.addRow(1, new Label("Paksus px"), lineWidthField);
         linePanel = new VBox(8, sectionLabel("Joon"), lineForm);
 
         GridPane tentForm = detailGrid();
@@ -3397,6 +3401,7 @@ public class PancakePlannerApp extends Application {
         areaColorPicker.setDisable(!areaSelected);
         areaOpacityField.setDisable(!areaSelected);
         lineColorPicker.setDisable(!lineSelected);
+        lineWidthField.setDisable(!lineSelected);
         tentWidthField.setDisable(!tentSelected);
         tentHeightField.setDisable(!tentSelected);
         tentRotationField.setDisable(!tentSelected);
@@ -3478,6 +3483,7 @@ public class PancakePlannerApp extends Application {
             areaColorPicker.setValue(Color.web("#f59e0b"));
             areaOpacityField.clear();
             lineColorPicker.setValue(Color.web("#0f766e"));
+            lineWidthField.clear();
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
@@ -3592,6 +3598,7 @@ public class PancakePlannerApp extends Application {
             areaColorPicker.setValue(Color.web("#f59e0b"));
             areaOpacityField.clear();
             lineColorPicker.setValue(Color.web(lineObject.colorHex()));
+            lineWidthField.setText(formatNumber(lineObject.widthPixels()));
             customObjectWidthField.clear();
             customObjectHeightField.clear();
             customObjectRotationField.clear();
@@ -3844,6 +3851,9 @@ public class PancakePlannerApp extends Application {
             }
             areaObject.setColorHex(toHex(areaColorPicker.getValue()));
         } else if (selectedObject instanceof LineObject lineObject) {
+            if (!applyLineWidth(lineObject)) {
+                return;
+            }
             lineObject.setColorHex(toHex(lineColorPicker.getValue()));
         }
         setAddingCablePoint(false);
@@ -4367,6 +4377,20 @@ public class PancakePlannerApp extends Application {
             return true;
         } catch (IllegalArgumentException exception) {
             showError("Ala läbipaistvust ei muudetud", exception.getMessage());
+            return false;
+        }
+    }
+
+    private boolean applyLineWidth(LineObject object) {
+        try {
+            double widthPixels = Double.parseDouble(lineWidthField.getText().trim().replace(',', '.'));
+            object.setWidthPixels(widthPixels);
+            return true;
+        } catch (NumberFormatException exception) {
+            showError("Joone paksust ei muudetud", "Sisesta joone paksus arvuna pikslites.");
+            return false;
+        } catch (IllegalArgumentException exception) {
+            showError("Joone paksust ei muudetud", exception.getMessage());
             return false;
         }
     }
