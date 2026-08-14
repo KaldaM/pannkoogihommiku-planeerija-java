@@ -5,6 +5,7 @@ import ee.matteus.pannukas.core.model.AreaObject;
 import ee.matteus.pannukas.core.model.CustomObject;
 import ee.matteus.pannukas.core.model.CustomObjectShape;
 import ee.matteus.pannukas.core.model.Equipment;
+import ee.matteus.pannukas.core.model.EquipmentContainer;
 import ee.matteus.pannukas.core.model.EventPlan;
 import ee.matteus.pannukas.core.model.LineObject;
 import ee.matteus.pannukas.core.model.MarkerObject;
@@ -1054,7 +1055,7 @@ public class PancakePlannerApp extends Application {
         equipmentWattsField = new TextField();
         equipmentWattsField.setPromptText("W");
         addEquipmentButton = new Button("Lisa seade");
-        addEquipmentButton.setOnAction(event -> addEquipmentToSelectedTent());
+        addEquipmentButton.setOnAction(event -> addEquipmentToSelectedContainer());
         removeEquipmentButton = new Button("Eemalda valitud");
         removeEquipmentButton.setOnAction(event -> removeSelectedEquipment());
         outletList = new ListView<>();
@@ -1169,7 +1170,7 @@ public class PancakePlannerApp extends Application {
                 addEquipmentButton,
                 removeEquipmentButton
         );
-        equipmentSection = collapsibleSection(EQUIPMENT_SECTION, "Telgi seadmed", equipmentPanel, false);
+        equipmentSection = collapsibleSection(EQUIPMENT_SECTION, "Seadmed", equipmentPanel, false);
         outletPanel = new VBox(
                 8,
                 outletList,
@@ -3539,6 +3540,7 @@ public class PancakePlannerApp extends Application {
         boolean markerSelected = selectedObject instanceof MarkerObject;
         boolean areaSelected = selectedObject instanceof AreaObject;
         boolean lineSelected = selectedObject instanceof LineObject;
+        boolean equipmentContainerSelected = selectedObject instanceof EquipmentContainer;
         nameField.setDisable(!hasSelection);
         groupField.setDisable(!hasSelection);
         notesArea.setDisable(!hasSelection);
@@ -3582,11 +3584,11 @@ public class PancakePlannerApp extends Application {
                 .orElse(false);
         resetCableLabelButton.setDisable(!customCableLabelPosition);
         resetCableLabelButton.setTooltip(new Tooltip(cableLabelResetTooltip(tentSelected, tentHasPowerConnection, customCableLabelPosition)));
-        equipmentList.setDisable(!tentSelected);
-        equipmentNameField.setDisable(!tentSelected);
-        equipmentWattsField.setDisable(!tentSelected);
-        addEquipmentButton.setDisable(!tentSelected);
-        removeEquipmentButton.setDisable(!tentSelected);
+        equipmentList.setDisable(!equipmentContainerSelected);
+        equipmentNameField.setDisable(!equipmentContainerSelected);
+        equipmentWattsField.setDisable(!equipmentContainerSelected);
+        addEquipmentButton.setDisable(!equipmentContainerSelected);
+        removeEquipmentButton.setDisable(!equipmentContainerSelected);
         outletList.setDisable(!powerSourceSelected);
         outletNameField.setDisable(!powerSourceSelected);
         outletTypeComboBox.setDisable(!powerSourceSelected);
@@ -3621,7 +3623,7 @@ public class PancakePlannerApp extends Application {
         setSectionVisible(linePanel, lineSelected);
         setSectionVisible(tentPanel, tentSelected);
         setSectionVisible(powerConnectionPanel, tentSelected);
-        setSectionVisible(equipmentSection, tentSelected);
+        setSectionVisible(equipmentSection, equipmentContainerSelected);
         setSectionVisible(outletSection, powerSourceSelected);
         setSectionVisible(choosePowerSourceButton, tentSelected);
         setSectionVisible(deleteObjectButton, hasSelection);
@@ -4075,9 +4077,6 @@ public class PancakePlannerApp extends Application {
             tentCopy.setRotationDegrees(tent.rotationDegrees());
             tentCopy.setColorHex(tent.colorHex());
             tentCopy.setOpacity(tent.opacity());
-            for (Equipment item : tent.equipment()) {
-                tentCopy.addEquipment(new Equipment(item.name(), item.requiredWatts()));
-            }
             copy = tentCopy;
         } else if (original instanceof PowerSource source) {
             PowerSource sourceCopy = new PowerSource(planFactory.newId(), duplicateName(source), copyPosition);
@@ -4125,7 +4124,18 @@ public class PancakePlannerApp extends Application {
         }
 
         copyCommonDetails(original, copy);
+        copyEquipment(original, copy);
         return copy;
+    }
+
+    private void copyEquipment(PlannerObject original, PlannerObject copy) {
+        if (!(original instanceof EquipmentContainer originalContainer)
+                || !(copy instanceof EquipmentContainer copyContainer)) {
+            return;
+        }
+        for (Equipment item : originalContainer.equipment()) {
+            copyContainer.addEquipment(new Equipment(item.name(), item.requiredWatts()));
+        }
     }
 
     private void copyCommonDetails(PlannerObject original, PlannerObject copy) {
@@ -4185,10 +4195,10 @@ public class PancakePlannerApp extends Application {
 
     private String deleteConfirmationText(PlannerObject object) {
         List<String> warnings = new ArrayList<>();
+        if (object instanceof EquipmentContainer container && !container.equipment().isEmpty()) {
+            warnings.add("Objekti seadmed kustutatakse samuti.");
+        }
         if (object instanceof Tent tent) {
-            if (!tent.equipment().isEmpty()) {
-                warnings.add("Telgi seadmed kustutatakse samuti.");
-            }
             if (plan.findPowerConnectionForConsumer(tent.id()).isPresent()) {
                 warnings.add("Telgi vooluühendus ja kaabli trajektoor kustutatakse samuti.");
             }
@@ -4798,8 +4808,9 @@ public class PancakePlannerApp extends Application {
         return selectedOutlet == null ? "" : selectedOutlet.outletId();
     }
 
-    private void addEquipmentToSelectedTent() {
-        if (!(selectedObject instanceof Tent tent)) {
+    private void addEquipmentToSelectedContainer() {
+        EquipmentContainer container = selectedEquipmentContainer();
+        if (container == null) {
             return;
         }
 
@@ -4818,7 +4829,7 @@ public class PancakePlannerApp extends Application {
         }
 
         try {
-            tent.addEquipment(new Equipment(name, watts));
+            container.addEquipment(new Equipment(name, watts));
         } catch (IllegalArgumentException exception) {
             showError("Seadet ei lisatud", exception.getMessage());
             return;
@@ -4832,16 +4843,17 @@ public class PancakePlannerApp extends Application {
     }
 
     private void removeSelectedEquipment() {
-        if (!(selectedObject instanceof Tent tent)) {
+        EquipmentContainer container = selectedEquipmentContainer();
+        if (container == null) {
             return;
         }
 
         int selectedIndex = equipmentList.getSelectionModel().getSelectedIndex();
-        if (selectedIndex < 0 || selectedIndex >= tent.equipment().size()) {
+        if (selectedIndex < 0 || selectedIndex >= container.equipment().size()) {
             return;
         }
 
-        tent.removeEquipment(selectedIndex);
+        container.removeEquipment(selectedIndex);
         refreshEquipmentList();
         refreshSummary();
         markDirty();
@@ -5101,13 +5113,18 @@ public class PancakePlannerApp extends Application {
 
     private void refreshEquipmentList() {
         equipmentList.getItems().clear();
-        if (!(selectedObject instanceof Tent tent)) {
+        EquipmentContainer container = selectedEquipmentContainer();
+        if (container == null) {
             return;
         }
 
-        for (Equipment item : tent.equipment()) {
+        for (Equipment item : container.equipment()) {
             equipmentList.getItems().add("%s - %d W".formatted(item.name(), item.requiredWatts()));
         }
+    }
+
+    private EquipmentContainer selectedEquipmentContainer() {
+        return selectedObject instanceof EquipmentContainer container ? container : null;
     }
 
     private void refreshOutletList() {
