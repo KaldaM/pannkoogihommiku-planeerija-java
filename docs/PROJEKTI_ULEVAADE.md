@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
 - Dokumendi viimane sisuline uuendus: 14. august 2026
-- Koodi viimane dokumenteeritud commit: `79270aa` (`Use slider for line width`, 14. august 2026)
+- Koodi viimane dokumenteeritud commit: `59968dd` (`Use sliders for font sizes`, 14. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -386,7 +386,7 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 
 ### 9.1 Vahetu jätkamiskoht
 
-Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Joone paksust, objektide läbipaistvust ning teksti- ja sildisuurusi saab muuta slideritega. Järgmine suurem samm on kavandada ühine elektritarbija mudel telgile, joonele ja alale ning katta see enne kasutajaliidese laiendamist testidega.
+Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Joone paksust, objektide läbipaistvust ning teksti- ja sildisuurusi saab muuta slideritega. Telk, ala ja joon kasutavad nüüd ühist `EquipmentContainer` lepingut, mis koondab seadmete haldamise ning vooluvajaduse arvutamise. Järgmine väike samm on salvestada ja laadida ala ning joone seadmed, säilitades vanade plaanide avamise.
 
 ### 9.2 Joonte ja alade järgmine funktsionaalne etapp
 
@@ -405,7 +405,7 @@ Seda ei tasu lahendada kolme eraldi erandina. Enne kasutajaliidese lisamist tule
 - arvutatav vooluvajadus;
 - kasutaja määratav elektriühenduse ankrupunkt.
 
-Seejärel saavad `Tent`, `AreaObject` ja `LineObject` kasutada sama ühenduste ning kokkuvõtete loogikat.
+`Tent`, `AreaObject` ja `LineObject` kasutavad juba sama seadmete ning vooluvajaduse lepingut. Salvestamine, kasutajaliides, ühendused ja kokkuvõtted tuleb järgmiste eraldi sammudena üldistada.
 
 ### 9.3 Juba otsustatud visuaalsed täiendused
 
@@ -469,10 +469,10 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 ## 11. Soovituslik tööjärjekord
 
-1. Kirjelda ja testi ühine seadmeid sisaldava elektritarbija mudel.
-2. Kontrolli joone ja ala kogu töövoogu käsitsi ning paranda leitud konkreetsed vead.
-3. Lisa elektriühenduse ankrupunkt telgile, joonele ja alale.
-4. Tee joon ja ala seadmeid sisaldavateks elektritarbijateks.
+1. Lisa ala ja joone seadmete salvestamine ning tagasiühilduvuse testid.
+2. Üldista külgpaneeli seadmete haldus telgilt kõigile `EquipmentContainer` objektidele.
+3. Üldista vooluühendused, kaablid ja kokkuvõtted telgilt kõigile elektritarbijatele.
+4. Lisa elektriühenduse ankrupunkt telgile, joonele ja alale.
 5. Alusta automaatteste salvestamisest ja vooluarvutusest, sest nende regressiooni mõju on suurim.
 6. Tükelda `PancakePlannerApp` järk-järgult, alustades ala- ja joone tööriistast või detailpaneelist.
 7. Versioonista `.pplan` vorming ja lahenda kaartide kaasaskantavus.
@@ -483,7 +483,7 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 Uuele arendajale või tehisintellekti vestlusele tuleks anda vähemalt järgmine info:
 
-> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. Järgmine kavandatud suurem töö on ühise, seadmeid sisaldava elektritarbija mudeli loomine telgile, joonele ja alale.
+> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. `EquipmentContainer` ühendab telgi, ala ja joone seadmemudeli; järgmine samm on ala ja joone seadmete salvestamine koos tagasiühilduvuse testidega.
 
 Tavaline kontroll enne muutmist:
 

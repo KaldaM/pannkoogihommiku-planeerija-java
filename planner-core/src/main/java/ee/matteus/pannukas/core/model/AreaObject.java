@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class AreaObject extends PlannerObject {
+public class AreaObject extends PlannerObject implements EquipmentContainer {
     public static final double DEFAULT_OPACITY = 0.35;
 
     private final List<Position> points = new ArrayList<>();
+    private final List<Equipment> equipment = new ArrayList<>();
     private String colorHex;
     private double opacity;
 
@@ -58,5 +59,20 @@ public class AreaObject extends PlannerObject {
 
     public void setOpacity(double opacity) {
         this.opacity = Math.max(0.0, Math.min(1.0, opacity));
+    }
+
+    @Override
+    public List<Equipment> equipment() {
+        return Collections.unmodifiableList(equipment);
+    }
+
+    @Override
+    public void addEquipment(Equipment item) {
+        equipment.add(item);
+    }
+
+    @Override
+    public void removeEquipment(int index) {
+        equipment.remove(index);
     }
 }

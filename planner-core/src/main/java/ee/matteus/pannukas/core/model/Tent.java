@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class Tent extends PlannerObject implements PowerConsumer {
+public class Tent extends PlannerObject implements EquipmentContainer {
     public static final double DEFAULT_OPACITY = 1.0;
 
     private double widthMeters;
@@ -62,20 +62,18 @@ public class Tent extends PlannerObject implements PowerConsumer {
         this.opacity = Math.max(0.0, Math.min(1.0, opacity));
     }
 
+    @Override
     public List<Equipment> equipment() {
         return Collections.unmodifiableList(equipment);
     }
 
+    @Override
     public void addEquipment(Equipment item) {
         equipment.add(item);
     }
 
+    @Override
     public void removeEquipment(int index) {
         equipment.remove(index);
-    }
-
-    @Override
-    public int requiredWatts() {
-        return equipment.stream().mapToInt(Equipment::requiredWatts).sum();
     }
 }

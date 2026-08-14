@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class LineObject extends PlannerObject {
+public class LineObject extends PlannerObject implements EquipmentContainer {
     public static final double DEFAULT_WIDTH_PIXELS = 3.0;
 
     private final List<Position> points = new ArrayList<>();
+    private final List<Equipment> equipment = new ArrayList<>();
     private String colorHex;
     private double widthPixels;
 
@@ -61,5 +62,20 @@ public class LineObject extends PlannerObject {
             throw new IllegalArgumentException("Joone laius peab olema positiivne.");
         }
         this.widthPixels = widthPixels;
+    }
+
+    @Override
+    public List<Equipment> equipment() {
+        return Collections.unmodifiableList(equipment);
+    }
+
+    @Override
+    public void addEquipment(Equipment item) {
+        equipment.add(item);
+    }
+
+    @Override
+    public void removeEquipment(int index) {
+        equipment.remove(index);
     }
 }
