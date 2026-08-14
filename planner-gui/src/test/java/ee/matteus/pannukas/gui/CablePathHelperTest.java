@@ -42,6 +42,20 @@ class CablePathHelperTest {
         assertEquals(new Position(50, 60), path.getLast());
     }
 
+    @Test
+    void appliesRelativePowerConnectionOffsetToConsumerEndpoint() {
+        AreaObject area = new AreaObject("area", "Ala", new Position(10, 20));
+        area.setPoints(List.of(
+                new Position(10, 20),
+                new Position(50, 60)
+        ));
+        area.setPowerConnectionOffset(new Position(12, -8));
+
+        List<Position> path = CablePathHelper.cablePath(area, source(), connection(area.id()), 10.0);
+
+        assertEquals(new Position(42, 32), path.getLast());
+    }
+
     private PowerSource source() {
         return new PowerSource("source", "Kapp", new Position(0, 0));
     }

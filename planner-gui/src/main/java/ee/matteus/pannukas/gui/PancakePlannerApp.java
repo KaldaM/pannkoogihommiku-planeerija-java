@@ -13,6 +13,7 @@ import ee.matteus.pannukas.core.model.MarkerType;
 import ee.matteus.pannukas.core.model.PlannerObject;
 import ee.matteus.pannukas.core.model.Position;
 import ee.matteus.pannukas.core.model.PowerConnection;
+import ee.matteus.pannukas.core.model.PowerConnectable;
 import ee.matteus.pannukas.core.model.PowerConsumer;
 import ee.matteus.pannukas.core.model.PowerOutlet;
 import ee.matteus.pannukas.core.model.PowerSource;
@@ -147,6 +148,7 @@ public class PancakePlannerApp extends Application {
     private double mapPressSceneY;
     private Position measurementStart;
     private final List<Node> measurementNodes = new ArrayList<>();
+    private final List<Node> powerConnectionAnchorMarkers = new ArrayList<>();
     private final List<MeasurementView> measurements = new ArrayList<>();
     private final List<Position> pendingShapePoints = new ArrayList<>();
     private final Set<String> visibleGroups = new HashSet<>();
@@ -2186,6 +2188,7 @@ public class PancakePlannerApp extends Application {
 
     private void redrawMap() {
         mapPane.getChildren().clear();
+        powerConnectionAnchorMarkers.clear();
         addMapImage();
         if (showCables()) {
             drawPowerConnections();
@@ -2213,6 +2216,7 @@ public class PancakePlannerApp extends Application {
                 drawCustomObject(customObject);
             }
         }
+        powerConnectionAnchorMarkers.forEach(Node::toFront);
         drawPendingShapePreview();
         mapPane.getChildren().addAll(measurementNodes);
     }
@@ -2405,6 +2409,24 @@ public class PancakePlannerApp extends Application {
                 makeCableSelectable(marker, cable.consumer());
                 makeCableRoutePointDraggable(marker, cable, index, line, highlightLine, hitLine, distanceLabel);
                 mapPane.getChildren().add(marker);
+            }
+            if (cable.consumer() instanceof PowerConnectable) {
+                Position endpoint = path.getLast();
+                Circle anchorMarker = new Circle(endpoint.x(), endpoint.y(), 6);
+                anchorMarker.setFill(Color.web("#fef3c7"));
+                anchorMarker.setStroke(Color.web("#111827"));
+                anchorMarker.setStrokeWidth(2);
+                Tooltip.install(anchorMarker, new Tooltip("Lohista voolu ühenduspunkti, paremklõps lähtestab"));
+                makePowerConnectionAnchorDraggable(
+                        anchorMarker,
+                        cable,
+                        line,
+                        highlightLine,
+                        hitLine,
+                        distanceLabel
+                );
+                mapPane.getChildren().add(anchorMarker);
+                powerConnectionAnchorMarkers.add(anchorMarker);
             }
         }
     }
@@ -2600,6 +2622,90 @@ public class PancakePlannerApp extends Application {
             }
             event.consume();
         });
+    }
+
+    private void makePowerConnectionAnchorDraggable(
+            Circle marker,
+            PowerCableView cable,
+            Polyline line,
+            Polyline highlightLine,
+            Polyline hitLine,
+            Label distanceLabel
+    ) {
+        final boolean[] dragged = {false};
+        marker.setOnMousePressed(event -> {
+            if (measuringActive || addingCablePoint) {
+                event.consume();
+                return;
+            }
+            dragged[0] = false;
+            event.consume();
+        });
+        marker.setOnMouseDragged(event -> {
+            if (measuringActive || addingCablePoint) {
+                event.consume();
+                return;
+            }
+            if (!(cable.consumer() instanceof PowerConnectable connectable)) {
+                event.consume();
+                return;
+            }
+            Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            Position defaultPoint = CablePathHelper.objectCenter(cable.consumer(), pixelsPerMeter());
+            connectable.setPowerConnectionOffset(new Position(
+                    mapPoint.getX() - defaultPoint.x(),
+                    mapPoint.getY() - defaultPoint.y()
+            ));
+            marker.setCenterX(mapPoint.getX());
+            marker.setCenterY(mapPoint.getY());
+            CablePolylineHelper.updateLastPoint(line, mapPoint);
+            CablePolylineHelper.updateLastPoint(highlightLine, mapPoint);
+            CablePolylineHelper.updateLastPoint(hitLine, mapPoint);
+            updateCableLabel(distanceLabel, cable, cable.connection().routePoints());
+            dragged[0] = true;
+            event.consume();
+        });
+        marker.setOnMouseReleased(event -> {
+            if (dragged[0]) {
+                redrawMap();
+                refreshSummary();
+                markDirty();
+            }
+            event.consume();
+        });
+        marker.setOnMouseClicked(event -> {
+            if (measuringActive || addingCablePoint) {
+                event.consume();
+                return;
+            }
+            if (event.getButton() == MouseButton.SECONDARY) {
+                showPowerConnectionAnchorContextMenu(marker, cable, event.getScreenX(), event.getScreenY());
+            } else if (!dragged[0]) {
+                selectObject(cable.consumer());
+            }
+            event.consume();
+        });
+    }
+
+    private void showPowerConnectionAnchorContextMenu(
+            Circle marker,
+            PowerCableView cable,
+            double screenX,
+            double screenY
+    ) {
+        MenuItem resetItem = new MenuItem("Lähtesta ühenduspunkt");
+        resetItem.setOnAction(event -> resetPowerConnectionAnchor(cable.consumer()));
+        new ContextMenu(resetItem).show(marker, screenX, screenY);
+    }
+
+    private void resetPowerConnectionAnchor(PlannerObject consumer) {
+        if (!(consumer instanceof PowerConnectable connectable)) {
+            return;
+        }
+        connectable.resetPowerConnectionOffset();
+        redrawMap();
+        refreshSummary();
+        markDirty();
     }
 
     private void showCableRoutePointContextMenu(

@@ -5,6 +5,7 @@ import ee.matteus.pannukas.core.model.LineObject;
 import ee.matteus.pannukas.core.model.PlannerObject;
 import ee.matteus.pannukas.core.model.Position;
 import ee.matteus.pannukas.core.model.PowerConnection;
+import ee.matteus.pannukas.core.model.PowerConnectable;
 import ee.matteus.pannukas.core.model.PowerSource;
 import ee.matteus.pannukas.core.model.Tent;
 
@@ -19,7 +20,7 @@ final class CablePathHelper {
         List<Position> path = new ArrayList<>();
         path.add(objectCenter(source, pixelsPerMeter));
         path.addAll(connection.routePoints());
-        path.add(objectCenter(consumer, pixelsPerMeter));
+        path.add(powerConnectionPoint(consumer, pixelsPerMeter));
         return path;
     }
 
@@ -33,8 +34,19 @@ final class CablePathHelper {
         List<Position> path = new ArrayList<>();
         path.add(objectCenter(source, pixelsPerMeter));
         path.addAll(routePoints);
-        path.add(objectCenter(consumer, pixelsPerMeter));
+        path.add(powerConnectionPoint(consumer, pixelsPerMeter));
         return path;
+    }
+
+    static Position powerConnectionPoint(PlannerObject consumer, double pixelsPerMeter) {
+        Position center = objectCenter(consumer, pixelsPerMeter);
+        if (!(consumer instanceof PowerConnectable connectable)) {
+            return center;
+        }
+        return new Position(
+                center.x() + connectable.powerConnectionOffset().x(),
+                center.y() + connectable.powerConnectionOffset().y()
+        );
     }
 
     static Position objectCenter(PlannerObject object, double pixelsPerMeter) {

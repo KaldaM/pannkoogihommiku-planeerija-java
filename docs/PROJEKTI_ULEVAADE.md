@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
 - Dokumendi viimane sisuline uuendus: 15. august 2026
-- Koodi viimane dokumenteeritud commit: `7992a97` (`Enable power connections for areas and lines`, 15. august 2026)
+- Koodi viimane dokumenteeritud commit: `7408507` (`Add configurable power connection anchors`, 15. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -90,7 +90,7 @@ Need ei ole praeguse prototüübi lubatud funktsioonid, vaid suurema süsteemi u
 
 ## 4. Arenduspõhimõtted
 
-Arendus on toimunud teadlikult väikeste sammudena. Üks kasutaja jaoks kontrollitav muudatus tehakse valmis, käivitatakse, proovitakse päris plaanil ning commititakse eraldi. Selline tööviis on seni andnud 167 commiti ja võimaldab näha, miks iga funktsioon lisati või ümber tehti.
+Arendus on toimunud teadlikult väikeste sammudena. Üks kasutaja jaoks kontrollitav muudatus tehakse valmis, käivitatakse, proovitakse päris plaanil ning commititakse eraldi. Selline tööviis on seni andnud 183 commiti ja võimaldab näha, miks iga funktsioon lisati või ümber tehti.
 
 Olulisemad kujunenud põhimõtted:
 
@@ -235,6 +235,8 @@ Kasutaja laaditud kaart salvestatakse praegu failiteena. Seetõttu võib plaan k
 - Vahepunkte saab reaalajas lohistada, lõigule lisada ja paremklõpsuga eemaldada.
 - Punktide muutmine ei nihuta samal ajal kaardivaadet.
 - Kaabli tegelik pikkus arvutatakse mõõtkava järgi.
+- Valitud ühenduse tarbijapoolset ühenduspunkti saab kaardil lohistada; kaabel ja pikkus uuenevad juba lohistamise ajal.
+- Ühenduspunkt paikneb objekti suhtes, liigub objektiga kaasa ning selle saab paremklõpsuga keskpunkti lähtestada.
 - Eraldi saab märkida olemasolevate kaablijuppide kombinatsiooni, näiteks `20 m + 10 m + 10 m`.
 - Kaablisildid on lühikesed, lohistatavad, peidetavad ja lähtestatavad.
 - Kaableid saab filtreerida 230 V, 16 A, 32 A ja 63 A tüübi järgi.
@@ -289,7 +291,7 @@ See funktsionaalsus on värskelt lisatud ja vajab enne uute objektitüüpide juu
 
 ## 7. Arenduse kronoloogia
 
-Allolev ajajoon koondab 167 commitist tähenduslikud etapid. Täpne muudatuste loetelu on käsuga `git log --reverse --oneline`.
+Allolev ajajoon koondab 183 commitist tähenduslikud etapid. Täpne muudatuste loetelu on käsuga `git log --reverse --oneline`.
 
 ### 1. juuli 2026: alus ja esimene töötav vertikaallõige
 
@@ -386,7 +388,7 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 
 ### 9.1 Vahetu jätkamiskoht
 
-Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Telk, ala ja joon kasutavad ühist `EquipmentContainer` lepingut, nende seadmeid saab hallata sama külgpaneeli kaudu ning kõiki kolme saab kasutajaliideses ühendada elektrikapi väljundiga. Kaardikaablid, vahepunktid, kokkuvõtted ja tekstiaruanded töötavad kõigi kolme tarbijatüübiga. `PowerConnectable` mudel hoiab nüüd keskpunkti suhtelist ühenduspunkti nihet ning see salvestub tagasiühilduvalt. Järgmine samm on kasutada seda nihet kaablijoonel ja lisada valitud tarbijale lohistatav ühenduspunkti marker.
+Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Telk, ala ja joon kasutavad ühist `EquipmentContainer` lepingut, nende seadmeid saab hallata sama külgpaneeli kaudu ning kõiki kolme saab kasutajaliideses ühendada elektrikapi väljundiga. Kaardikaablid, vahepunktid, kokkuvõtted ja tekstiaruanded töötavad kõigi kolme tarbijatüübiga. `PowerConnectable` mudel hoiab keskpunkti suhtelist ühenduspunkti nihet ning see salvestub tagasiühilduvalt. Valitud ühendusel kuvatakse lohistatav tarbijapoolne ühenduspunkt, mille muutmisel uueneb kaabel reaalajas. Vahetu järgmine samm on selle tervikvoo käsitsi kontrollimine telgi, ala ja joonega, sealhulgas objekti liigutamise, salvestamise ning uuesti avamise järel.
 
 ### 9.2 Joonte ja alade järgmine funktsionaalne etapp
 
@@ -405,11 +407,13 @@ Seda ei tasu lahendada kolme eraldi erandina. Enne kasutajaliidese lisamist tule
 - arvutatav vooluvajadus;
 - kasutaja määratav elektriühenduse ankrupunkt.
 
-`Tent`, `AreaObject` ja `LineObject` kasutavad sama seadmete ning vooluvajaduse lepingut. Salvestamine, ühendused, kaardikaablid ja kokkuvõtted on üldistatud. Ühenduspunkti nihe on mudelis ja failivormingus olemas, kuid selle kaardil kuvamine ning muutmine on pooleli.
+`Tent`, `AreaObject` ja `LineObject` kasutavad sama seadmete ning vooluvajaduse lepingut. Salvestamine, ühendused, kaardikaablid ja kokkuvõtted on üldistatud. Ühenduspunkti nihe on mudelis ja failivormingus olemas ning seda saab valitud ühendusel kaardil lohistada või lähtestada.
 
-### 9.3 Juba otsustatud visuaalsed täiendused
+### 9.3 Ühenduspunkti järelkontroll
 
-- Lisada telgile, alale ja joonele kaardil muudetav vooluühenduse punkt.
+- Kontrollida ühenduspunkti muutmist telgil, alal ja joonel.
+- Kontrollida, et punkt liigub objekti ning muudetud joone- või alageomeetriaga ootuspäraselt kaasa.
+- Kontrollida punkti lähtestamist ning säilimist plaani salvestamisel ja avamisel.
 
 ### 9.4 Kvaliteet ja arhitektuur
 
@@ -462,27 +466,26 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 - Kasutaja enda kaardipildi viide ei ole teise arvutisse liigutamisel kaasaskantav.
 - Undo/redo puudub, mistõttu sõltub vigade parandamine käsitsi muutmisest või varasemast salvestusest.
 - Windowsi installeri ja iseseisva runtime'iga väljalaset ei ole.
-- Ühenduspunkti nihe salvestub, kuid seda ei saa veel kaardil kuvada ega lohistada.
+- Lohistatava ühenduspunkti JavaFX-i hiirekäitumist ei kata automaattest; see vajab käsitsi kontrollimist eri objektitüüpidega.
 - Rakendusel ei ole veel veebivaadet, kasutajakontosid, õigusi ega keskset andmehoidlat.
 - Tartu kaardiandmetega otseliidestust ei ole.
 
 ## 11. Soovituslik tööjärjekord
 
-1. Kontrolli ala ja joone seadmete, vooluühenduste, kaablipunktide, salvestamise ja avamise tervikvoogu kasutajaliideses.
-2. Paranda käsitsi kontrollimisel ilmnevad vead.
-3. Kuva valitud ühendatud tarbijal lohistatav elektriühenduse ankrupunkt.
-4. Lisa ankrupunkti lähtestamine ning kontrolli selle liikumist objekti ja geomeetria muutmisel.
-5. Alusta automaatteste salvestamisest ja vooluarvutusest, sest nende regressiooni mõju on suurim.
-6. Tükelda `PancakePlannerApp` järk-järgult, alustades ala- ja joone tööriistast või detailpaneelist.
-7. Versioonista `.pplan` vorming ja lahenda kaartide kaasaskantavus.
-8. Loo Windowsi proovipakett ning katseta seda puhtas arvutis.
-9. Alles seejärel vali bakalaureusetöö järgmine suurem vertikaallõige, näiteks alajaotuskilp või avalik veebivaade.
+1. Kontrolli ühenduspunkti lohistamist ja lähtestamist telgil, alal ning joonel.
+2. Kontrolli ühenduspunkti liikumist objekti ja geomeetria muutmisel ning säilimist plaani salvestamisel ja avamisel.
+3. Paranda käsitsi kontrollimisel ilmnevad vead.
+4. Alusta automaatteste salvestamisest ja vooluarvutusest, sest nende regressiooni mõju on suurim.
+5. Tükelda `PancakePlannerApp` järk-järgult, alustades ala- ja joone tööriistast või detailpaneelist.
+6. Versioonista `.pplan` vorming ja lahenda kaartide kaasaskantavus.
+7. Loo Windowsi proovipakett ning katseta seda puhtas arvutis.
+8. Alles seejärel vali bakalaureusetöö järgmine suurem vertikaallõige, näiteks alajaotuskilp või avalik veebivaade.
 
 ## 12. Uue arendusvestluse alustamise juhis
 
 Uuele arendajale või tehisintellekti vestlusele tuleks anda vähemalt järgmine info:
 
-> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. Telgi, ala ja joone seadmed, vooluühendused, kaardikaablid ning aruanded kasutavad ühist loogikat. `PowerConnectable` nihe salvestub; järgmine samm on selle kasutamine kaablijoonel ja lohistatava ankrumarkeri lisamine.
+> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. Telgi, ala ja joone seadmed, vooluühendused, kaardikaablid ning aruanded kasutavad ühist loogikat. Valitud ühenduse tarbijapoolset ankrupunkti saab kaardil lohistada ja paremklõpsuga lähtestada; järgmine samm on selle käsitsi kontrollimine eri objektitüüpide, objekti liigutamise ning salvestamise järel.
 
 Tavaline kontroll enne muutmist:
 

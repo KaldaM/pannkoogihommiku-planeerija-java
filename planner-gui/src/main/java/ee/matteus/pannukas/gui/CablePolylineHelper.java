@@ -28,4 +28,14 @@ final class CablePolylineHelper {
         polyline.getPoints().set(xCoordinateIndex, mapPoint.getX());
         polyline.getPoints().set(yCoordinateIndex, mapPoint.getY());
     }
+
+    static void updateLastPoint(Polyline polyline, Point2D mapPoint) {
+        int yCoordinateIndex = polyline.getPoints().size() - 1;
+        int xCoordinateIndex = yCoordinateIndex - 1;
+        if (xCoordinateIndex < 0) {
+            return;
+        }
+        polyline.getPoints().set(xCoordinateIndex, mapPoint.getX());
+        polyline.getPoints().set(yCoordinateIndex, mapPoint.getY());
+    }
 }
