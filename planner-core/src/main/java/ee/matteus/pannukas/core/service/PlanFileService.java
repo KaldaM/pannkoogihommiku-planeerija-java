@@ -28,9 +28,13 @@ import java.util.List;
 import java.util.Properties;
 
 public class PlanFileService {
+    public static final int CURRENT_FORMAT_VERSION = 1;
+    private static final String FORMAT_VERSION_PROPERTY = "formatVersion";
+
     public void save(EventPlan plan, Path file) throws IOException {
         Properties properties = new Properties();
         properties.setProperty("format", "pannukas-plan-v1");
+        properties.setProperty(FORMAT_VERSION_PROPERTY, Integer.toString(CURRENT_FORMAT_VERSION));
         properties.setProperty("plan.name", plan.name());
         properties.setProperty("plan.mapImagePath", plan.mapImagePath());
         properties.setProperty("plan.pixelsPerMeter", Double.toString(plan.pixelsPerMeter()));
@@ -97,6 +101,7 @@ public class PlanFileService {
         try (InputStream input = Files.newInputStream(file)) {
             properties.load(input);
         }
+        validateFormatVersion(properties);
 
         EventPlan plan = new EventPlan(properties.getProperty("plan.name", "Pannkoogihommik"));
         plan.setMapImagePath(properties.getProperty("plan.mapImagePath", ""));
@@ -154,6 +159,32 @@ public class PlanFileService {
         }
 
         return plan;
+    }
+
+    private void validateFormatVersion(Properties properties) throws IOException {
+        String value = properties.getProperty(FORMAT_VERSION_PROPERTY);
+        if (value == null || value.isBlank()) {
+            return;
+        }
+
+        int formatVersion;
+        try {
+            formatVersion = Integer.parseInt(value.trim());
+        } catch (NumberFormatException exception) {
+            throw new IOException("Plaanifaili vormingu versioon ei ole korrektne: " + value, exception);
+        }
+
+        if (formatVersion > CURRENT_FORMAT_VERSION) {
+            throw new IOException(
+                    "Plaanifail on loodud uuema rakenduse versiooniga "
+                            + "(faili vorming " + formatVersion
+                            + ", toetatud kuni " + CURRENT_FORMAT_VERSION + "). "
+                            + "Faili avamiseks uuenda rakendust."
+            );
+        }
+        if (formatVersion < 1) {
+            throw new IOException("Plaanifaili vormingu versiooni " + formatVersion + " ei toetata.");
+        }
     }
 
     private void writeObject(Properties properties, String prefix, PlannerObject object) {

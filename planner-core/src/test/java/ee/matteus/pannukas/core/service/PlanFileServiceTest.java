@@ -14,16 +14,69 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PlanFileServiceTest {
     @TempDir
     Path tempDirectory;
 
     private final PlanFileService service = new PlanFileService();
+
+    @Test
+    void writesCurrentFormatVersionAndLoadsVersionedPlan() throws IOException {
+        EventPlan plan = new EventPlan("Versiooniga plaan");
+        Path file = tempDirectory.resolve("versioned-plan.pplan");
+
+        service.save(plan, file);
+
+        Properties properties = new Properties();
+        try (InputStream input = Files.newInputStream(file)) {
+            properties.load(input);
+        }
+        assertEquals(
+                Integer.toString(PlanFileService.CURRENT_FORMAT_VERSION),
+                properties.getProperty("formatVersion")
+        );
+        assertEquals("Versiooniga plaan", service.load(file).name());
+    }
+
+    @Test
+    void loadsLegacyPlanWithoutFormatVersion() throws IOException {
+        Path file = tempDirectory.resolve("unversioned-plan.pplan");
+        Files.writeString(file, """
+                format=pannukas-plan-v1
+                plan.name=Versioonita plaan
+                objects.count=0
+                connections.count=0
+                """);
+
+        EventPlan loadedPlan = service.load(file);
+
+        assertEquals("Versioonita plaan", loadedPlan.name());
+    }
+
+    @Test
+    void rejectsPlanFromNewerFormatVersion() throws IOException {
+        Path file = tempDirectory.resolve("future-plan.pplan");
+        Files.writeString(file, """
+                formatVersion=2
+                plan.name=Tuleviku plaan
+                objects.count=0
+                connections.count=0
+                """);
+
+        IOException exception = assertThrows(IOException.class, () -> service.load(file));
+
+        assertTrue(exception.getMessage().contains("uuema rakenduse versiooniga"));
+        assertTrue(exception.getMessage().contains("uuenda rakendust"));
+    }
 
     @Test
     void savesAndLoadsCustomObjectOpacity() throws IOException {

@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
 - Dokumendi viimane sisuline uuendus: 15. august 2026
-- Koodi viimane dokumenteeritud commit: `7408507` (`Add configurable power connection anchors`, 15. august 2026)
+- Koodi viimane dokumenteeritud commit: `cc07e8d` (`Add draggable power connection anchors`, 15. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -90,7 +90,7 @@ Need ei ole praeguse prototüübi lubatud funktsioonid, vaid suurema süsteemi u
 
 ## 4. Arenduspõhimõtted
 
-Arendus on toimunud teadlikult väikeste sammudena. Üks kasutaja jaoks kontrollitav muudatus tehakse valmis, käivitatakse, proovitakse päris plaanil ning commititakse eraldi. Selline tööviis on seni andnud 183 commiti ja võimaldab näha, miks iga funktsioon lisati või ümber tehti.
+Arendus on toimunud teadlikult väikeste sammudena. Üks kasutaja jaoks kontrollitav muudatus tehakse valmis, käivitatakse, proovitakse päris plaanil ning commititakse eraldi. Selline tööviis on seni andnud 184 commiti ja võimaldab näha, miks iga funktsioon lisati või ümber tehti.
 
 Olulisemad kujunenud põhimõtted:
 
@@ -178,7 +178,7 @@ Plaan salvestatakse `.pplan` laiendiga Java properties-vormingus faili. Salvesta
 - kaablite trajektoorid, märkmed, jupid ja sildiasukohad;
 - kihtide, kaablitüüpide ja gruppide nähtavus.
 
-Lugeja kasutab puuduvate väljade korral vaikeväärtusi. Tänu sellele on arenduse käigus säilinud vanemate plaanifailide avamine. Vormingul ei ole praegu eraldi skeemiversiooni ega migratsioonisüsteemi; enne suuremaid mudelimuudatusi tuleb see lisada.
+Uued failid sisaldavad täisarvulist `formatVersion` välja; praegune vorminguversioon on `1`. Versioonita fail loetakse tagasiühilduvuse huvides esimese versiooni failiks. Rakendus keeldub endast uuema vormingu avamisest ja palub kasutajal rakendust uuendada, selle asemel et tundmatuid andmeid vaikselt valesti tõlgendada. Eraldi migratsioonisüsteemi ei ole veel vaja läinud, kuid see tuleb lisada enne esimest murdvat vormingumuudatust.
 
 Kasutaja laaditud kaart salvestatakse praegu failiteena. Seetõttu võib plaan koos kaardiga teise arvutisse viimisel kaardi kaotada. Tulevikus tuleks kaart kas plaanifaili sisse pakkida või kasutada plaanikausta suhtelist teed.
 
@@ -291,7 +291,7 @@ See funktsionaalsus on värskelt lisatud ja vajab enne uute objektitüüpide juu
 
 ## 7. Arenduse kronoloogia
 
-Allolev ajajoon koondab 183 commitist tähenduslikud etapid. Täpne muudatuste loetelu on käsuga `git log --reverse --oneline`.
+Allolev ajajoon koondab 184 commitist tähenduslikud etapid. Täpne muudatuste loetelu on käsuga `git log --reverse --oneline`.
 
 ### 1. juuli 2026: alus ja esimene töötav vertikaallõige
 
@@ -424,7 +424,7 @@ Enne funktsioonide hulga suurt kasvatamist on vaja:
 - lisada domeeniloogika automaattestid;
 - lisada salvestamise ja vanade failide tagasiühilduvuse testid;
 - lisada kaablite ning kujundite geomeetria testid;
-- võtta `.pplan` vormingus kasutusele selge versiooninumber ja migratsioonid;
+- lisada esimese murdva `.pplan` vormingumuudatuse eel versioonidevahelised migratsioonid;
 - otsustada, kas properties-vorming sobib pikaajaliselt või tuleks liikuda näiteks versioonitud JSON-vormingule;
 - lisada logimine ja kasutajale arusaadavad veateated ootamatute failivigade jaoks.
 
@@ -462,7 +462,7 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 - Automaattestid katavad geomeetriat, seadmemudelit, salvestamise tagasiühilduvust, vooluarvutust, kaabli otspunkte ja tekstiaruannet, kuid kasutajaliidese sündmuste testikate on endiselt piiratud.
 - Peamine JavaFX-i rakendusklass on liiga suur ja koondab veel palju erinevaid vastutusi.
-- Salvestusvormingul puudub versiooninumber ja ametlik skeem.
+- Salvestusvormingul on versiooninumber, kuid puuduvad veel ametlik skeem ja versioonidevahelised migratsioonid.
 - Kasutaja enda kaardipildi viide ei ole teise arvutisse liigutamisel kaasaskantav.
 - Undo/redo puudub, mistõttu sõltub vigade parandamine käsitsi muutmisest või varasemast salvestusest.
 - Windowsi installeri ja iseseisva runtime'iga väljalaset ei ole.
@@ -477,7 +477,7 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 3. Paranda käsitsi kontrollimisel ilmnevad vead.
 4. Alusta automaatteste salvestamisest ja vooluarvutusest, sest nende regressiooni mõju on suurim.
 5. Tükelda `PancakePlannerApp` järk-järgult, alustades ala- ja joone tööriistast või detailpaneelist.
-6. Versioonista `.pplan` vorming ja lahenda kaartide kaasaskantavus.
+6. Lahenda kaardifailide kaasaskantavus ning lisa vajaduse tekkimisel vormingu migratsioonid.
 7. Loo Windowsi proovipakett ning katseta seda puhtas arvutis.
 8. Alles seejärel vali bakalaureusetöö järgmine suurem vertikaallõige, näiteks alajaotuskilp või avalik veebivaade.
 
