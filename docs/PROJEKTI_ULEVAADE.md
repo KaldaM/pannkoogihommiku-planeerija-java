@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
 - Dokumendi viimane sisuline uuendus: 15. august 2026
-- Koodi viimane dokumenteeritud commit: `833db8c` (`Support power connections for all consumers`, 14. august 2026)
+- Koodi viimane dokumenteeritud commit: `7992a97` (`Enable power connections for areas and lines`, 15. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -386,7 +386,7 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 
 ### 9.1 Vahetu jätkamiskoht
 
-Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Telk, ala ja joon kasutavad ühist `EquipmentContainer` lepingut, nende seadmeid saab hallata sama külgpaneeli kaudu ning kõiki kolme saab kasutajaliideses ühendada elektrikapi väljundiga. Kaardikaablid, vahepunktid, kokkuvõtted ja tekstiaruanded töötavad kõigi kolme tarbijatüübiga. Ala ja joone kaabli vaikimisi otspunkt on praegu kujundi piirdekasti keskpunkt. Järgmine samm on kogu vooluühenduse töövoo käsitsi kontroll ning seejärel kasutaja määratav ühenduspunkt.
+Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Telk, ala ja joon kasutavad ühist `EquipmentContainer` lepingut, nende seadmeid saab hallata sama külgpaneeli kaudu ning kõiki kolme saab kasutajaliideses ühendada elektrikapi väljundiga. Kaardikaablid, vahepunktid, kokkuvõtted ja tekstiaruanded töötavad kõigi kolme tarbijatüübiga. `PowerConnectable` mudel hoiab nüüd keskpunkti suhtelist ühenduspunkti nihet ning see salvestub tagasiühilduvalt. Järgmine samm on kasutada seda nihet kaablijoonel ja lisada valitud tarbijale lohistatav ühenduspunkti marker.
 
 ### 9.2 Joonte ja alade järgmine funktsionaalne etapp
 
@@ -405,7 +405,7 @@ Seda ei tasu lahendada kolme eraldi erandina. Enne kasutajaliidese lisamist tule
 - arvutatav vooluvajadus;
 - kasutaja määratav elektriühenduse ankrupunkt.
 
-`Tent`, `AreaObject` ja `LineObject` kasutavad sama seadmete ning vooluvajaduse lepingut. Salvestamine, ühendused, kaardikaablid ja kokkuvõtted on üldistatud. Pooleli on kasutaja määratav kaabli ühenduspunkt.
+`Tent`, `AreaObject` ja `LineObject` kasutavad sama seadmete ning vooluvajaduse lepingut. Salvestamine, ühendused, kaardikaablid ja kokkuvõtted on üldistatud. Ühenduspunkti nihe on mudelis ja failivormingus olemas, kuid selle kaardil kuvamine ning muutmine on pooleli.
 
 ### 9.3 Juba otsustatud visuaalsed täiendused
 
@@ -462,7 +462,7 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 - Kasutaja enda kaardipildi viide ei ole teise arvutisse liigutamisel kaasaskantav.
 - Undo/redo puudub, mistõttu sõltub vigade parandamine käsitsi muutmisest või varasemast salvestusest.
 - Windowsi installeri ja iseseisva runtime'iga väljalaset ei ole.
-- Telgi ja tulevaste vabakujuliste tarbijate kaabli ühenduspunkti ei saa eraldi määrata.
+- Ühenduspunkti nihe salvestub, kuid seda ei saa veel kaardil kuvada ega lohistada.
 - Rakendusel ei ole veel veebivaadet, kasutajakontosid, õigusi ega keskset andmehoidlat.
 - Tartu kaardiandmetega otseliidestust ei ole.
 
@@ -470,8 +470,8 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 1. Kontrolli ala ja joone seadmete, vooluühenduste, kaablipunktide, salvestamise ja avamise tervikvoogu kasutajaliideses.
 2. Paranda käsitsi kontrollimisel ilmnevad vead.
-3. Lisa elektriühenduse ankrupunkt telgile, joonele ja alale.
-4. Kontrolli ankrupunkti liikumist objekti liigutamisel ning säilimist salvestusringis.
+3. Kuva valitud ühendatud tarbijal lohistatav elektriühenduse ankrupunkt.
+4. Lisa ankrupunkti lähtestamine ning kontrolli selle liikumist objekti ja geomeetria muutmisel.
 5. Alusta automaatteste salvestamisest ja vooluarvutusest, sest nende regressiooni mõju on suurim.
 6. Tükelda `PancakePlannerApp` järk-järgult, alustades ala- ja joone tööriistast või detailpaneelist.
 7. Versioonista `.pplan` vorming ja lahenda kaartide kaasaskantavus.
@@ -482,7 +482,7 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 Uuele arendajale või tehisintellekti vestlusele tuleks anda vähemalt järgmine info:
 
-> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. Telgi, ala ja joone seadmed, vooluühendused, kaardikaablid ning aruanded kasutavad ühist loogikat. Järgmine samm on tervikvoo käsitsi kontroll ja seejärel kasutaja määratav elektriühenduse ankrupunkt.
+> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. Telgi, ala ja joone seadmed, vooluühendused, kaardikaablid ning aruanded kasutavad ühist loogikat. `PowerConnectable` nihe salvestub; järgmine samm on selle kasutamine kaablijoonel ja lohistatava ankrumarkeri lisamine.
 
 Tavaline kontroll enne muutmist:
 

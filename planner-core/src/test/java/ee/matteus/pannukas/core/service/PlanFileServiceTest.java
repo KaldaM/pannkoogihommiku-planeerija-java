@@ -103,6 +103,7 @@ class PlanFileServiceTest {
 
         Tent loadedTent = (Tent) loadedPlan.objects().getFirst();
         assertEquals(Tent.DEFAULT_OPACITY, loadedTent.opacity(), 0.0001);
+        assertEquals(new Position(0, 0), loadedTent.powerConnectionOffset());
     }
 
     @Test
@@ -160,6 +161,8 @@ class PlanFileServiceTest {
         assertEquals(0, loadedLine.equipment().size());
         assertEquals(0, loadedArea.requiredWatts());
         assertEquals(0, loadedLine.requiredWatts());
+        assertEquals(new Position(0, 0), loadedArea.powerConnectionOffset());
+        assertEquals(new Position(0, 0), loadedLine.powerConnectionOffset());
     }
 
     @Test
@@ -185,5 +188,30 @@ class PlanFileServiceTest {
         assertEquals("area", loadedPlan.powerConnections().get(0).consumerId());
         assertEquals("line", loadedPlan.powerConnections().get(1).consumerId());
         assertEquals(800, new PowerSummaryService().summaries(loadedPlan).getFirst().usedWatts());
+    }
+
+    @Test
+    void savesAndLoadsPowerConnectionOffsets() throws IOException {
+        EventPlan plan = new EventPlan("Test");
+        Tent tent = new Tent("tent", "Telk", new Position(10, 20));
+        tent.setPowerConnectionOffset(new Position(4, -6));
+        AreaObject area = new AreaObject("area", "Ala", new Position(30, 40));
+        area.setPowerConnectionOffset(new Position(-12, 8));
+        LineObject line = new LineObject("line", "Joon", new Position(50, 60));
+        line.setPowerConnectionOffset(new Position(15, 20));
+        plan.addObject(tent);
+        plan.addObject(area);
+        plan.addObject(line);
+        Path file = tempDirectory.resolve("power-connection-offsets.pplan");
+
+        service.save(plan, file);
+        EventPlan loadedPlan = service.load(file);
+
+        Tent loadedTent = (Tent) loadedPlan.objects().get(0);
+        AreaObject loadedArea = (AreaObject) loadedPlan.objects().get(1);
+        LineObject loadedLine = (LineObject) loadedPlan.objects().get(2);
+        assertEquals(new Position(4, -6), loadedTent.powerConnectionOffset());
+        assertEquals(new Position(-12, 8), loadedArea.powerConnectionOffset());
+        assertEquals(new Position(15, 20), loadedLine.powerConnectionOffset());
     }
 }

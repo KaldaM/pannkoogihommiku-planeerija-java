@@ -11,6 +11,7 @@ public class LineObject extends PlannerObject implements EquipmentContainer {
     private final List<Equipment> equipment = new ArrayList<>();
     private String colorHex;
     private double widthPixels;
+    private Position powerConnectionOffset = new Position(0, 0);
 
     public LineObject(String id, String name, Position position) {
         super(id, name, position);
@@ -62,6 +63,16 @@ public class LineObject extends PlannerObject implements EquipmentContainer {
             throw new IllegalArgumentException("Joone laius peab olema positiivne.");
         }
         this.widthPixels = widthPixels;
+    }
+
+    @Override
+    public Position powerConnectionOffset() {
+        return powerConnectionOffset;
+    }
+
+    @Override
+    public void setPowerConnectionOffset(Position offset) {
+        powerConnectionOffset = offset == null ? new Position(0, 0) : offset;
     }
 
     @Override

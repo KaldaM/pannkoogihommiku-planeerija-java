@@ -11,6 +11,7 @@ public class AreaObject extends PlannerObject implements EquipmentContainer {
     private final List<Equipment> equipment = new ArrayList<>();
     private String colorHex;
     private double opacity;
+    private Position powerConnectionOffset = new Position(0, 0);
 
     public AreaObject(String id, String name, Position position) {
         super(id, name, position);
@@ -59,6 +60,16 @@ public class AreaObject extends PlannerObject implements EquipmentContainer {
 
     public void setOpacity(double opacity) {
         this.opacity = Math.max(0.0, Math.min(1.0, opacity));
+    }
+
+    @Override
+    public Position powerConnectionOffset() {
+        return powerConnectionOffset;
+    }
+
+    @Override
+    public void setPowerConnectionOffset(Position offset) {
+        powerConnectionOffset = offset == null ? new Position(0, 0) : offset;
     }
 
     @Override

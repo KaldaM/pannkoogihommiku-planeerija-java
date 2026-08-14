@@ -12,6 +12,7 @@ public class Tent extends PlannerObject implements EquipmentContainer {
     private double rotationDegrees;
     private String colorHex;
     private double opacity;
+    private Position powerConnectionOffset = new Position(0, 0);
     private final List<Equipment> equipment = new ArrayList<>();
 
     public Tent(String id, String name, Position position) {
@@ -60,6 +61,16 @@ public class Tent extends PlannerObject implements EquipmentContainer {
 
     public void setOpacity(double opacity) {
         this.opacity = Math.max(0.0, Math.min(1.0, opacity));
+    }
+
+    @Override
+    public Position powerConnectionOffset() {
+        return powerConnectionOffset;
+    }
+
+    @Override
+    public void setPowerConnectionOffset(Position offset) {
+        powerConnectionOffset = offset == null ? new Position(0, 0) : offset;
     }
 
     @Override

@@ -2,7 +2,7 @@ package ee.matteus.pannukas.core.model;
 
 import java.util.List;
 
-public interface EquipmentContainer extends PowerConsumer {
+public interface EquipmentContainer extends PowerConnectable {
     List<Equipment> equipment();
 
     void addEquipment(Equipment item);

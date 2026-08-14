@@ -13,6 +13,7 @@ import ee.matteus.pannukas.core.model.MarkerType;
 import ee.matteus.pannukas.core.model.PlannerObject;
 import ee.matteus.pannukas.core.model.Position;
 import ee.matteus.pannukas.core.model.PowerConnection;
+import ee.matteus.pannukas.core.model.PowerConnectable;
 import ee.matteus.pannukas.core.model.PowerOutlet;
 import ee.matteus.pannukas.core.model.PowerSource;
 import ee.matteus.pannukas.core.model.TextObject;
@@ -167,6 +168,10 @@ public class PlanFileService {
         properties.setProperty(prefix + "customMapLabelPosition", Boolean.toString(object.customMapLabelPosition()));
         properties.setProperty(prefix + "mapLabelOffsetX", Double.toString(object.mapLabelOffset().x()));
         properties.setProperty(prefix + "mapLabelOffsetY", Double.toString(object.mapLabelOffset().y()));
+        if (object instanceof PowerConnectable connectable) {
+            properties.setProperty(prefix + "powerConnectionOffsetX", Double.toString(connectable.powerConnectionOffset().x()));
+            properties.setProperty(prefix + "powerConnectionOffsetY", Double.toString(connectable.powerConnectionOffset().y()));
+        }
 
         if (object instanceof Tent tent) {
             writeTent(properties, prefix, tent);
@@ -273,6 +278,12 @@ public class PlanFileService {
             object.setMapLabelOffset(new Position(
                     doubleValue(properties, prefix + "mapLabelOffsetX", 0),
                     doubleValue(properties, prefix + "mapLabelOffsetY", 0)
+            ));
+        }
+        if (object instanceof PowerConnectable connectable) {
+            connectable.setPowerConnectionOffset(new Position(
+                    doubleValue(properties, prefix + "powerConnectionOffsetX", 0),
+                    doubleValue(properties, prefix + "powerConnectionOffsetY", 0)
             ));
         }
         return object;
