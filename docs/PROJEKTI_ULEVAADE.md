@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
-- Dokumendi viimane sisuline uuendus: 14. august 2026
-- Koodi viimane dokumenteeritud commit: `323b8ec` (`Manage equipment for areas and lines`, 14. august 2026)
+- Dokumendi viimane sisuline uuendus: 15. august 2026
+- Koodi viimane dokumenteeritud commit: `833db8c` (`Support power connections for all consumers`, 14. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -386,7 +386,7 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 
 ### 9.1 Vahetu jätkamiskoht
 
-Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Joone paksust, objektide läbipaistvust ning teksti- ja sildisuurusi saab muuta slideritega. Telk, ala ja joon kasutavad ühist `EquipmentContainer` lepingut ning nende seadmeid saab hallata sama külgpaneeli kaudu. Domeenimudel lubab kõiki kolme ühendada vooluallikaga, arvestab nende tarbimist kokkuvõttes ning säilitab ühendused salvestusringis. Järgmine samm on üldistada kasutajaliidese vooluvalikud ja kaablijoonistamine telgilt alale ning joonele.
+Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Telk, ala ja joon kasutavad ühist `EquipmentContainer` lepingut, nende seadmeid saab hallata sama külgpaneeli kaudu ning kõiki kolme saab kasutajaliideses ühendada elektrikapi väljundiga. Kaardikaablid, vahepunktid, kokkuvõtted ja tekstiaruanded töötavad kõigi kolme tarbijatüübiga. Ala ja joone kaabli vaikimisi otspunkt on praegu kujundi piirdekasti keskpunkt. Järgmine samm on kogu vooluühenduse töövoo käsitsi kontroll ning seejärel kasutaja määratav ühenduspunkt.
 
 ### 9.2 Joonte ja alade järgmine funktsionaalne etapp
 
@@ -405,11 +405,11 @@ Seda ei tasu lahendada kolme eraldi erandina. Enne kasutajaliidese lisamist tule
 - arvutatav vooluvajadus;
 - kasutaja määratav elektriühenduse ankrupunkt.
 
-`Tent`, `AreaObject` ja `LineObject` kasutavad sama seadmete ning vooluvajaduse lepingut. Salvestamine, domeeni ühendused ja kokkuvõtted on üldistatud; kasutajaliides ning kaabli otspunkti valimine vajavad veel üldistamist.
+`Tent`, `AreaObject` ja `LineObject` kasutavad sama seadmete ning vooluvajaduse lepingut. Salvestamine, ühendused, kaardikaablid ja kokkuvõtted on üldistatud. Pooleli on kasutaja määratav kaabli ühenduspunkt.
 
 ### 9.3 Juba otsustatud visuaalsed täiendused
 
-- Kontrollida, et joone paksus ja ala läbipaistvus salvestuvad ning avanevad vanades ja uutes plaanides korrektselt.
+- Lisada telgile, alale ja joonele kaardil muudetav vooluühenduse punkt.
 
 ### 9.4 Kvaliteet ja arhitektuur
 
@@ -456,23 +456,22 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 ## 10. Teadaolevad piirangud ja riskid
 
-- Automaattestide sõltuvused on seadistatud, kuid sisuline testikate praktiliselt puudub.
+- Automaattestid katavad geomeetriat, seadmemudelit, salvestamise tagasiühilduvust, vooluarvutust, kaabli otspunkte ja tekstiaruannet, kuid kasutajaliidese sündmuste testikate on endiselt piiratud.
 - Peamine JavaFX-i rakendusklass on liiga suur ja koondab veel palju erinevaid vastutusi.
 - Salvestusvormingul puudub versiooninumber ja ametlik skeem.
 - Kasutaja enda kaardipildi viide ei ole teise arvutisse liigutamisel kaasaskantav.
 - Undo/redo puudub, mistõttu sõltub vigade parandamine käsitsi muutmisest või varasemast salvestusest.
 - Windowsi installeri ja iseseisva runtime'iga väljalaset ei ole.
-- Ala- ja jooneobjektid ei ole veel elektritarbijad ega sisalda seadmeid.
 - Telgi ja tulevaste vabakujuliste tarbijate kaabli ühenduspunkti ei saa eraldi määrata.
 - Rakendusel ei ole veel veebivaadet, kasutajakontosid, õigusi ega keskset andmehoidlat.
 - Tartu kaardiandmetega otseliidestust ei ole.
 
 ## 11. Soovituslik tööjärjekord
 
-1. Kontrolli ala ja joone seadmete lisamist, eemaldamist, dubleerimist, salvestamist ning avamist kasutajaliideses.
-2. Paranda käsitsi kontrollimisel ilmnevad seadmehalduse vead.
-3. Üldista kasutajaliidese vooluühendused ja kaablid telgilt kõigile elektritarbijatele.
-4. Lisa elektriühenduse ankrupunkt telgile, joonele ja alale.
+1. Kontrolli ala ja joone seadmete, vooluühenduste, kaablipunktide, salvestamise ja avamise tervikvoogu kasutajaliideses.
+2. Paranda käsitsi kontrollimisel ilmnevad vead.
+3. Lisa elektriühenduse ankrupunkt telgile, joonele ja alale.
+4. Kontrolli ankrupunkti liikumist objekti liigutamisel ning säilimist salvestusringis.
 5. Alusta automaatteste salvestamisest ja vooluarvutusest, sest nende regressiooni mõju on suurim.
 6. Tükelda `PancakePlannerApp` järk-järgult, alustades ala- ja joone tööriistast või detailpaneelist.
 7. Versioonista `.pplan` vorming ja lahenda kaartide kaasaskantavus.
@@ -483,7 +482,7 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 Uuele arendajale või tehisintellekti vestlusele tuleks anda vähemalt järgmine info:
 
-> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. `EquipmentContainer` ühendab telgi, ala ja joone seadmemudeli; domeen toetab kõigi kolme vooluühendusi. Järgmine suurem samm on GUI vooluvalikute ja kaablijoonistamise üldistamine alale ning joonele.
+> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. Telgi, ala ja joone seadmed, vooluühendused, kaardikaablid ning aruanded kasutavad ühist loogikat. Järgmine samm on tervikvoo käsitsi kontroll ja seejärel kasutaja määratav elektriühenduse ankrupunkt.
 
 Tavaline kontroll enne muutmist:
 

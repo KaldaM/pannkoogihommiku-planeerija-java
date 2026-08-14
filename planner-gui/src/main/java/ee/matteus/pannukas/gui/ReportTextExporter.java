@@ -3,6 +3,7 @@ package ee.matteus.pannukas.gui;
 import ee.matteus.pannukas.core.model.ConnectorType;
 import ee.matteus.pannukas.core.model.AreaObject;
 import ee.matteus.pannukas.core.model.Equipment;
+import ee.matteus.pannukas.core.model.EquipmentContainer;
 import ee.matteus.pannukas.core.model.EventPlan;
 import ee.matteus.pannukas.core.model.LineObject;
 import ee.matteus.pannukas.core.model.MarkerObject;
@@ -31,7 +32,7 @@ final class ReportTextExporter {
     private static final Pattern CABLE_LENGTH_PATTERN = Pattern.compile("\\d+(?:[,.]\\d+)?");
     private static final Comparator<CableSummaryRow> CABLE_SUMMARY_ROW_COMPARATOR = Comparator
             .comparing((CableSummaryRow row) -> row.connection().connectorType())
-            .thenComparing(row -> row.tent().name(), String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(row -> row.consumer().name(), String.CASE_INSENSITIVE_ORDER)
             .thenComparing(row -> row.source().name(), String.CASE_INSENSITIVE_ORDER);
 
     private final PowerSummaryService powerSummaryService;
@@ -99,7 +100,7 @@ final class ReportTextExporter {
             }
             builder.append(lineSeparator);
         }
-        appendUnconnectedTentsReport(builder, plan, lineSeparator);
+        appendUnconnectedConsumersReport(builder, plan, lineSeparator);
     }
 
     private void appendOutletReport(
@@ -112,8 +113,8 @@ final class ReportTextExporter {
             String lineSeparator
     ) {
         int usedWatts = usedWatts(plan, outlet.id());
-        List<Tent> tents = connectedTents(plan, source.id(), outlet.id());
-        if (reportScope == ReportExportScope.COMPACT && usedWatts == 0 && tents.isEmpty()) {
+        List<PlannerObject> consumers = connectedConsumers(plan, source.id(), outlet.id());
+        if (reportScope == ReportExportScope.COMPACT && usedWatts == 0 && consumers.isEmpty()) {
             return;
         }
         builder.append("  ")
@@ -126,22 +127,26 @@ final class ReportTextExporter {
                 .append(remainingWattsText(outlet.capacityWatts() - usedWatts))
                 .append(lineSeparator);
 
-        if (tents.isEmpty()) {
+        if (consumers.isEmpty()) {
             builder.append("    Tarbijaid pole").append(lineSeparator);
             return;
         }
 
-        for (Tent tent : tents) {
+        for (PlannerObject consumerObject : consumers) {
+            PowerConsumer consumer = (PowerConsumer) consumerObject;
             builder.append("    - ")
-                    .append(tent.name())
+                    .append(consumer.name())
                     .append(": ")
-                    .append(tent.requiredWatts())
+                    .append(consumer.requiredWatts())
                     .append(" W");
-            if (!tent.groupName().isBlank()) {
-                builder.append(" (").append(tent.groupName()).append(")");
+            if (!consumerObject.groupName().isBlank()) {
+                builder.append(" (").append(consumerObject.groupName()).append(")");
             }
             builder.append(lineSeparator);
-            for (Equipment equipment : tent.equipment()) {
+            if (!(consumerObject instanceof EquipmentContainer container)) {
+                continue;
+            }
+            for (Equipment equipment : container.equipment()) {
                 builder.append("      * ")
                         .append(equipment.name())
                         .append(": ")
@@ -152,31 +157,30 @@ final class ReportTextExporter {
         }
     }
 
-    private List<Tent> connectedTents(EventPlan plan, String sourceId, String outletId) {
+    private List<PlannerObject> connectedConsumers(EventPlan plan, String sourceId, String outletId) {
         return plan.powerConnections().stream()
                 .filter(connection -> connection.sourceId().equals(sourceId))
                 .filter(connection -> connection.outletId().equals(outletId))
                 .map(connection -> plan.findObject(connection.consumerId()))
                 .flatMap(optional -> optional.stream())
-                .filter(Tent.class::isInstance)
-                .map(Tent.class::cast)
+                .filter(PowerConsumer.class::isInstance)
                 .toList();
     }
 
-    private void appendUnconnectedTentsReport(StringBuilder builder, EventPlan plan, String lineSeparator) {
-        List<Tent> unconnectedTents = plan.tents().stream()
-                .filter(tent -> plan.findPowerConnectionForConsumer(tent.id()).isEmpty())
+    private void appendUnconnectedConsumersReport(StringBuilder builder, EventPlan plan, String lineSeparator) {
+        List<PowerConsumer> unconnectedConsumers = plan.powerConsumers().stream()
+                .filter(consumer -> plan.findPowerConnectionForConsumer(consumer.id()).isEmpty())
                 .toList();
-        if (unconnectedTents.isEmpty()) {
+        if (unconnectedConsumers.isEmpty()) {
             return;
         }
 
-        builder.append("Ühendamata telgid").append(lineSeparator);
-        for (Tent tent : unconnectedTents) {
+        builder.append("Ühendamata tarbijad").append(lineSeparator);
+        for (PowerConsumer consumer : unconnectedConsumers) {
             builder.append("  - ")
-                    .append(tent.name())
+                    .append(consumer.name())
                     .append(": ")
-                    .append(tent.requiredWatts())
+                    .append(consumer.requiredWatts())
                     .append(" W")
                     .append(lineSeparator);
         }
@@ -193,8 +197,11 @@ final class ReportTextExporter {
         boolean hasNotedLength = false;
         List<CableSummaryRow> cableRows = new ArrayList<>();
         Map<ConnectorType, CableTypeSummary> summariesByType = new EnumMap<>(ConnectorType.class);
-        for (Tent tent : plan.tents()) {
-            PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
+        for (PlannerObject consumer : plan.objects()) {
+            if (!(consumer instanceof PowerConsumer)) {
+                continue;
+            }
+            PowerConnection connection = plan.findPowerConnectionForConsumer(consumer.id()).orElse(null);
             if (connection == null) {
                 continue;
             }
@@ -207,7 +214,7 @@ final class ReportTextExporter {
             }
 
             double lengthMeters = CableDisplayHelper.lengthMeters(
-                    CablePathHelper.cablePath(tent, source, connection, plan.pixelsPerMeter()),
+                    CablePathHelper.cablePath(consumer, source, connection, plan.pixelsPerMeter()),
                     plan.pixelsPerMeter()
             );
             totalLengthMeters += lengthMeters;
@@ -223,7 +230,7 @@ final class ReportTextExporter {
                 typeSummary.addPieces(cableLengthPieces(connection));
                 hasNotedLength = true;
             }
-            cableRows.add(new CableSummaryRow(tent, source, connection, lengthMeters, notedLengthMeters));
+            cableRows.add(new CableSummaryRow(consumer, source, connection, lengthMeters, notedLengthMeters));
         }
 
         if (cableRows.isEmpty()) {
@@ -284,7 +291,7 @@ final class ReportTextExporter {
                 ? "%.1f m kaardil, %.1f m märgitud".formatted(row.mapLengthMeters(), row.notedLengthMeters().getAsDouble())
                 : "%.1f m".formatted(row.mapLengthMeters());
         return "  - %s -> %s (%s): %s%s".formatted(
-                row.tent().name(),
+                row.consumer().name(),
                 row.source().name(),
                 row.connection().connectorType().displayName(),
                 lengthText,
@@ -468,7 +475,7 @@ final class ReportTextExporter {
     }
 
     private record CableSummaryRow(
-            Tent tent,
+            PlannerObject consumer,
             PowerSource source,
             PowerConnection connection,
             double mapLengthMeters,

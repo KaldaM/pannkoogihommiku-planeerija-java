@@ -110,7 +110,7 @@ public class PancakePlannerApp extends Application {
     private static final Pattern CABLE_LENGTH_PATTERN = Pattern.compile("\\d+(?:[,.]\\d+)?");
     private static final Comparator<CableSummaryRow> CABLE_SUMMARY_ROW_COMPARATOR = Comparator
             .comparing((CableSummaryRow row) -> row.connection().connectorType())
-            .thenComparing(row -> row.tent().name(), String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(row -> row.consumer().name(), String.CASE_INSENSITIVE_ORDER)
             .thenComparing(row -> row.source().name(), String.CASE_INSENSITIVE_ORDER);
     private static final double MIN_MAP_WIDTH = 760.0;
     private static final double MIN_MAP_HEIGHT = 560.0;
@@ -252,7 +252,7 @@ public class PancakePlannerApp extends Application {
     private ComboBox<PlacementType> placementTypeComboBox;
     private Button addPlacementButton;
     private PlannerObject selectedObject;
-    private Tent pendingPowerSourceTent;
+    private PlannerObject pendingPowerSourceConsumer;
     private String pendingPlacementName;
     private String pendingPlacementGroupName;
     private String pendingPlacementColorHex;
@@ -388,11 +388,11 @@ public class PancakePlannerApp extends Application {
         clearMeasurementsButton.setOnAction(event -> clearMeasurements());
 
         addCablePointButton = new ToggleButton("Kaabli punkt");
-        addCablePointButton.setTooltip(new Tooltip("Lisa valitud telgi voolukaablile vahepunkt"));
+        addCablePointButton.setTooltip(new Tooltip("Lisa valitud objekti voolukaablile vahepunkt"));
         addCablePointButton.setOnAction(event -> setAddingCablePoint(addCablePointButton.isSelected()));
 
         clearCableRouteButton = new Button("Puhasta trajektoor");
-        clearCableRouteButton.setTooltip(new Tooltip("Eemaldab valitud telgi voolukaabli vahepunktid"));
+        clearCableRouteButton.setTooltip(new Tooltip("Eemaldab valitud objekti voolukaabli vahepunktid"));
         clearCableRouteButton.setOnAction(event -> clearSelectedCableRoute());
 
         mapToolStatusLabel = new Label();
@@ -1556,7 +1556,7 @@ public class PancakePlannerApp extends Application {
         pendingMarkerPlacement = false;
         pendingLineObjectPlacement = false;
         pendingAreaObjectPlacement = false;
-        pendingPowerSourceTent = null;
+        pendingPowerSourceConsumer = null;
         refreshPlacementButtons();
         updateMapToolStatus();
     }
@@ -1586,7 +1586,7 @@ public class PancakePlannerApp extends Application {
         pendingMarkerPlacement = false;
         pendingLineObjectPlacement = false;
         pendingAreaObjectPlacement = false;
-        pendingPowerSourceTent = null;
+        pendingPowerSourceConsumer = null;
         refreshPlacementButtons();
         updateMapToolStatus();
     }
@@ -1618,7 +1618,7 @@ public class PancakePlannerApp extends Application {
         pendingMarkerPlacement = false;
         pendingLineObjectPlacement = false;
         pendingAreaObjectPlacement = false;
-        pendingPowerSourceTent = null;
+        pendingPowerSourceConsumer = null;
         refreshPlacementButtons();
         updateMapToolStatus();
     }
@@ -1652,7 +1652,7 @@ public class PancakePlannerApp extends Application {
         pendingMarkerPlacement = false;
         pendingLineObjectPlacement = false;
         pendingAreaObjectPlacement = false;
-        pendingPowerSourceTent = null;
+        pendingPowerSourceConsumer = null;
         refreshPlacementButtons();
         updateMapToolStatus();
     }
@@ -1681,7 +1681,7 @@ public class PancakePlannerApp extends Application {
         pendingTextObjectPlacement = false;
         pendingLineObjectPlacement = false;
         pendingAreaObjectPlacement = false;
-        pendingPowerSourceTent = null;
+        pendingPowerSourceConsumer = null;
         refreshPlacementButtons();
         updateMapToolStatus();
     }
@@ -1710,7 +1710,7 @@ public class PancakePlannerApp extends Application {
         pendingTextObjectPlacement = false;
         pendingMarkerPlacement = false;
         pendingAreaObjectPlacement = false;
-        pendingPowerSourceTent = null;
+        pendingPowerSourceConsumer = null;
         pendingShapePoints.clear();
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -1743,7 +1743,7 @@ public class PancakePlannerApp extends Application {
         pendingTextObjectPlacement = false;
         pendingMarkerPlacement = false;
         pendingLineObjectPlacement = false;
-        pendingPowerSourceTent = null;
+        pendingPowerSourceConsumer = null;
         pendingShapePoints.clear();
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -2038,7 +2038,7 @@ public class PancakePlannerApp extends Application {
 
     private void resetPlanViewState() {
         selectedObject = null;
-        pendingPowerSourceTent = null;
+        pendingPowerSourceConsumer = null;
         clearPendingPlacementDetails();
         pendingTentPlacement = false;
         pendingPowerSourcePlacement = false;
@@ -2118,7 +2118,7 @@ public class PancakePlannerApp extends Application {
         if (mapToolStatusLabel == null) {
             return;
         }
-        if (pendingPowerSourceTent != null) {
+        if (pendingPowerSourceConsumer != null) {
             mapToolStatusLabel.setText("Vali kaardilt elektrikapp");
             return;
         }
@@ -2327,18 +2327,20 @@ public class PancakePlannerApp extends Application {
     }
 
     private void drawPowerConnections() {
-        for (Tent tent : plan.tents()) {
-            if (!isGroupVisible(tent) || !isObjectTypeVisible(tent)) {
+        for (PlannerObject consumer : plan.objects()) {
+            if (!(consumer instanceof PowerConsumer)
+                    || !isGroupVisible(consumer)
+                    || !isObjectTypeVisible(consumer)) {
                 continue;
             }
-            plan.findPowerConnectionForConsumer(tent.id())
+            plan.findPowerConnectionForConsumer(consumer.id())
                     .filter(connection -> showCableType(connection.connectorType()))
                     .flatMap(connection -> plan.findObject(connection.sourceId())
                             .filter(PowerSource.class::isInstance)
                             .map(PowerSource.class::cast)
                             .filter(this::isGroupVisible)
                             .filter(this::isObjectTypeVisible)
-                            .map(source -> new PowerCableView(tent, source, connection)))
+                            .map(source -> new PowerCableView(consumer, source, connection)))
                     .ifPresent(this::drawPowerConnection);
         }
     }
@@ -2346,7 +2348,7 @@ public class PancakePlannerApp extends Application {
     private void drawPowerConnection(PowerCableView cable) {
         List<Position> path = cablePath(cable);
         Color cableColor = CableDisplayHelper.color(cable.connection().connectorType());
-        boolean selectedCable = isSelected(cable.tent());
+        boolean selectedCable = isSelected(cable.consumer());
         double strokeWidth = CableDisplayHelper.width(cable.connection().connectorType()) + (selectedCable ? 2.0 : 0.0);
 
         Polyline line = CablePolylineHelper.create(path);
@@ -2388,7 +2390,7 @@ public class PancakePlannerApp extends Application {
             ));
             distanceLabel.setLayoutX(labelPosition.x());
             distanceLabel.setLayoutY(labelPosition.y());
-            makeCableSelectable(distanceLabel, cable.tent());
+            makeCableSelectable(distanceLabel, cable.consumer());
             makeCableLabelDraggable(distanceLabel, cable);
             mapPane.getChildren().add(distanceLabel);
         }
@@ -2400,7 +2402,7 @@ public class PancakePlannerApp extends Application {
                 marker.setStroke(cableColor);
                 marker.setStrokeWidth(2);
                 Tooltip.install(marker, new Tooltip("Lohista punkti muutmiseks, paremklõps avab valikud"));
-                makeCableSelectable(marker, cable.tent());
+                makeCableSelectable(marker, cable.consumer());
                 makeCableRoutePointDraggable(marker, cable, index, line, highlightLine, hitLine, distanceLabel);
                 mapPane.getChildren().add(marker);
             }
@@ -2408,20 +2410,20 @@ public class PancakePlannerApp extends Application {
     }
 
     private List<Position> cablePath(PowerCableView cable) {
-        return CablePathHelper.cablePath(cable.tent(), cable.source(), cable.connection(), pixelsPerMeter());
+        return CablePathHelper.cablePath(cable.consumer(), cable.source(), cable.connection(), pixelsPerMeter());
     }
 
-    private List<Position> cablePath(Tent tent, PowerSource source, PowerConnection connection) {
-        return cablePath(new PowerCableView(tent, source, connection));
+    private List<Position> cablePath(PlannerObject consumer, PowerSource source, PowerConnection connection) {
+        return cablePath(new PowerCableView(consumer, source, connection));
     }
 
-    private void makeCableSelectable(Node node, Tent tent) {
-        makeCableSelectable(node, new PowerCableView(tent, null, null));
+    private void makeCableSelectable(Node node, PlannerObject consumer) {
+        makeCableSelectable(node, new PowerCableView(consumer, null, null));
     }
 
     private void makeCableSelectable(Node node, PowerCableView cable) {
         node.setOnMouseClicked(event -> {
-            Tent tent = cable.tent();
+            PlannerObject consumer = cable.consumer();
             if (pendingTentPlacement) {
                 Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
                 placeTent(new Position(mapPoint.getX(), mapPoint.getY()));
@@ -2470,8 +2472,8 @@ public class PancakePlannerApp extends Application {
                 if (cable.source() == null || cable.connection() == null) {
                     addCableRoutePoint(point);
                 } else {
-                    if (!isSelected(tent)) {
-                        selectObject(tent);
+                    if (!isSelected(consumer)) {
+                        selectObject(consumer);
                         event.consume();
                         return;
                     }
@@ -2486,7 +2488,7 @@ public class PancakePlannerApp extends Application {
                 event.consume();
                 return;
             }
-            selectObject(tent);
+            selectObject(consumer);
             event.consume();
         });
     }
@@ -2499,7 +2501,7 @@ public class PancakePlannerApp extends Application {
                 event.consume();
                 return;
             }
-            selectedObject = cable.tent();
+            selectedObject = cable.consumer();
             refreshDetails();
             dragged[0] = false;
             Point2D mapPoint = mapPane.sceneToLocal(event.getSceneX(), event.getSceneY());
@@ -2518,7 +2520,7 @@ public class PancakePlannerApp extends Application {
             label.setLayoutX(labelX);
             label.setLayoutY(labelY);
             Position defaultPosition = CableDisplayHelper.defaultLabelPosition(cablePath(cable));
-            plan.updateCableLabelOffset(cable.tent().id(), new Position(
+            plan.updateCableLabelOffset(cable.consumer().id(), new Position(
                     labelX - defaultPosition.x(),
                     labelY - defaultPosition.y()
             ));
@@ -2562,7 +2564,7 @@ public class PancakePlannerApp extends Application {
             Position updatedPoint = new Position(mapPoint.getX(), mapPoint.getY());
             List<Position> routePoints = CableRouteEditor.replacePoint(
                     plan,
-                    cable.tent().id(),
+                    cable.consumer().id(),
                     routePointIndex,
                     updatedPoint
             ).orElse(null);
@@ -2594,7 +2596,7 @@ public class PancakePlannerApp extends Application {
                 return;
             }
             if (!dragged[0]) {
-                selectObject(cable.tent());
+                selectObject(cable.consumer());
             }
             event.consume();
         });
@@ -2615,7 +2617,7 @@ public class PancakePlannerApp extends Application {
     }
 
     private void removeCableRoutePoint(PowerCableView cable, int routePointIndex) {
-        if (!CableRouteEditor.removePoint(plan, cable.tent().id(), routePointIndex)) {
+        if (!CableRouteEditor.removePoint(plan, cable.consumer().id(), routePointIndex)) {
             return;
         }
         redrawMap();
@@ -2628,7 +2630,7 @@ public class PancakePlannerApp extends Application {
             return;
         }
         List<Position> path = CablePathHelper.cablePath(
-                cable.tent(),
+                cable.consumer(),
                 cable.source(),
                 cable.connection(),
                 routePoints,
@@ -2644,7 +2646,7 @@ public class PancakePlannerApp extends Application {
         distanceLabel.setLayoutY(labelPosition.y());
     }
 
-    private record PowerCableView(Tent tent, PowerSource source, PowerConnection connection) {
+    private record PowerCableView(PlannerObject consumer, PowerSource source, PowerConnection connection) {
     }
 
     private Image loadImage(String imagePath) {
@@ -3375,7 +3377,7 @@ public class PancakePlannerApp extends Application {
                 event.consume();
                 return;
             }
-            if (pendingPowerSourceTent != null && object instanceof PowerSource source) {
+            if (pendingPowerSourceConsumer != null && object instanceof PowerSource source) {
                 connectPowerSourceFromMap(source);
                 event.consume();
                 return;
@@ -3391,7 +3393,7 @@ public class PancakePlannerApp extends Application {
             if (measuringActive || addingCablePoint) {
                 return;
             }
-            if (pendingPowerSourceTent != null && object instanceof PowerSource source) {
+            if (pendingPowerSourceConsumer != null && object instanceof PowerSource source) {
                 connectPowerSourceFromMap(source);
                 event.consume();
                 return;
@@ -3518,12 +3520,12 @@ public class PancakePlannerApp extends Application {
         return "Viib nime tagasi automaatsesse asukohta";
     }
 
-    private String cableLabelResetTooltip(boolean tentSelected, boolean tentHasPowerConnection, boolean customCableLabelPosition) {
-        if (!tentSelected) {
-            return "Vali telk, mille kaablisilti lähtestada";
+    private String cableLabelResetTooltip(boolean consumerSelected, boolean consumerHasPowerConnection, boolean customCableLabelPosition) {
+        if (!consumerSelected) {
+            return "Vali elektritarbija, mille kaablisilti lähtestada";
         }
-        if (!tentHasPowerConnection) {
-            return "Valitud telgil pole vooluühendust";
+        if (!consumerHasPowerConnection) {
+            return "Valitud objektil pole vooluühendust";
         }
         if (!customCableLabelPosition) {
             return "Kaablisildi asukoht on automaatne";
@@ -3540,6 +3542,7 @@ public class PancakePlannerApp extends Application {
         boolean markerSelected = selectedObject instanceof MarkerObject;
         boolean areaSelected = selectedObject instanceof AreaObject;
         boolean lineSelected = selectedObject instanceof LineObject;
+        boolean powerConsumerSelected = selectedObject instanceof PowerConsumer;
         boolean equipmentContainerSelected = selectedObject instanceof EquipmentContainer;
         nameField.setDisable(!hasSelection);
         groupField.setDisable(!hasSelection);
@@ -3571,19 +3574,23 @@ public class PancakePlannerApp extends Application {
         tentRotationField.setDisable(!tentSelected);
         tentColorPicker.setDisable(!tentSelected);
         tentOpacitySlider.setDisable(!tentSelected);
-        powerSourceComboBox.setDisable(!tentSelected);
-        connectionTypeComboBox.setDisable(!tentSelected);
-        connectionOutletComboBox.setDisable(!tentSelected);
-        cableLengthNotesField.setDisable(!tentSelected);
-        cableNotesField.setDisable(!tentSelected);
-        boolean tentHasPowerConnection = selectedObject instanceof Tent tent
-                && plan.findPowerConnectionForConsumer(tent.id()).isPresent();
-        boolean customCableLabelPosition = selectedObject instanceof Tent selectedTent
-                && plan.findPowerConnectionForConsumer(selectedTent.id())
+        powerSourceComboBox.setDisable(!powerConsumerSelected);
+        connectionTypeComboBox.setDisable(!powerConsumerSelected);
+        connectionOutletComboBox.setDisable(!powerConsumerSelected);
+        cableLengthNotesField.setDisable(!powerConsumerSelected);
+        cableNotesField.setDisable(!powerConsumerSelected);
+        boolean consumerHasPowerConnection = powerConsumerSelected
+                && plan.findPowerConnectionForConsumer(selectedObject.id()).isPresent();
+        boolean customCableLabelPosition = powerConsumerSelected
+                && plan.findPowerConnectionForConsumer(selectedObject.id())
                 .map(PowerConnection::customCableLabelPosition)
                 .orElse(false);
         resetCableLabelButton.setDisable(!customCableLabelPosition);
-        resetCableLabelButton.setTooltip(new Tooltip(cableLabelResetTooltip(tentSelected, tentHasPowerConnection, customCableLabelPosition)));
+        resetCableLabelButton.setTooltip(new Tooltip(cableLabelResetTooltip(
+                powerConsumerSelected,
+                consumerHasPowerConnection,
+                customCableLabelPosition
+        )));
         equipmentList.setDisable(!equipmentContainerSelected);
         equipmentNameField.setDisable(!equipmentContainerSelected);
         equipmentWattsField.setDisable(!equipmentContainerSelected);
@@ -3597,23 +3604,23 @@ public class PancakePlannerApp extends Application {
         boolean outletSelected = powerSourceSelected && outletList.getSelectionModel().getSelectedIndex() >= 0;
         updateOutletButton.setDisable(!outletSelected);
         removeOutletButton.setDisable(!outletSelected);
-        choosePowerSourceButton.setDisable(!tentSelected);
+        choosePowerSourceButton.setDisable(!powerConsumerSelected);
         if (addCablePointButton != null) {
-            addCablePointButton.setDisable(!tentHasPowerConnection);
+            addCablePointButton.setDisable(!consumerHasPowerConnection);
             addCablePointButton.setText(addingCablePoint ? "Tähista kaabli punkt" : "Kaabli punkt");
-            if (!tentHasPowerConnection) {
+            if (!consumerHasPowerConnection) {
                 addCablePointButton.setSelected(false);
                 addingCablePoint = false;
                 updateMapToolStatus();
             }
         }
         if (clearCableRouteButton != null) {
-            clearCableRouteButton.setDisable(!tentHasPowerConnection);
+            clearCableRouteButton.setDisable(!consumerHasPowerConnection);
         }
-        boolean selectingPowerSourceForThisTent = tentSelected
-                && pendingPowerSourceTent != null
-                && pendingPowerSourceTent.id().equals(selectedObject.id());
-        choosePowerSourceButton.setText(selectingPowerSourceForThisTent
+        boolean selectingPowerSourceForThisConsumer = powerConsumerSelected
+                && pendingPowerSourceConsumer != null
+                && pendingPowerSourceConsumer.id().equals(selectedObject.id());
+        choosePowerSourceButton.setText(selectingPowerSourceForThisConsumer
                 ? "Tühista kapi valik"
                 : "Vali kapp kaardilt");
         setSectionVisible(customObjectPanel, customObjectSelected);
@@ -3622,10 +3629,10 @@ public class PancakePlannerApp extends Application {
         setSectionVisible(areaPanel, areaSelected);
         setSectionVisible(linePanel, lineSelected);
         setSectionVisible(tentPanel, tentSelected);
-        setSectionVisible(powerConnectionPanel, tentSelected);
+        setSectionVisible(powerConnectionPanel, powerConsumerSelected);
         setSectionVisible(equipmentSection, equipmentContainerSelected);
         setSectionVisible(outletSection, powerSourceSelected);
-        setSectionVisible(choosePowerSourceButton, tentSelected);
+        setSectionVisible(choosePowerSourceButton, powerConsumerSelected);
         setSectionVisible(deleteObjectButton, hasSelection);
 
         if (!hasSelection) {
@@ -3798,10 +3805,26 @@ public class PancakePlannerApp extends Application {
             cableLengthNotesField.clear();
             cableNotesField.clear();
         }
+        refreshSelectedPowerConnectionFields();
         refreshPowerSourceChoices();
         refreshEquipmentList();
         refreshOutletList();
         updateCustomObjectSizeFields();
+    }
+
+    private void refreshSelectedPowerConnectionFields() {
+        if (!(selectedObject instanceof PowerConsumer)) {
+            cableLengthNotesField.clear();
+            cableNotesField.clear();
+            return;
+        }
+        plan.findPowerConnectionForConsumer(selectedObject.id()).ifPresentOrElse(connection -> {
+            cableLengthNotesField.setText(connection.cableLengthNotes());
+            cableNotesField.setText(connection.cableNotes());
+        }, () -> {
+            cableLengthNotesField.clear();
+            cableNotesField.clear();
+        });
     }
 
     private void updateCustomObjectSizeFields() {
@@ -3835,9 +3858,10 @@ public class PancakePlannerApp extends Application {
     }
 
     private void startPowerSourceSelectionFromMap() {
-        if (!(selectedObject instanceof Tent tent)) {
+        if (!(selectedObject instanceof PowerConsumer)) {
             return;
         }
+        PlannerObject consumer = selectedObject;
         pendingTentPlacement = false;
         pendingPowerSourcePlacement = false;
         pendingCustomObjectPlacement = false;
@@ -3848,29 +3872,29 @@ public class PancakePlannerApp extends Application {
         clearPendingPlacementDetails();
         refreshPlacementButtons();
         updateMapToolStatus();
-        if (pendingPowerSourceTent != null && pendingPowerSourceTent.id().equals(tent.id())) {
-            pendingPowerSourceTent = null;
+        if (pendingPowerSourceConsumer != null && pendingPowerSourceConsumer.id().equals(consumer.id())) {
+            pendingPowerSourceConsumer = null;
             updateMapToolStatus();
             refreshDetails();
             return;
         }
-        pendingPowerSourceTent = tent;
+        pendingPowerSourceConsumer = consumer;
         updateMapToolStatus();
         refreshDetails();
     }
 
     private void connectPowerSourceFromMap(PowerSource source) {
-        Tent tent = pendingPowerSourceTent;
-        if (tent == null) {
+        PlannerObject consumer = pendingPowerSourceConsumer;
+        if (!(consumer instanceof PowerConsumer)) {
             return;
         }
-        if (plan.connectToPower(source.id(), tent.id(), selectedConnectionType()).isEmpty()) {
+        if (plan.connectToPower(source.id(), consumer.id(), selectedConnectionType()).isEmpty()) {
             showError("Vooluallikat ei valitud", "Valitud kapis ei ole selle ühenduse jaoks sobivat väljundit.");
             return;
         }
-        pendingPowerSourceTent = null;
+        pendingPowerSourceConsumer = null;
         updateMapToolStatus();
-        selectedObject = tent;
+        selectedObject = consumer;
         refreshDetails();
         redrawMap();
         refreshSummary();
@@ -3897,10 +3921,10 @@ public class PancakePlannerApp extends Application {
     }
 
     private void resetSelectedCableLabelPosition() {
-        if (!(selectedObject instanceof Tent tent)) {
+        if (!(selectedObject instanceof PowerConsumer)) {
             return;
         }
-        plan.resetCableLabelOffset(tent.id());
+        plan.resetCableLabelOffset(selectedObject.id());
         redrawMap();
         refreshDetails();
         markDirty();
@@ -3922,16 +3946,16 @@ public class PancakePlannerApp extends Application {
     }
 
     private void autoApplyCableNotes() {
-        if (!(selectedObject instanceof Tent tent)) {
+        if (!(selectedObject instanceof PowerConsumer)) {
             return;
         }
         String cableNotes = cableNotesField.getText();
-        PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
+        PowerConnection connection = plan.findPowerConnectionForConsumer(selectedObject.id()).orElse(null);
         if (connection == null || connection.cableNotes().equals(cableNotes.trim())) {
             return;
         }
-        plan.updateCableNotes(tent.id(), cableNotes);
-        cableNotesField.setText(plan.findPowerConnectionForConsumer(tent.id())
+        plan.updateCableNotes(selectedObject.id(), cableNotes);
+        cableNotesField.setText(plan.findPowerConnectionForConsumer(selectedObject.id())
                 .map(PowerConnection::cableNotes)
                 .orElse(""));
         redrawMap();
@@ -3940,16 +3964,16 @@ public class PancakePlannerApp extends Application {
     }
 
     private void autoApplyCableLengthNotes() {
-        if (!(selectedObject instanceof Tent tent)) {
+        if (!(selectedObject instanceof PowerConsumer)) {
             return;
         }
         String cableLengthNotes = cableLengthNotesField.getText();
-        PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
+        PowerConnection connection = plan.findPowerConnectionForConsumer(selectedObject.id()).orElse(null);
         if (connection == null || connection.cableLengthNotes().equals(cableLengthNotes.trim())) {
             return;
         }
-        plan.updateCableLengthNotes(tent.id(), cableLengthNotes);
-        cableLengthNotesField.setText(plan.findPowerConnectionForConsumer(tent.id())
+        plan.updateCableLengthNotes(selectedObject.id(), cableLengthNotes);
+        cableLengthNotesField.setText(plan.findPowerConnectionForConsumer(selectedObject.id())
                 .map(PowerConnection::cableLengthNotes)
                 .orElse(""));
         redrawMap();
@@ -4003,9 +4027,6 @@ public class PancakePlannerApp extends Application {
                 return;
             }
             tent.setColorHex(toHex(tentColorPicker.getValue()));
-            if (!applySelectedPowerSource(tent)) {
-                return;
-            }
         } else if (selectedObject instanceof CustomObject customObject) {
             if (!applyCustomObjectSize(customObject)) {
                 return;
@@ -4038,6 +4059,9 @@ public class PancakePlannerApp extends Application {
                 return;
             }
             lineObject.setColorHex(toHex(lineColorPicker.getValue()));
+        }
+        if (selectedObject instanceof PowerConsumer && !applySelectedPowerSource(selectedObject)) {
+            return;
         }
         setAddingCablePoint(false);
         if (addCablePointButton != null) {
@@ -4176,7 +4200,7 @@ public class PancakePlannerApp extends Application {
 
         plan.removeObject(selectedObject.id());
         selectedObject = null;
-        pendingPowerSourceTent = null;
+        pendingPowerSourceConsumer = null;
         refreshGroupFilters();
         refreshObjectList();
         redrawMap();
@@ -4198,10 +4222,8 @@ public class PancakePlannerApp extends Application {
         if (object instanceof EquipmentContainer container && !container.equipment().isEmpty()) {
             warnings.add("Objekti seadmed kustutatakse samuti.");
         }
-        if (object instanceof Tent tent) {
-            if (plan.findPowerConnectionForConsumer(tent.id()).isPresent()) {
-                warnings.add("Telgi vooluühendus ja kaabli trajektoor kustutatakse samuti.");
-            }
+        if (object instanceof PowerConsumer && plan.findPowerConnectionForConsumer(object.id()).isPresent()) {
+            warnings.add("Objekti vooluühendus ja kaabli trajektoor kustutatakse samuti.");
         }
         if (object instanceof PowerSource source) {
             int connectionCount = (int) plan.powerConnections().stream()
@@ -4253,7 +4275,7 @@ public class PancakePlannerApp extends Application {
             pendingLineObjectPlacement = false;
             pendingAreaObjectPlacement = false;
             clearPendingPlacementDetails();
-            pendingPowerSourceTent = null;
+            pendingPowerSourceConsumer = null;
             refreshPlacementButtons();
         }
         measurementStart = null;
@@ -4262,23 +4284,23 @@ public class PancakePlannerApp extends Application {
     }
 
     private void addCableRoutePoint(Position point) {
-        if (!(selectedObject instanceof Tent tent)) {
-            showError("Kaabli punkti ei lisatud", "Vali enne telk, mille voolukaablile punkt lisada.");
+        if (!(selectedObject instanceof PowerConsumer)) {
+            showError("Kaabli punkti ei lisatud", "Vali enne elektritarbija, mille voolukaablile punkt lisada.");
             setAddingCablePoint(false);
             if (addCablePointButton != null) {
                 addCablePointButton.setSelected(false);
             }
             return;
         }
-        if (plan.findPowerConnectionForConsumer(tent.id()).isEmpty()) {
-            showError("Kaabli punkti ei lisatud", "Valitud telgil ei ole veel vooluühendust.");
+        if (plan.findPowerConnectionForConsumer(selectedObject.id()).isEmpty()) {
+            showError("Kaabli punkti ei lisatud", "Valitud objektil ei ole veel vooluühendust.");
             setAddingCablePoint(false);
             if (addCablePointButton != null) {
                 addCablePointButton.setSelected(false);
             }
             return;
         }
-        if (!CableRouteEditor.addPoint(plan, tent.id(), point)) {
+        if (!CableRouteEditor.addPoint(plan, selectedObject.id(), point)) {
             return;
         }
         redrawMap();
@@ -4287,28 +4309,33 @@ public class PancakePlannerApp extends Application {
     }
 
     private void insertCableRoutePoint(PowerCableView cable, Position point) {
-        PowerConnection connection = plan.findPowerConnectionForConsumer(cable.tent().id()).orElse(null);
+        PowerConnection connection = plan.findPowerConnectionForConsumer(cable.consumer().id()).orElse(null);
         if (connection == null) {
             return;
         }
 
-        if (!CableRouteEditor.insertPoint(plan, cable.tent().id(), cablePath(cable.tent(), cable.source(), connection), point)) {
+        if (!CableRouteEditor.insertPoint(
+                plan,
+                cable.consumer().id(),
+                cablePath(cable.consumer(), cable.source(), connection),
+                point
+        )) {
             return;
         }
-        selectedObject = cable.tent();
+        selectedObject = cable.consumer();
         redrawMap();
         refreshSummary();
         markDirty();
     }
 
     private void clearSelectedCableRoute() {
-        if (!(selectedObject instanceof Tent tent)) {
+        if (!(selectedObject instanceof PowerConsumer)) {
             return;
         }
-        if (plan.findPowerConnectionForConsumer(tent.id()).isEmpty()) {
+        if (plan.findPowerConnectionForConsumer(selectedObject.id()).isEmpty()) {
             return;
         }
-        if (!CableRouteEditor.clearRoute(plan, tent.id())) {
+        if (!CableRouteEditor.clearRoute(plan, selectedObject.id())) {
             return;
         }
         redrawMap();
@@ -4369,7 +4396,7 @@ public class PancakePlannerApp extends Application {
         pendingMarkerPlacement = false;
         pendingLineObjectPlacement = false;
         pendingAreaObjectPlacement = false;
-        pendingPowerSourceTent = null;
+        pendingPowerSourceConsumer = null;
         clearPendingPlacementDetails();
         refreshPlacementButtons();
         updateMapToolStatus();
@@ -4654,11 +4681,11 @@ public class PancakePlannerApp extends Application {
 
         powerSourceComboBox.getSelectionModel().selectFirst();
         refreshConnectionTypeChoices(ConnectorType.SCHUKO_230V);
-        if (!(selectedObject instanceof Tent tent)) {
+        if (!(selectedObject instanceof PowerConsumer)) {
             return;
         }
 
-        plan.findPowerConnectionForConsumer(tent.id()).ifPresent(connection -> {
+        plan.findPowerConnectionForConsumer(selectedObject.id()).ifPresent(connection -> {
             powerSourceComboBox.getItems().stream()
                     .filter(choice -> choice.sourceId().equals(connection.sourceId()))
                     .findFirst()
@@ -4777,16 +4804,16 @@ public class PancakePlannerApp extends Application {
                 .orElse(null);
     }
 
-    private boolean applySelectedPowerSource(Tent tent) {
+    private boolean applySelectedPowerSource(PlannerObject consumer) {
         PowerSourceChoice selectedSource = powerSourceComboBox.getSelectionModel().getSelectedItem();
         if (selectedSource == null || selectedSource.isNone()) {
-            plan.disconnectPower(tent.id());
+            plan.disconnectPower(consumer.id());
             return true;
         }
 
         if (plan.connectToPower(
                 selectedSource.sourceId(),
-                tent.id(),
+                consumer.id(),
                 selectedConnectionType(),
                 selectedConnectionOutletId(),
                 cableNotesField.getText(),
@@ -4916,10 +4943,10 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        List<Tent> connectedTents = connectedTents(outlet.id());
+        List<PowerConsumer> connectedConsumers = connectedConsumers(outlet.id());
         if (outlet.type() != selectedType
-                && !connectedTents.isEmpty()
-                && !confirmOutletTypeChange(outlet, selectedType, connectedTents)) {
+                && !connectedConsumers.isEmpty()
+                && !confirmOutletTypeChange(outlet, selectedType, connectedConsumers)) {
             return;
         }
 
@@ -4942,8 +4969,8 @@ public class PancakePlannerApp extends Application {
         }
 
         PowerOutlet outlet = source.outlets().get(selectedIndex);
-        List<Tent> connectedTents = connectedTents(outlet.id());
-        if (!connectedTents.isEmpty() && !confirmRemoveConnectedOutlet(outlet, connectedTents)) {
+        List<PowerConsumer> connectedConsumers = connectedConsumers(outlet.id());
+        if (!connectedConsumers.isEmpty() && !confirmRemoveConnectedOutlet(outlet, connectedConsumers)) {
             return;
         }
 
@@ -4976,42 +5003,42 @@ public class PancakePlannerApp extends Application {
         }
     }
 
-    private List<Tent> connectedTents(String outletId) {
+    private List<PowerConsumer> connectedConsumers(String outletId) {
         return plan.powerConnections().stream()
                 .filter(connection -> connection.outletId().equals(outletId))
                 .map(connection -> plan.findObject(connection.consumerId()))
                 .flatMap(optional -> optional.stream())
-                .filter(Tent.class::isInstance)
-                .map(Tent.class::cast)
+                .filter(PowerConsumer.class::isInstance)
+                .map(PowerConsumer.class::cast)
                 .toList();
     }
 
-    private boolean confirmRemoveConnectedOutlet(PowerOutlet outlet, List<Tent> connectedTents) {
+    private boolean confirmRemoveConnectedOutlet(PowerOutlet outlet, List<PowerConsumer> connectedConsumers) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Eemalda väljund");
         alert.setHeaderText("See väljund on kasutusel");
-        String tentRows = connectedTents.stream()
-                .map(tent -> "- " + tent.name())
+        String consumerRows = connectedConsumers.stream()
+                .map(consumer -> "- " + consumer.name())
                 .reduce("", (rows, row) -> rows + row + System.lineSeparator());
-        alert.setContentText("%s kustutamisel eemaldatakse nende telkide vooluühendused:%n%n%s".formatted(
+        alert.setContentText("%s kustutamisel eemaldatakse nende objektide vooluühendused:%n%n%s".formatted(
                 outlet.name().isBlank() ? outlet.type().displayName() : outlet.name(),
-                tentRows
+                consumerRows
         ));
         return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
 
-    private boolean confirmOutletTypeChange(PowerOutlet outlet, ConnectorType selectedType, List<Tent> connectedTents) {
+    private boolean confirmOutletTypeChange(PowerOutlet outlet, ConnectorType selectedType, List<PowerConsumer> connectedConsumers) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Muuda väljundi tüüpi");
         alert.setHeaderText("See väljund on kasutusel");
-        String tentRows = connectedTents.stream()
-                .map(tent -> "- " + tent.name())
+        String consumerRows = connectedConsumers.stream()
+                .map(consumer -> "- " + consumer.name())
                 .reduce("", (rows, row) -> rows + row + System.lineSeparator());
-        alert.setContentText("%s tüüp muutub: %s -> %s.%n%nNende telkide ühenduse tüüp muutub samuti:%n%n%s".formatted(
+        alert.setContentText("%s tüüp muutub: %s -> %s.%n%nNende objektide ühenduse tüüp muutub samuti:%n%n%s".formatted(
                 outlet.name().isBlank() ? outlet.type().displayName() : outlet.name(),
                 outlet.type().displayName(),
                 selectedType.displayName(),
-                tentRows
+                consumerRows
         ));
         return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
     }
@@ -5212,12 +5239,12 @@ public class PancakePlannerApp extends Application {
                 continue;
             }
             plan.findObject(connection.consumerId())
-                    .filter(Tent.class::isInstance)
-                    .map(Tent.class::cast)
-                    .ifPresent(tent -> summaryList.getItems().add("%s- %s: %d W (%s)".formatted(
+                    .filter(PowerConsumer.class::isInstance)
+                    .map(PowerConsumer.class::cast)
+                    .ifPresent(consumer -> summaryList.getItems().add("%s- %s: %d W (%s)".formatted(
                             rowPrefix,
-                            tent.name(),
-                            tent.requiredWatts(),
+                            consumer.name(),
+                            consumer.requiredWatts(),
                             connection.connectorType().displayName()
                     )));
         }
@@ -5245,8 +5272,11 @@ public class PancakePlannerApp extends Application {
         boolean hasNotedLength = false;
         Map<ConnectorType, CableTypeSummary> summariesByType = new EnumMap<>(ConnectorType.class);
 
-        for (Tent tent : plan.tents()) {
-            PowerConnection connection = plan.findPowerConnectionForConsumer(tent.id()).orElse(null);
+        for (PlannerObject consumer : plan.objects()) {
+            if (!(consumer instanceof PowerConsumer)) {
+                continue;
+            }
+            PowerConnection connection = plan.findPowerConnectionForConsumer(consumer.id()).orElse(null);
             if (connection == null) {
                 continue;
             }
@@ -5259,7 +5289,7 @@ public class PancakePlannerApp extends Application {
                 continue;
             }
 
-            double lengthMeters = CableDisplayHelper.lengthMeters(cablePath(tent, source, connection), pixelsPerMeter());
+            double lengthMeters = CableDisplayHelper.lengthMeters(cablePath(consumer, source, connection), pixelsPerMeter());
             totalLengthMeters += lengthMeters;
             OptionalDouble notedLengthMeters = notedCableLengthMeters(connection);
             CableTypeSummary typeSummary = summariesByType.computeIfAbsent(
@@ -5273,7 +5303,7 @@ public class PancakePlannerApp extends Application {
                 typeSummary.addPieces(cableLengthPieces(connection));
                 hasNotedLength = true;
             }
-            cableRows.add(new CableSummaryRow(tent, source, connection, lengthMeters, notedLengthMeters));
+            cableRows.add(new CableSummaryRow(consumer, source, connection, lengthMeters, notedLengthMeters));
         }
 
         if (cableRows.isEmpty()) {
@@ -5512,7 +5542,7 @@ public class PancakePlannerApp extends Application {
                 ? "%.1f m kaardil, %.1f m märgitud".formatted(row.mapLengthMeters(), row.notedLengthMeters().getAsDouble())
                 : "%.1f m".formatted(row.mapLengthMeters());
         return "  - %s -> %s (%s): %s%s".formatted(
-                row.tent().name(),
+                row.consumer().name(),
                 row.source().name(),
                 row.connection().connectorType().displayName(),
                 lengthText,
@@ -5521,7 +5551,7 @@ public class PancakePlannerApp extends Application {
     }
 
     private record CableSummaryRow(
-            Tent tent,
+            PlannerObject consumer,
             PowerSource source,
             PowerConnection connection,
             double mapLengthMeters,
