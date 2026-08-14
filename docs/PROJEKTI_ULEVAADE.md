@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
 - Dokumendi viimane sisuline uuendus: 15. august 2026
-- Koodi viimane dokumenteeritud commit: `cc07e8d` (`Add draggable power connection anchors`, 15. august 2026)
+- Koodi viimane dokumenteeritud commit: `00161b4` (`Version the plan file format`, 15. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -90,7 +90,7 @@ Need ei ole praeguse prototüübi lubatud funktsioonid, vaid suurema süsteemi u
 
 ## 4. Arenduspõhimõtted
 
-Arendus on toimunud teadlikult väikeste sammudena. Üks kasutaja jaoks kontrollitav muudatus tehakse valmis, käivitatakse, proovitakse päris plaanil ning commititakse eraldi. Selline tööviis on seni andnud 184 commiti ja võimaldab näha, miks iga funktsioon lisati või ümber tehti.
+Arendus on toimunud teadlikult väikeste sammudena. Üks kasutaja jaoks kontrollitav muudatus tehakse valmis, käivitatakse, proovitakse päris plaanil ning commititakse eraldi. Selline tööviis on seni andnud 185 commiti ja võimaldab näha, miks iga funktsioon lisati või ümber tehti.
 
 Olulisemad kujunenud põhimõtted:
 
@@ -133,6 +133,8 @@ Java 21 valiti pika toe ja JavaFX 21-ga stabiilse sobivuse tõttu. Projekt ei va
 - mõõdulint ja trajektooride redaktorid;
 - TXT-, PNG- ja PDF-eksport.
 
+`planner-gui` sõltub Gradle'is tavapäraselt `planner-core` moodulist. Core kompileeritakse eraldi teegiks ning selle lähtekoode ei kaasata GUI moodulisse teist korda.
+
 Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi abiklassidesse tõstetud. Sellest hoolimata on `PancakePlannerApp` endiselt väga suur ning vajab edasise kasvu eel vaadeteks, kontrolleriteks ja tööriistadeks jagamist.
 
 ### 5.3 Olulisemad domeeniklassid
@@ -153,7 +155,7 @@ Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi ab
 
 ### 5.4 Elektrimudel
 
-Praegu on voolutarbijaks `Tent`. Telgis olevate seadmete võimsused liidetakse ning telk ühendatakse ühe elektrikapi ühe konkreetse väljundiga. Väljundi koormus arvutatakse selle külge ühendatud telkide võimsustest.
+Voolutarbijad on `Tent`, `AreaObject` ja `LineObject`. Nende seadmete võimsused liidetakse ning objekt ühendatakse ühe elektrikapi ühe konkreetse väljundiga. Väljundi koormus arvutatakse selle külge ühendatud objektide võimsustest. Kõigil kolmel tarbijatüübil saab kaardil määrata füüsilise vooluühenduse punkti.
 
 Toetatud ühendused ja algsed vaikemahud:
 
@@ -291,7 +293,7 @@ See funktsionaalsus on värskelt lisatud ja vajab enne uute objektitüüpide juu
 
 ## 7. Arenduse kronoloogia
 
-Allolev ajajoon koondab 184 commitist tähenduslikud etapid. Täpne muudatuste loetelu on käsuga `git log --reverse --oneline`.
+Allolev ajajoon koondab 185 commitist tähenduslikud etapid. Täpne muudatuste loetelu on käsuga `git log --reverse --oneline`.
 
 ### 1. juuli 2026: alus ja esimene töötav vertikaallõige
 
@@ -420,7 +422,6 @@ Seda ei tasu lahendada kolme eraldi erandina. Enne kasutajaliidese lisamist tule
 Enne funktsioonide hulga suurt kasvatamist on vaja:
 
 - jagada väga suur `PancakePlannerApp` väiksemateks vaate-, kontrolleri- ja tööriistaklassideks;
-- muuta `planner-gui` sõltuvaks `planner-core` moodulist tavapärase Gradle'i sõltuvuse kaudu, mitte kaasata core'i lähtekoodi uuesti GUI source set'i;
 - lisada domeeniloogika automaattestid;
 - lisada salvestamise ja vanade failide tagasiühilduvuse testid;
 - lisada kaablite ning kujundite geomeetria testid;

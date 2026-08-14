@@ -4,15 +4,8 @@ plugins {
 }
 
 dependencies {
+    implementation project(':planner-core')
     implementation 'org.apache.pdfbox:pdfbox:2.0.31'
-}
-
-sourceSets {
-    main {
-        java {
-            srcDir '../planner-core/src/main/java'
-        }
-    }
 }
 
 javafx {
