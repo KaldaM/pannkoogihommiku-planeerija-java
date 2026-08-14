@@ -1,7 +1,10 @@
 package ee.matteus.pannukas.core.service;
 
+import ee.matteus.pannukas.core.model.AreaObject;
 import ee.matteus.pannukas.core.model.CustomObject;
+import ee.matteus.pannukas.core.model.Equipment;
 import ee.matteus.pannukas.core.model.EventPlan;
+import ee.matteus.pannukas.core.model.LineObject;
 import ee.matteus.pannukas.core.model.Position;
 import ee.matteus.pannukas.core.model.Tent;
 import org.junit.jupiter.api.Test;
@@ -97,5 +100,62 @@ class PlanFileServiceTest {
 
         Tent loadedTent = (Tent) loadedPlan.objects().getFirst();
         assertEquals(Tent.DEFAULT_OPACITY, loadedTent.opacity(), 0.0001);
+    }
+
+    @Test
+    void savesAndLoadsAreaAndLineEquipment() throws IOException {
+        EventPlan plan = new EventPlan("Test");
+        AreaObject area = new AreaObject("area-1", "Lava", new Position(10, 20));
+        area.addEquipment(new Equipment("Valgusti", 500));
+        area.addEquipment(new Equipment("Soojendi", 1500));
+        LineObject line = new LineObject("line-1", "Valguskett", new Position(30, 40));
+        line.addEquipment(new Equipment("Lambid", 750));
+        plan.addObject(area);
+        plan.addObject(line);
+        Path file = tempDirectory.resolve("area-line-equipment.pplan");
+
+        service.save(plan, file);
+        EventPlan loadedPlan = service.load(file);
+
+        AreaObject loadedArea = (AreaObject) loadedPlan.objects().get(0);
+        assertEquals(2, loadedArea.equipment().size());
+        assertEquals("Valgusti", loadedArea.equipment().get(0).name());
+        assertEquals(2000, loadedArea.requiredWatts());
+
+        LineObject loadedLine = (LineObject) loadedPlan.objects().get(1);
+        assertEquals(1, loadedLine.equipment().size());
+        assertEquals("Lambid", loadedLine.equipment().getFirst().name());
+        assertEquals(750, loadedLine.requiredWatts());
+    }
+
+    @Test
+    void olderAreaAndLineWithoutEquipmentLoadWithEmptyLists() throws IOException {
+        Path file = tempDirectory.resolve("old-area-line-plan.pplan");
+        Files.writeString(file, """
+                plan.name=Vana plaan
+                objects.count=2
+                object.0.type=AREA_OBJECT
+                object.0.id=area-1
+                object.0.name=Ala
+                object.0.x=10
+                object.0.y=20
+                object.0.points.count=0
+                object.1.type=LINE_OBJECT
+                object.1.id=line-1
+                object.1.name=Joon
+                object.1.x=30
+                object.1.y=40
+                object.1.points.count=0
+                connections.count=0
+                """);
+
+        EventPlan loadedPlan = service.load(file);
+
+        AreaObject loadedArea = (AreaObject) loadedPlan.objects().get(0);
+        LineObject loadedLine = (LineObject) loadedPlan.objects().get(1);
+        assertEquals(0, loadedArea.equipment().size());
+        assertEquals(0, loadedLine.equipment().size());
+        assertEquals(0, loadedArea.requiredWatts());
+        assertEquals(0, loadedLine.requiredWatts());
     }
 }

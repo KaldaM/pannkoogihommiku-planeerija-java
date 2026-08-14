@@ -5,6 +5,7 @@ import ee.matteus.pannukas.core.model.AreaObject;
 import ee.matteus.pannukas.core.model.CustomObject;
 import ee.matteus.pannukas.core.model.CustomObjectShape;
 import ee.matteus.pannukas.core.model.Equipment;
+import ee.matteus.pannukas.core.model.EquipmentContainer;
 import ee.matteus.pannukas.core.model.EventPlan;
 import ee.matteus.pannukas.core.model.LineObject;
 import ee.matteus.pannukas.core.model.MarkerObject;
@@ -191,13 +192,7 @@ public class PlanFileService {
         properties.setProperty(prefix + "rotationDegrees", Double.toString(tent.rotationDegrees()));
         properties.setProperty(prefix + "colorHex", tent.colorHex());
         properties.setProperty(prefix + "opacity", Double.toString(tent.opacity()));
-        properties.setProperty(prefix + "equipment.count", Integer.toString(tent.equipment().size()));
-        for (int index = 0; index < tent.equipment().size(); index++) {
-            Equipment item = tent.equipment().get(index);
-            String equipmentPrefix = prefix + "equipment." + index + ".";
-            properties.setProperty(equipmentPrefix + "name", item.name());
-            properties.setProperty(equipmentPrefix + "requiredWatts", Integer.toString(item.requiredWatts()));
-        }
+        writeEquipment(properties, prefix, tent);
     }
 
     private void writePowerSource(Properties properties, String prefix, PowerSource source) {
@@ -240,6 +235,7 @@ public class PlanFileService {
         properties.setProperty(prefix + "colorHex", object.colorHex());
         properties.setProperty(prefix + "opacity", Double.toString(object.opacity()));
         writePoints(properties, prefix, object.points());
+        writeEquipment(properties, prefix, object);
     }
 
     private void writeLineObject(Properties properties, String prefix, LineObject object) {
@@ -247,6 +243,7 @@ public class PlanFileService {
         properties.setProperty(prefix + "colorHex", object.colorHex());
         properties.setProperty(prefix + "widthPixels", Double.toString(object.widthPixels()));
         writePoints(properties, prefix, object.points());
+        writeEquipment(properties, prefix, object);
     }
 
     private PlannerObject readObject(Properties properties, String prefix) {
@@ -295,14 +292,7 @@ public class PlanFileService {
         tent.setColorHex(properties.getProperty(prefix + "colorHex", "#e74c3c"));
         tent.setOpacity(doubleValue(properties, prefix + "opacity", Tent.DEFAULT_OPACITY));
 
-        int equipmentCount = intValue(properties, prefix + "equipment.count", 0);
-        for (int index = 0; index < equipmentCount; index++) {
-            String equipmentPrefix = prefix + "equipment." + index + ".";
-            tent.addEquipment(new Equipment(
-                    properties.getProperty(equipmentPrefix + "name", "Seade"),
-                    intValue(properties, equipmentPrefix + "requiredWatts", 0)
-            ));
-        }
+        readEquipment(properties, prefix, tent);
         return tent;
     }
 
@@ -379,6 +369,7 @@ public class PlanFileService {
         object.setColorHex(properties.getProperty(prefix + "colorHex", "#f59e0b"));
         object.setOpacity(doubleValue(properties, prefix + "opacity", AreaObject.DEFAULT_OPACITY));
         object.setPoints(readPoints(properties, prefix));
+        readEquipment(properties, prefix, object);
         return object;
     }
 
@@ -391,7 +382,29 @@ public class PlanFileService {
         object.setColorHex(properties.getProperty(prefix + "colorHex", "#0f766e"));
         object.setWidthPixels(doubleValue(properties, prefix + "widthPixels", LineObject.DEFAULT_WIDTH_PIXELS));
         object.setPoints(readPoints(properties, prefix));
+        readEquipment(properties, prefix, object);
         return object;
+    }
+
+    private void writeEquipment(Properties properties, String prefix, EquipmentContainer container) {
+        properties.setProperty(prefix + "equipment.count", Integer.toString(container.equipment().size()));
+        for (int index = 0; index < container.equipment().size(); index++) {
+            Equipment item = container.equipment().get(index);
+            String equipmentPrefix = prefix + "equipment." + index + ".";
+            properties.setProperty(equipmentPrefix + "name", item.name());
+            properties.setProperty(equipmentPrefix + "requiredWatts", Integer.toString(item.requiredWatts()));
+        }
+    }
+
+    private void readEquipment(Properties properties, String prefix, EquipmentContainer container) {
+        int equipmentCount = intValue(properties, prefix + "equipment.count", 0);
+        for (int index = 0; index < equipmentCount; index++) {
+            String equipmentPrefix = prefix + "equipment." + index + ".";
+            container.addEquipment(new Equipment(
+                    properties.getProperty(equipmentPrefix + "name", "Seade"),
+                    intValue(properties, equipmentPrefix + "requiredWatts", 0)
+            ));
+        }
     }
 
     private Position readPosition(Properties properties, String prefix) {

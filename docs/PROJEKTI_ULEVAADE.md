@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
 - Dokumendi viimane sisuline uuendus: 14. august 2026
-- Koodi viimane dokumenteeritud commit: `59968dd` (`Use sliders for font sizes`, 14. august 2026)
+- Koodi viimane dokumenteeritud commit: `33fdb90` (`Add shared equipment model for power consumers`, 14. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -386,7 +386,7 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 
 ### 9.1 Vahetu jätkamiskoht
 
-Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Joone paksust, objektide läbipaistvust ning teksti- ja sildisuurusi saab muuta slideritega. Telk, ala ja joon kasutavad nüüd ühist `EquipmentContainer` lepingut, mis koondab seadmete haldamise ning vooluvajaduse arvutamise. Järgmine väike samm on salvestada ja laadida ala ning joone seadmed, säilitades vanade plaanide avamise.
+Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Joone paksust, objektide läbipaistvust ning teksti- ja sildisuurusi saab muuta slideritega. Telk, ala ja joon kasutavad ühist `EquipmentContainer` lepingut, mis koondab seadmete haldamise ning vooluvajaduse arvutamise. Ala ja joone seadmed salvestuvad ning vanad ilma seadmeväljadeta plaanid avanevad tühjade nimekirjadega. Järgmine väike samm on üldistada külgpaneeli seadmehaldus telgilt kõigile kolmele objektitüübile.
 
 ### 9.2 Joonte ja alade järgmine funktsionaalne etapp
 
@@ -469,8 +469,8 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 ## 11. Soovituslik tööjärjekord
 
-1. Lisa ala ja joone seadmete salvestamine ning tagasiühilduvuse testid.
-2. Üldista külgpaneeli seadmete haldus telgilt kõigile `EquipmentContainer` objektidele.
+1. Üldista külgpaneeli seadmete haldus telgilt kõigile `EquipmentContainer` objektidele.
+2. Kontrolli ala ja joone seadmete lisamist, eemaldamist, salvestamist ning avamist kasutajaliideses.
 3. Üldista vooluühendused, kaablid ja kokkuvõtted telgilt kõigile elektritarbijatele.
 4. Lisa elektriühenduse ankrupunkt telgile, joonele ja alale.
 5. Alusta automaatteste salvestamisest ja vooluarvutusest, sest nende regressiooni mõju on suurim.
@@ -483,7 +483,7 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 Uuele arendajale või tehisintellekti vestlusele tuleks anda vähemalt järgmine info:
 
-> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. `EquipmentContainer` ühendab telgi, ala ja joone seadmemudeli; järgmine samm on ala ja joone seadmete salvestamine koos tagasiühilduvuse testidega.
+> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. `EquipmentContainer` ühendab telgi, ala ja joone seadmemudeli ning nende seadmed salvestuvad; järgmine samm on külgpaneeli seadmehalduse üldistamine kõigile kolmele objektitüübile.
 
 Tavaline kontroll enne muutmist:
 
