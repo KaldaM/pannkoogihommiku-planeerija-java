@@ -117,6 +117,13 @@ public class EventPlan {
                 .toList();
     }
 
+    public List<PowerConsumer> powerConsumers() {
+        return objects.stream()
+                .filter(PowerConsumer.class::isInstance)
+                .map(PowerConsumer.class::cast)
+                .toList();
+    }
+
     public List<AreaObject> areaObjects() {
         return objects.stream()
                 .filter(AreaObject.class::isInstance)
@@ -258,6 +265,14 @@ public class EventPlan {
                 .map(PowerSource.class::cast)
                 .orElse(null);
         if (source == null) {
+            return Optional.empty();
+        }
+
+        PowerConsumer consumer = findObject(consumerId)
+                .filter(PowerConsumer.class::isInstance)
+                .map(PowerConsumer.class::cast)
+                .orElse(null);
+        if (consumer == null) {
             return Optional.empty();
         }
 

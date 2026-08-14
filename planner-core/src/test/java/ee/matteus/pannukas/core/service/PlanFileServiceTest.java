@@ -1,11 +1,14 @@
 package ee.matteus.pannukas.core.service;
 
 import ee.matteus.pannukas.core.model.AreaObject;
+import ee.matteus.pannukas.core.model.ConnectorType;
 import ee.matteus.pannukas.core.model.CustomObject;
 import ee.matteus.pannukas.core.model.Equipment;
 import ee.matteus.pannukas.core.model.EventPlan;
 import ee.matteus.pannukas.core.model.LineObject;
 import ee.matteus.pannukas.core.model.Position;
+import ee.matteus.pannukas.core.model.PowerOutlet;
+import ee.matteus.pannukas.core.model.PowerSource;
 import ee.matteus.pannukas.core.model.Tent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -157,5 +160,30 @@ class PlanFileServiceTest {
         assertEquals(0, loadedLine.equipment().size());
         assertEquals(0, loadedArea.requiredWatts());
         assertEquals(0, loadedLine.requiredWatts());
+    }
+
+    @Test
+    void savesAndLoadsAreaAndLinePowerConnections() throws IOException {
+        EventPlan plan = new EventPlan("Test");
+        PowerSource source = new PowerSource("source", "Kapp", new Position(50, 50));
+        source.addOutlet(new PowerOutlet("outlet", ConnectorType.SCHUKO_230V, 11000));
+        AreaObject area = new AreaObject("area", "Lava", new Position(10, 20));
+        area.addEquipment(new Equipment("Valgusti", 500));
+        LineObject line = new LineObject("line", "Valguskett", new Position(30, 40));
+        line.addEquipment(new Equipment("Lambid", 300));
+        plan.addObject(source);
+        plan.addObject(area);
+        plan.addObject(line);
+        plan.connectToPower(source.id(), area.id(), ConnectorType.SCHUKO_230V, "outlet");
+        plan.connectToPower(source.id(), line.id(), ConnectorType.SCHUKO_230V, "outlet");
+        Path file = tempDirectory.resolve("area-line-connections.pplan");
+
+        service.save(plan, file);
+        EventPlan loadedPlan = service.load(file);
+
+        assertEquals(2, loadedPlan.powerConnections().size());
+        assertEquals("area", loadedPlan.powerConnections().get(0).consumerId());
+        assertEquals("line", loadedPlan.powerConnections().get(1).consumerId());
+        assertEquals(800, new PowerSummaryService().summaries(loadedPlan).getFirst().usedWatts());
     }
 }

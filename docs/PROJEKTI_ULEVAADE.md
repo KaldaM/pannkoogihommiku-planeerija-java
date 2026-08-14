@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
 - Dokumendi viimane sisuline uuendus: 14. august 2026
-- Koodi viimane dokumenteeritud commit: `5841aa6` (`Save equipment for areas and lines`, 14. august 2026)
+- Koodi viimane dokumenteeritud commit: `323b8ec` (`Manage equipment for areas and lines`, 14. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -386,7 +386,7 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 
 ### 9.1 Vahetu jätkamiskoht
 
-Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Joone paksust, objektide läbipaistvust ning teksti- ja sildisuurusi saab muuta slideritega. Telk, ala ja joon kasutavad ühist `EquipmentContainer` lepingut ning nende seadmeid saab hallata sama külgpaneeli kaudu. Ala ja joone seadmed salvestuvad ning vanad ilma seadmeväljadeta plaanid avanevad tühjade nimekirjadega. Järgmine samm on kontrollida seda töövoogu kasutajaliideses ning seejärel üldistada vooluühendused kõigile kolmele objektitüübile.
+Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Joone paksust, objektide läbipaistvust ning teksti- ja sildisuurusi saab muuta slideritega. Telk, ala ja joon kasutavad ühist `EquipmentContainer` lepingut ning nende seadmeid saab hallata sama külgpaneeli kaudu. Domeenimudel lubab kõiki kolme ühendada vooluallikaga, arvestab nende tarbimist kokkuvõttes ning säilitab ühendused salvestusringis. Järgmine samm on üldistada kasutajaliidese vooluvalikud ja kaablijoonistamine telgilt alale ning joonele.
 
 ### 9.2 Joonte ja alade järgmine funktsionaalne etapp
 
@@ -405,7 +405,7 @@ Seda ei tasu lahendada kolme eraldi erandina. Enne kasutajaliidese lisamist tule
 - arvutatav vooluvajadus;
 - kasutaja määratav elektriühenduse ankrupunkt.
 
-`Tent`, `AreaObject` ja `LineObject` kasutavad juba sama seadmete ning vooluvajaduse lepingut. Salvestamine, kasutajaliides, ühendused ja kokkuvõtted tuleb järgmiste eraldi sammudena üldistada.
+`Tent`, `AreaObject` ja `LineObject` kasutavad sama seadmete ning vooluvajaduse lepingut. Salvestamine, domeeni ühendused ja kokkuvõtted on üldistatud; kasutajaliides ning kaabli otspunkti valimine vajavad veel üldistamist.
 
 ### 9.3 Juba otsustatud visuaalsed täiendused
 
@@ -471,7 +471,7 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 1. Kontrolli ala ja joone seadmete lisamist, eemaldamist, dubleerimist, salvestamist ning avamist kasutajaliideses.
 2. Paranda käsitsi kontrollimisel ilmnevad seadmehalduse vead.
-3. Üldista vooluühendused, kaablid ja kokkuvõtted telgilt kõigile elektritarbijatele.
+3. Üldista kasutajaliidese vooluühendused ja kaablid telgilt kõigile elektritarbijatele.
 4. Lisa elektriühenduse ankrupunkt telgile, joonele ja alale.
 5. Alusta automaatteste salvestamisest ja vooluarvutusest, sest nende regressiooni mõju on suurim.
 6. Tükelda `PancakePlannerApp` järk-järgult, alustades ala- ja joone tööriistast või detailpaneelist.
@@ -483,7 +483,7 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 Uuele arendajale või tehisintellekti vestlusele tuleks anda vähemalt järgmine info:
 
-> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. `EquipmentContainer` ühendab telgi, ala ja joone seadmemudeli; nende seadmed salvestuvad ja on külgpaneelil hallatavad. Järgmine suurem samm on vooluühenduste üldistamine kõigile kolmele objektitüübile.
+> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. `EquipmentContainer` ühendab telgi, ala ja joone seadmemudeli; domeen toetab kõigi kolme vooluühendusi. Järgmine suurem samm on GUI vooluvalikute ja kaablijoonistamise üldistamine alale ning joonele.
 
 Tavaline kontroll enne muutmist:
 
