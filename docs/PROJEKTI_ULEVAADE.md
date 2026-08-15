@@ -108,13 +108,13 @@ Olulisemad kujunenud põhimõtted:
 
 ### 5.1 Tehnoloogiad
 
-- Java 21 LTS
-- JavaFX 21.0.4
+- Java 25 LTS
+- JavaFX 26.0.2
 - Gradle Wrapper ja mitme mooduliga Gradle'i projekt
 - Apache PDFBox 2.0.31 PDF-raportite loomiseks
 - JUnit Jupiter 5.10.2 testide taristuna
 
-Java 21 valiti pika toe ja JavaFX 21-ga stabiilse sobivuse tõttu. Projekt ei vaja praegu Java 25 funktsioone; hilisem uuendamine on võimalik eraldi kontrollitud muudatusena.
+Java 25 valiti praeguse pika toe versioonina. JavaFX 26 kasutamine võimaldab säilitada ajakohasema töölauaintegratsiooni, sealhulgas parandused Linuxi KDE murdskaleerimisele ja modaaldialoogide avamisel maksimeeritud akna suuruse säilimisele. JavaFX 26 nõuab vähemalt Java 24 runtime'i; projekt kasutab ühtse arendus- ja käituskeskkonna jaoks Java 25 tööriistaahelat.
 
 ### 5.2 Moodulid
 
@@ -203,7 +203,7 @@ Kasutaja laaditud kaart salvestatakse praegu failiteena. Seetõttu võib plaan k
 
 ### 5.7 Platvormiülene seis
 
-- Projekt kasutab Java 21, JavaFX-i, Gradle'it ning `java.nio.file` API-t; rakenduse domeeniloogika ei sõltu teadlikult Windowsi-spetsiifilisest API-st.
+- Projekt kasutab Java 25, JavaFX-i, Gradle'it ning `java.nio.file` API-t; rakenduse domeeniloogika ei sõltu teadlikult Windowsi-spetsiifilisest API-st.
 - Repository sisaldab Gradle Wrapperi käivitajaid nii Windowsile kui Unixilaadsetele süsteemidele.
 - `planner-gui` sõltub `planner-core` moodulist Gradle'i projektisõltuvuse kaudu; core kompileeritakse eraldi teegiks.
 - Kasutaja eelistused salvestatakse Java `Preferences` API kaudu, mille tegeliku asukoha valib operatsioonisüsteem.

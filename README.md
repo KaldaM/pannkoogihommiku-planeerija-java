@@ -13,8 +13,8 @@ Põhjalik ülevaade algsetest eesmärkidest, senisest arendusest, praegusest sei
 
 ## Tehnoloogiad
 
-- Java 21
-- JavaFX 21
+- Java 25 LTS
+- JavaFX 26.0.2
 - Gradle Wrapper
 - Apache PDFBox
 - JUnit 5
