@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
 - Dokumendi viimane sisuline uuendus: 15. august 2026
-- Koodi viimane dokumenteeritud commit: `00161b4` (`Version the plan file format`, 15. august 2026)
+- Koodi viimane dokumenteeritud commit: `3b5d8a7` (`Use proper Gradle module dependency`, 15. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -44,7 +44,7 @@ Rakendus peab võimaldama koostada ürituse alaplaani, kus kasutaja saab:
 - salvestada töö ning hiljem samast kohast jätkata;
 - eksportida plaan teistele arusaadavasse vormi.
 
-Oluline lõppnõue on see, et tavakasutaja ei peaks rakenduse käivitamiseks paigaldama IntelliJ IDEA-t, Javat ega kasutama käsurida. Selleks on tulevikus vaja Windowsi paigalduspaketti koos rakenduse enda Java runtime'iga.
+Oluline lõppnõue on see, et tavakasutaja ei peaks rakenduse käivitamiseks paigaldama IntelliJ IDEA-t, Javat ega kasutama käsurida. Selleks on tulevikus vaja sihtplatvormi paigaldus- või käivituspaketti koos rakenduse enda Java runtime'iga. Windowsi ja Linuxi paketid tuleb koostada ning kontrollida eraldi, sest `jpackage` loob paketi sellel platvormil, kus build käivitatakse.
 
 ### 3.2 Bakalaureusetöö suurem visioon
 
@@ -90,7 +90,7 @@ Need ei ole praeguse prototüübi lubatud funktsioonid, vaid suurema süsteemi u
 
 ## 4. Arenduspõhimõtted
 
-Arendus on toimunud teadlikult väikeste sammudena. Üks kasutaja jaoks kontrollitav muudatus tehakse valmis, käivitatakse, proovitakse päris plaanil ning commititakse eraldi. Selline tööviis on seni andnud 185 commiti ja võimaldab näha, miks iga funktsioon lisati või ümber tehti.
+Arendus on toimunud teadlikult väikeste sammudena. Üks kasutaja jaoks kontrollitav muudatus tehakse valmis, käivitatakse, proovitakse päris plaanil ning commititakse eraldi. Selline tööviis on seni andnud 186 commiti ja võimaldab näha, miks iga funktsioon lisati või ümber tehti.
 
 Olulisemad kujunenud põhimõtted:
 
@@ -147,6 +147,8 @@ Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi ab
 | `PowerSource` | Elektrikapp ja selle väljundite loetelu |
 | `PowerOutlet` | Nimi, ühenduse tüüp ja lubatud võimsus |
 | `PowerConnection` | Allikas, tarbija, väljund, kaabli tüüp, märkmed, jupid ja trajektoor |
+| `EquipmentContainer` | Ühine leping seadmeid hoidvatele ja voolu tarbivatele objektidele |
+| `PowerConnectable` | Ühine leping tarbija vooluvajadusele ja muudetavale ühenduspunktile |
 | `CustomObject` | Ristkülik või ring muudetava suuruse, pöörde, värvi ja läbipaistvusega |
 | `TextObject` | Mitmerealine tekstikast, pealkiri, värv ja kirjasuurus |
 | `MarkerObject` | Ikooniga objekt, näiteks WC, saun, liige, turva või start/finiš |
@@ -182,7 +184,31 @@ Plaan salvestatakse `.pplan` laiendiga Java properties-vormingus faili. Salvesta
 
 Uued failid sisaldavad täisarvulist `formatVersion` välja; praegune vorminguversioon on `1`. Versioonita fail loetakse tagasiühilduvuse huvides esimese versiooni failiks. Rakendus keeldub endast uuema vormingu avamisest ja palub kasutajal rakendust uuendada, selle asemel et tundmatuid andmeid vaikselt valesti tõlgendada. Eraldi migratsioonisüsteemi ei ole veel vaja läinud, kuid see tuleb lisada enne esimest murdvat vormingumuudatust.
 
-Kasutaja laaditud kaart salvestatakse praegu failiteena. Seetõttu võib plaan koos kaardiga teise arvutisse viimisel kaardi kaotada. Tulevikus tuleks kaart kas plaanifaili sisse pakkida või kasutada plaanikausta suhtelist teed.
+Kasutaja laaditud kaart salvestatakse praegu failiteena. Seetõttu võib plaan koos kaardiga teise arvutisse või teise operatsioonisüsteemi viimisel kaardi kaotada. Kokkulepitud järgmine arendustöö lahendab selle `.pplan` versioon 2 paketivorminguga; seda ei ole veel teostatud.
+
+### 5.6 Tähtsamad teenused ja GUI komponendid
+
+| Komponent | Vastutus |
+| --- | --- |
+| `PlanFileService` | Versioon 1 plaanifailide kirjutamine, lugemine ja vorminguversiooni kontroll |
+| `PlanFactory` | Uue plaani algseisu loomine |
+| `PowerSummaryService` | Elektrikappide koormuse ja vaba võimsuse arvutamine |
+| `GeometryCalculator` | Joonte pikkuse ning kujundite pindala ja ümbermõõdu arvutamine |
+| `PancakePlannerApp` | Rakenduse põhivaade, tööriistad, dialoogid ja kasutaja tegevuste sidumine mudeliga |
+| `CablePathHelper`, `CableRouteEditor`, `CableRouteGeometry` | Voolukaabli tee moodustamine ning vahepunktide muutmise loogika |
+| `CableDisplayHelper`, `CablePolylineHelper` | Kaablite visuaalne esitus ja reaalajas uuendamine |
+| `ReportTextExporter`, `PdfReportExporter` | Teksti- ja PDF-aruannete loomine |
+| `MapImageSnapshotter` | Kaardivaate ettevalmistamine pildi- ja PDF-ekspordiks |
+| `ExportOptionsDialog`, `ExportFileChooser`, `ExportFileNames` | Ekspordi valikud, sihtfail ja ühtsed failinimed |
+
+### 5.7 Platvormiülene seis
+
+- Projekt kasutab Java 21, JavaFX-i, Gradle'it ning `java.nio.file` API-t; rakenduse domeeniloogika ei sõltu teadlikult Windowsi-spetsiifilisest API-st.
+- Repository sisaldab Gradle Wrapperi käivitajaid nii Windowsile kui Unixilaadsetele süsteemidele.
+- `planner-gui` sõltub `planner-core` moodulist Gradle'i projektisõltuvuse kaudu; core kompileeritakse eraldi teegiks.
+- Kasutaja eelistused salvestatakse Java `Preferences` API kaudu, mille tegeliku asukoha valib operatsioonisüsteem.
+- Linuxis kompileerimist, JavaFX-i käivitamist, failidialooge, kasutaja eelistusi ja eksporti ei ole veel tervikuna kontrollitud.
+- Ühegi platvormi tavakasutaja paketti ega rakendusega kaasas olevat Java runtime'i ei ole veel loodud.
 
 ## 6. Praeguseks saavutatud funktsionaalsus
 
@@ -223,7 +249,7 @@ Kasutaja laaditud kaart salvestatakse praegu failiteena. Seetõttu võib plaan k
 - Kappi saab lisada eri tüüpi väljundeid.
 - Väljundil on muudetav nimi, ühenduse tüüp ja võimsus.
 - Ühendatud väljundi muutmisel või eemaldamisel kaitsevad hoiatused olemasolevaid seoseid.
-- Telgi saab ühendada konkreetse väljundiga külgpaneelist või valida kapi otse kaardilt.
+- Telgi, ala või joone saab ühendada konkreetse väljundiga külgpaneelist või valida kapi otse kaardilt.
 - Kui sobiva tüübiga väljund on üheselt valitav, saab süsteem selle automaatselt määrata.
 - Valikus näidatakse ainult konkreetses kapis päriselt olemas olevaid ühendusetüüpe ja väljundeid.
 - Koormust arvestatakse väljundi, mitte ainult kogu kapi tasemel.
@@ -231,7 +257,7 @@ Kasutaja laaditud kaart salvestatakse praegu failiteena. Seetõttu võib plaan k
 
 ### 6.5 Voolukaablid
 
-- Ühendatud telgi ja kapi vahel kuvatakse kaabel.
+- Ühendatud tarbija ja kapi vahel kuvatakse kaabel.
 - Kaabli tüüp tuleneb valitud elektriühendusest.
 - Kaablile saab lisada vahepunkte ning kujundada tegeliku trajektoori.
 - Vahepunkte saab reaalajas lohistada, lõigule lisada ja paremklõpsuga eemaldada.
@@ -256,7 +282,7 @@ Kasutaja laaditud kaart salvestatakse praegu failiteena. Seetõttu võib plaan k
 - Ala värvi saab muuta ning läbipaistvust saab määrata slideriga.
 - Joone värvi ja paksust saab määrata nii loomisel kui hiljem; paksust muudetakse slideriga.
 
-See funktsionaalsus on värskelt lisatud ja vajab enne uute objektitüüpide juurde liikumist veel terviklikku kasutuskatset.
+Jooned ja alad kasutavad telgiga sama seadmete ning vooluühenduste mudelit. Nende geomeetria ja elektriühenduste JavaFX-i hiirekäitumine vajab endiselt terviklikku käsitsi regressioonikontrolli.
 
 ### 6.7 Korraldaja objektid
 
@@ -275,7 +301,7 @@ See funktsionaalsus on värskelt lisatud ja vajab enne uute objektitüüpide juu
 - Objektiloend asub detailide kohal ning selle kõrgust saab lohistades muuta.
 - Objektiloendi kasutaja valitud kõrgus jäetakse rakenduste vahel meelde.
 - Külgpaneel kuvab ainult valitud objektitüübile asjakohaseid välju.
-- Telgi seadmed ja kapi väljundid paiknevad vastava objekti detailide juures.
+- Telgi, ala ja joone seadmed ning kapi väljundid paiknevad vastava objekti detailide juures.
 - Voolu-, kaabli- ja grupikokkuvõtteid saab ükshaaval sisse ja välja lülitada.
 
 ### 6.9 Salvestamine ja eksport
@@ -286,6 +312,7 @@ See funktsionaalsus on värskelt lisatud ja vajab enne uute objektitüüpide juu
 - Salvestamata muudatuste nähtav olek.
 - Enne uue plaani loomist, teise plaani avamist või rakenduse sulgemist pakutakse muudatuste salvestamist.
 - Varem loodud plaanifailid on püsinud uute versioonidega avatavad.
+- Uued failid märgitakse `formatVersion=1` väärtusega; versioonita vanad failid loetakse versiooniks 1 ning uuema tundmatu versiooni avamine lõpetatakse selge veateatega.
 - Tekstiraporti eksport.
 - Kaardipildi eksport PNG-na valitava ulatusega.
 - PDF-eksport koos ühes dialoogis valitavate sisu- ja kompaktsusvalikutega.
@@ -293,7 +320,7 @@ See funktsionaalsus on värskelt lisatud ja vajab enne uute objektitüüpide juu
 
 ## 7. Arenduse kronoloogia
 
-Allolev ajajoon koondab 185 commitist tähenduslikud etapid. Täpne muudatuste loetelu on käsuga `git log --reverse --oneline`.
+Allolev ajajoon koondab 186 commitist tähenduslikud etapid. Täpne muudatuste loetelu on käsuga `git log --reverse --oneline`.
 
 ### 1. juuli 2026: alus ja esimene töötav vertikaallõige
 
@@ -367,7 +394,17 @@ Allolev ajajoon koondab 185 commitist tähenduslikud etapid. Täpne muudatuste l
 - Lisati vastavad kaardikihid ja renderdamine.
 - Punktide järjestikuse klõpsamisega lisamisvoog asendas ebaloomuliku valmis algkujundi.
 - Lisati punktide lohistamine, eemaldamine ja vahepunktide kaudu juurde tekitamine.
-- Viimase commitiga sai pärast loomist muuta joone värvi.
+- Pärast loomist sai muuta joone värvi.
+
+### 14.–15. august 2026: mõõdud, üldistatud elektritarbijad ja failivormingu alus
+
+- Joontele lisati pikkus ning aladele, ringidele ja ristkülikutele pindala ning ümbermõõt; mõõdud kuvatakse ka objektide nimekirjas.
+- Telkide ja tavaobjektide läbipaistvus, joone paksus ning teksti- ja sildisuurused muudeti slideritega seadistatavaks.
+- `Tent`, `AreaObject` ja `LineObject` ühendati ühise `EquipmentContainer` ning `PowerConnectable` mudeli alla.
+- Ala ja joone seadmed, vooluvajadus, elektriühendused, kaablid, kokkuvõtted ja eksport üldistati telgiga samale loogikale.
+- Tarbijatele lisati salvestatav ja kaardil lohistatav vooluühenduse punkt.
+- `.pplan` versioon 1 sai selge `formatVersion` välja, versioonita failide tagasiühilduva lugemise ja uuema vormingu kontrolli.
+- `planner-gui` hakkas core'i lähtekoodi uuesti kompileerimise asemel sõltuma korrektselt `planner-core` moodulist.
 
 ## 8. Kasutajatestides tehtud olulisemad õppetunnid
 
@@ -390,58 +427,37 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 
 ### 9.1 Vahetu jätkamiskoht
 
-Joonte ja alade geomeetria ning põhilised visuaalsed omadused on valmis. Telk, ala ja joon kasutavad ühist `EquipmentContainer` lepingut, nende seadmeid saab hallata sama külgpaneeli kaudu ning kõiki kolme saab kasutajaliideses ühendada elektrikapi väljundiga. Kaardikaablid, vahepunktid, kokkuvõtted ja tekstiaruanded töötavad kõigi kolme tarbijatüübiga. `PowerConnectable` mudel hoiab keskpunkti suhtelist ühenduspunkti nihet ning see salvestub tagasiühilduvalt. Valitud ühendusel kuvatakse lohistatav tarbijapoolne ühenduspunkt, mille muutmisel uueneb kaabel reaalajas. Vahetu järgmine samm on selle tervikvoo käsitsi kontrollimine telgi, ala ja joonega, sealhulgas objekti liigutamise, salvestamise ning uuesti avamise järel.
+Järgmine kokkulepitud arendustöö on `.pplan` versioon 2 paketivorming. Seda ei ole veel ehitatud.
 
-### 9.2 Joonte ja alade järgmine funktsionaalne etapp
+Versioon 2 nõuded ja otsused:
 
-Kasutaja on selgelt määranud järgmised nõuded:
+- kasutajale jääb plaan üheks `.pplan` failiks;
+- faili sisemine kuju on ZIP-pakett, mis sisaldab plaani struktureeritud andmeid ja kasutaja valitud kaardipilti;
+- kaardipilti ei kodeerita properties-faili Base64 tekstina, et vältida tarbetut mahu kasvu;
+- versioon 1 tavalised properties-failid, sealhulgas versiooniväljata vanad failid, peavad edasi avanema;
+- uued paketid peavad kandma vorminguversiooni `2` ning endast uuema versiooni korral peab rakendus andma arusaadava veateate;
+- vana faili avamine ei pea seda kohe muutma; järgmine salvestamine võib kirjutada plaani versioon 2 kujul;
+- vigane või poolik pakett ei tohi osaliselt laaditud plaani kasutajale korrektse plaanina näidata;
+- automaattestid peavad katma versioonita faili, versioon 1 faili, kaardiga ja kaardita versioon 2 paketi ning tundmatu tulevase versiooni.
 
-- ala ja joone sisse peab saama lisada seadmeid;
-- ala ja joon peavad saama olla elektritarbijad;
-- joone elektriline kasutusjuht võib olla näiteks valguskett;
-- ala elektriline kasutusjuht võib olla ebakorrapärase kujuga lava;
-- voolukaabel ei tohi selliste objektide puhul vaikimisi ühineda geomeetrilise keskpunktiga;
-- ka telgil peab saama määrata, millisest kohast vool füüsiliselt ühendub.
+### 9.2 Kvaliteet ja arhitektuur
 
-Seda ei tasu lahendada kolme eraldi erandina. Enne kasutajaliidese lisamist tuleks kujundada ühine mudel elektrit tarbivate ja seadmeid sisaldavate objektide jaoks. Võimalik suund on eraldada:
+- Hoida `.pplan` paketi lugemine ja kirjutamine `planner-core` teenuses; JavaFX-i pildikuvamine jääb `planner-gui` vastutuseks.
+- Jagada väga suur `PancakePlannerApp` järk-järgult väiksemateks vaate-, kontrolleri- ja tööriistaklassideks.
+- Laiendada automaatteste eelkõige vigaste failide, kasutajaliidese sündmuste ja ekspordi regressioonide suunas.
+- Kontrollida käsitsi ühenduspunkti muutmist telgil, alal ja joonel, objekti või geomeetria liigutamist ning salvestamise järel taastumist.
+- Lisada ootamatute failivigade jaoks logimine, säilitades kasutajale lühikesed ja arusaadavad veateated.
 
-- seadmete hoidmise võime;
-- arvutatav vooluvajadus;
-- kasutaja määratav elektriühenduse ankrupunkt.
+### 9.3 Platvormiülene kontroll ja väljastamine
 
-`Tent`, `AreaObject` ja `LineObject` kasutavad sama seadmete ning vooluvajaduse lepingut. Salvestamine, ühendused, kaardikaablid ja kokkuvõtted on üldistatud. Ühenduspunkti nihe on mudelis ja failivormingus olemas ning seda saab valitud ühendusel kaardil lohistada või lähtestada.
+- Käivitada puhas build ja testid Linuxis.
+- Kontrollida Linuxis JavaFX-i kaardivaadet, failidialooge, kasutaja eelistusi ning TXT-, PNG- ja PDF-eksporti.
+- Luua Gradle'i kaudu `jpackage` põhine rakenduse pilt koos Java runtime'i ja JavaFX-iga.
+- Koostada ning testida Windowsi ja Linuxi distributsioonid nende vastavatel platvormidel.
+- Lisada rakenduse ikoon, versiooniinfo ning paigaldamise ja uuendamise juhised.
+- Kontrollida paketti arvutis, kus Javat ega arenduskeskkonda pole paigaldatud.
 
-### 9.3 Ühenduspunkti järelkontroll
-
-- Kontrollida ühenduspunkti muutmist telgil, alal ja joonel.
-- Kontrollida, et punkt liigub objekti ning muudetud joone- või alageomeetriaga ootuspäraselt kaasa.
-- Kontrollida punkti lähtestamist ning säilimist plaani salvestamisel ja avamisel.
-
-### 9.4 Kvaliteet ja arhitektuur
-
-Enne funktsioonide hulga suurt kasvatamist on vaja:
-
-- jagada väga suur `PancakePlannerApp` väiksemateks vaate-, kontrolleri- ja tööriistaklassideks;
-- lisada domeeniloogika automaattestid;
-- lisada salvestamise ja vanade failide tagasiühilduvuse testid;
-- lisada kaablite ning kujundite geomeetria testid;
-- lisada esimese murdva `.pplan` vormingumuudatuse eel versioonidevahelised migratsioonid;
-- otsustada, kas properties-vorming sobib pikaajaliselt või tuleks liikuda näiteks versioonitud JSON-vormingule;
-- lisada logimine ja kasutajale arusaadavad veateated ootamatute failivigade jaoks.
-
-### 9.5 Tavakasutajale väljastamine
-
-See on algse ülesande oluline, kuid seni tegemata osa:
-
-- luua Gradle'i ülesanne Windowsi `jpackage` paketi tegemiseks;
-- lisada paketti vajalik Java runtime ja JavaFX;
-- luua rakenduse ikoon ning versiooniinfo;
-- valida esmalt `app-image` või kaasaskantav pakett kiireks testimiseks;
-- seejärel luua tavapärane Windowsi installer;
-- kontrollida paigaldust arvutis, kus Javat ja IntelliJ IDEA-t ei ole;
-- dokumenteerida paigaldamine, uuendamine ja plaanifailide seos rakendusega.
-
-### 9.6 Suurema süsteemi funktsioonid
+### 9.4 Suurema süsteemi funktsioonid
 
 Pärast prototüübi põhivoo stabiliseerimist:
 
@@ -463,30 +479,32 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 - Automaattestid katavad geomeetriat, seadmemudelit, salvestamise tagasiühilduvust, vooluarvutust, kaabli otspunkte ja tekstiaruannet, kuid kasutajaliidese sündmuste testikate on endiselt piiratud.
 - Peamine JavaFX-i rakendusklass on liiga suur ja koondab veel palju erinevaid vastutusi.
-- Salvestusvormingul on versiooninumber, kuid puuduvad veel ametlik skeem ja versioonidevahelised migratsioonid.
-- Kasutaja enda kaardipildi viide ei ole teise arvutisse liigutamisel kaasaskantav.
+- Praegune `.pplan` versioon 1 on properties-fail; versioon 2 paketivorming ja selle migratsioonitee on alles kavandatud.
+- Kasutaja enda kaardipildi viide ei ole teise arvutisse, teise kausta ega teise operatsioonisüsteemi liigutamisel kaasaskantav.
 - Undo/redo puudub, mistõttu sõltub vigade parandamine käsitsi muutmisest või varasemast salvestusest.
-- Windowsi installeri ja iseseisva runtime'iga väljalaset ei ole.
+- Windowsi ega Linuxi installeri või iseseisva runtime'iga väljalaset ei ole.
+- Linuxis käivitamist ja platvormipõhiseid failidialooge ei ole veel kontrollitud.
+- Automaatset CI buildi eri operatsioonisüsteemidel ei ole seadistatud.
 - Lohistatava ühenduspunkti JavaFX-i hiirekäitumist ei kata automaattest; see vajab käsitsi kontrollimist eri objektitüüpidega.
 - Rakendusel ei ole veel veebivaadet, kasutajakontosid, õigusi ega keskset andmehoidlat.
 - Tartu kaardiandmetega otseliidestust ei ole.
 
 ## 11. Soovituslik tööjärjekord
 
-1. Kontrolli ühenduspunkti lohistamist ja lähtestamist telgil, alal ning joonel.
-2. Kontrolli ühenduspunkti liikumist objekti ja geomeetria muutmisel ning säilimist plaani salvestamisel ja avamisel.
-3. Paranda käsitsi kontrollimisel ilmnevad vead.
-4. Alusta automaatteste salvestamisest ja vooluarvutusest, sest nende regressiooni mõju on suurim.
-5. Tükelda `PancakePlannerApp` järk-järgult, alustades ala- ja joone tööriistast või detailpaneelist.
-6. Lahenda kaardifailide kaasaskantavus ning lisa vajaduse tekkimisel vormingu migratsioonid.
-7. Loo Windowsi proovipakett ning katseta seda puhtas arvutis.
-8. Alles seejärel vali bakalaureusetöö järgmine suurem vertikaallõige, näiteks alajaotuskilp või avalik veebivaade.
+1. Määra `.pplan` versioon 2 paketi täpne sisemine struktuur ja vastutused core'i ning GUI vahel.
+2. Teosta versioon 2 lugemine ja kirjutamine koos kasutaja kaardipildi pakkimisega.
+3. Säilita versioonita ning versioon 1 properties-failide avamine ja kata mõlemad formaadid automaattestidega.
+4. Kontrolli plaani kaasaskantavust, liigutades ühe `.pplan` faili algsest kaardipildist eraldi asukohta.
+5. Käivita puhas build, testid ja peamised kasutusvood Linuxis ning paranda leitud platvormierinevused.
+6. Tükelda `PancakePlannerApp` järk-järgult, alustades failivoo või kaarditööriistade vastutustest.
+7. Loo Windowsi ja Linuxi proovipaketid koos rakenduse runtime'iga.
+8. Seejärel vali järgmine suurem funktsionaalne lõik, näiteks alajaotuskilp või avalik veebivaade.
 
 ## 12. Uue arendusvestluse alustamise juhis
 
 Uuele arendajale või tehisintellekti vestlusele tuleks anda vähemalt järgmine info:
 
-> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Vaata `git status --short` ning viimaseid committe käsuga `git log -15 --oneline`. Ära eelda, et dokument on koodist uuem: kontrolli alati praegust teostust. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. Säilita vanade `.pplan` failide avamine. Ära keela lukustatud objekti andmete muutmist; lukk kaitseb selle asukohta. Telgi, ala ja joone seadmed, vooluühendused, kaardikaablid ning aruanded kasutavad ühist loogikat. Valitud ühenduse tarbijapoolset ankrupunkti saab kaardil lohistada ja paremklõpsuga lähtestada; järgmine samm on selle käsitsi kontrollimine eri objektitüüpide, objekti liigutamise ning salvestamise järel.
+> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Kontrolli töökausta ja viimaseid committe ning võrdle dokumenti alati tegeliku koodiga. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. `planner-gui` sõltub `planner-core` moodulist; ära lisa core'i lähtekoode GUI source set'i. Säilita versioonita ja versioon 1 `.pplan` failide avamine. Järgmine kokkulepitud töö on ZIP-põhine `.pplan` versioon 2, mis sisaldab kasutaja valitud kaardipilti. Seda funktsiooni ei ole veel teostatud.
 
 Tavaline kontroll enne muutmist:
 
@@ -495,16 +513,28 @@ git status --short
 git log -15 --oneline
 ```
 
-Rakenduse käivitamine:
+Rakenduse käivitamine Windowsis:
 
 ```powershell
 .\gradlew.bat :planner-gui:run
 ```
 
-Testide käivitamine:
+Rakenduse käivitamine Linuxis või macOS-is:
+
+```bash
+./gradlew :planner-gui:run
+```
+
+Testide käivitamine Windowsis:
 
 ```powershell
 .\gradlew.bat test
+```
+
+Testide käivitamine Linuxis või macOS-is:
+
+```bash
+./gradlew test
 ```
 
 Pärast iga sammu:
@@ -514,7 +544,7 @@ git diff --check
 git status --short
 ```
 
-Seejärel proovib kasutaja muudatust IntelliJ IDEA kaudu. Kui see töötab, tehakse üks kirjeldava ingliskeelse nimega commit ja lükatakse GitHubi.
+Seejärel kontrollib kasutaja muudatust rakenduses. Kui see töötab, tehakse üks kirjeldava ingliskeelse nimega commit ja lükatakse GitHubi.
 
 ## 13. Dokumendi hooldamine
 
