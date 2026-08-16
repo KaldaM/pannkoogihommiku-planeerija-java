@@ -45,4 +45,12 @@ Rakendus avab edasi ka vanad versioonita ja versioon 1 properties-vormingus `.pp
 
 ## Tavakasutajale jagamine
 
-Windowsi paigalduspaketti ei ole veel loodud. Enne rakenduse jagamist tehnilise ettevalmistuseta kasutajatele tuleb lisada `jpackage`-põhine pakkimine, mis sisaldab rakenduse käitamiseks vajalikku Java runtime'i.
+Linuxis saab luua iseseisva rakendusekausta, mis sisaldab vajalikku Java runtime'i ja JavaFX-i:
+
+```bash
+./gradlew :planner-gui:packageLinuxAppImage
+```
+
+Valmis rakendus asub kaustas `planner-gui/build/jpackage/pannkoogihommiku-planeerija`. Selle käivitaja on `bin/pannkoogihommiku-planeerija` ning kasutaja arvutisse ei pea olema eraldi Javat ega Gradle'it paigaldatud.
+
+Linuxi paigalduspaketti ja Windowsi distributsiooni ei ole veel loodud. `jpackage` paketid tuleb koostada ning kontrollida sellel operatsioonisüsteemil, millele need on mõeldud.

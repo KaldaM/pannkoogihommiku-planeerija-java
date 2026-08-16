@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
-- Dokumendi viimane sisuline uuendus: 16. august 2026
-- Koodi viimane dokumenteeritud commit: `8bf5315` (`Upgrade to Java 25 and JavaFX 26`, 16. august 2026)
+- Dokumendi viimane sisuline uuendus: 17. august 2026
+- Koodi viimane dokumenteeritud commit: `d212c8b` (`Ensure saved plans use the .pplan extension`, 16. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -422,6 +422,13 @@ Allolev ajajoon koondab 186 commitist tähenduslikud etapid. Täpne muudatuste l
 - Paketile lisati manifesti, sisekirjete, suuruste, kaardipildi ja vorminguversiooni kontroll ning olemasolevat faili kaitsev ajutise faili kaudu salvestamine.
 - Automaattestid katavad v1 migratsiooni, kaardiga ja kaardita v2 paketi, PNG- ja JPEG-kaardi, tundmatu tulevase versiooni ning valitud vigased paketid.
 
+### 17. august 2026: iseseisva Linuxi rakendusepildi alus
+
+- `planner-gui` moodulisse lisati Gradle'i ülesanne `packageLinuxAppImage`, mis loob `jpackage` abil iseseisva rakendusekausta.
+- Rakendusepilt sisaldab Java 25 runtime'i, JavaFX-i, core'i ja kõiki muid käitusaegseid sõltuvusi; sihtarvutisse ei ole vaja eraldi Javat ega Gradle'it.
+- Mitte-modulaarse rakenduse jaoks lisati eraldi käivitusklass, JavaFX kaasatakse runtime'i päris moodulitena ning runtime piirati rakenduse kasutatavate Java moodulitega.
+- Järgmine pakendamise samm on Fedora RPM-i loomine ja paigaldustest.
+
 ## 8. Kasutajatestides tehtud olulisemad õppetunnid
 
 Projekti väärtus ei ole ainult funktsioonide arvus. Korduv päris kasutamine tõi välja mitu üldistatavat disainiõppetundi:
@@ -468,7 +475,7 @@ Vahetu järgmine samm on teha päris kasutusvooga kaasaskantavuse kontroll: vali
 
 - Käivitada puhas build ja testid Linuxis.
 - Kontrollida Linuxis JavaFX-i kaardivaadet, failidialooge, kasutaja eelistusi ning TXT-, PNG- ja PDF-eksporti.
-- Luua Gradle'i kaudu `jpackage` põhine rakenduse pilt koos Java runtime'i ja JavaFX-iga.
+- Kontrollida Gradle'i kaudu loodavat `jpackage` rakenduse pilti koos Java runtime'i ja JavaFX-iga.
 - Koostada ning testida Windowsi ja Linuxi distributsioonid nende vastavatel platvormidel.
 - Lisada rakenduse ikoon, versiooniinfo ning paigaldamise ja uuendamise juhised.
 - Kontrollida paketti arvutis, kus Javat ega arenduskeskkonda pole paigaldatud.
@@ -511,8 +518,9 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 2. Kontrolli vana versioon 1 projekti avamist, andmete säilimist ja samasse faili versioon 2 kujul salvestamist.
 3. Käivita puhas build, testid ja peamised kasutusvood Linuxis ning Windowsis.
 4. Tükelda `PancakePlannerApp` järk-järgult, alustades failivoo või kaarditööriistade vastutustest.
-5. Loo Windowsi ja Linuxi proovipaketid koos rakenduse runtime'iga.
-6. Seejärel vali järgmine suurem funktsionaalne lõik, näiteks alajaotuskilp või avalik veebivaade.
+5. Loo ja testi Fedora RPM-pakett, kasutades valminud Linuxi rakendusepildi seadistust.
+6. Loo Windowsis eraldi Windowsi proovipakett koos rakenduse runtime'iga.
+7. Seejärel vali järgmine suurem funktsionaalne lõik, näiteks alajaotuskilp või avalik veebivaade.
 
 ## 12. Uue arendusvestluse alustamise juhis
 

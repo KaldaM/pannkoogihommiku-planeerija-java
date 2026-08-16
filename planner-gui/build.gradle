@@ -17,3 +17,68 @@ application {
     mainClass = 'ee.matteus.pannukas.gui.PancakePlannerApp'
     applicationDefaultJvmArgs = ['--enable-native-access=javafx.graphics']
 }
+
+def linuxAppName = 'pannkoogihommiku-planeerija'
+def packagedMainClass = 'ee.matteus.pannukas.gui.PancakePlannerLauncher'
+def packagedJavaModules = 'javafx.controls,javafx.fxml,javafx.swing,java.logging,java.prefs,java.scripting,jdk.jfr,jdk.unsupported.desktop'
+def packageInputDirectory = layout.buildDirectory.dir('jpackage-input')
+def linuxPackageDirectory = layout.buildDirectory.dir('jpackage')
+def linuxAppImageDirectory = linuxPackageDirectory.map { it.dir(linuxAppName) }
+def javaFxRuntimeJars = configurations.runtimeClasspath.filter {
+    it.name.startsWith('javafx-')
+}
+def packagingLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(25)
+}
+
+tasks.register('prepareLinuxPackageInput', Sync) {
+    group = 'distribution'
+    description = 'Prepares application classpath files for the Linux jpackage build.'
+    dependsOn tasks.named('installDist')
+    from(layout.buildDirectory.dir("install/${project.name}/lib")) {
+        exclude 'javafx-*.jar'
+    }
+    into packageInputDirectory
+}
+
+tasks.register('packageLinuxAppImage', Exec) {
+    group = 'distribution'
+    description = 'Builds a self-contained Linux application image with jpackage.'
+    dependsOn tasks.named('prepareLinuxPackageInput')
+    onlyIf {
+        System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('linux')
+    }
+
+    inputs.dir(packageInputDirectory)
+    inputs.files(javaFxRuntimeJars)
+    outputs.dir(linuxAppImageDirectory)
+
+    doFirst {
+        delete(linuxAppImageDirectory)
+
+        File javaExecutable = packagingLauncher.get().executablePath.asFile
+        File jpackageExecutable = new File(javaExecutable.parentFile, 'jpackage')
+        if (!jpackageExecutable.isFile()) {
+            throw new GradleException("Java 25 tööriistaahelast ei leitud jpackage käsku: ${jpackageExecutable}")
+        }
+        String javaFxModulePath = javaFxRuntimeJars.files
+                .sort { first, second -> first.name <=> second.name }
+                .collect { it.absolutePath }
+                .join(File.pathSeparator)
+
+        commandLine(
+                jpackageExecutable,
+                '--type', 'app-image',
+                '--dest', linuxPackageDirectory.get().asFile,
+                '--name', linuxAppName,
+                '--app-version', project.version.toString(),
+                '--description', 'Ürituse alaplaani ja elektrivajaduse planeerija',
+                '--input', packageInputDirectory.get().asFile,
+                '--main-jar', tasks.named('jar', Jar).get().archiveFileName.get(),
+                '--main-class', packagedMainClass,
+                '--module-path', javaFxModulePath,
+                '--add-modules', packagedJavaModules,
+                '--java-options', '--enable-native-access=javafx.graphics'
+        )
+    }
+}
