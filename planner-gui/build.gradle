@@ -24,6 +24,8 @@ def packagedJavaModules = 'javafx.controls,javafx.fxml,javafx.swing,java.logging
 def packageInputDirectory = layout.buildDirectory.dir('jpackage-input')
 def linuxPackageDirectory = layout.buildDirectory.dir('jpackage')
 def linuxAppImageDirectory = linuxPackageDirectory.map { it.dir(linuxAppName) }
+def linuxRpmDirectory = layout.buildDirectory.dir('jpackage-rpm')
+def linuxPackageResources = layout.projectDirectory.dir('src/main/jpackage/linux')
 def javaFxRuntimeJars = configurations.runtimeClasspath.filter {
     it.name.startsWith('javafx-')
 }
@@ -79,6 +81,50 @@ tasks.register('packageLinuxAppImage', Exec) {
                 '--module-path', javaFxModulePath,
                 '--add-modules', packagedJavaModules,
                 '--java-options', '--enable-native-access=javafx.graphics'
+        )
+    }
+}
+
+tasks.register('packageLinuxRpm', Exec) {
+    group = 'distribution'
+    description = 'Builds a Fedora-compatible RPM package from the Linux application image.'
+    dependsOn tasks.named('packageLinuxAppImage')
+    onlyIf {
+        System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('linux')
+    }
+
+    inputs.dir(linuxAppImageDirectory)
+    inputs.dir(linuxPackageResources)
+    outputs.dir(linuxRpmDirectory)
+
+    doFirst {
+        delete(linuxRpmDirectory)
+        File rpmDirectory = linuxRpmDirectory.get().asFile
+        if (!rpmDirectory.mkdirs() && !rpmDirectory.isDirectory()) {
+            throw new GradleException("RPM-paketi väljundkausta ei saanud luua: ${rpmDirectory}")
+        }
+
+        File javaExecutable = packagingLauncher.get().executablePath.asFile
+        File jpackageExecutable = new File(javaExecutable.parentFile, 'jpackage')
+        if (!jpackageExecutable.isFile()) {
+            throw new GradleException("Java 25 tööriistaahelast ei leitud jpackage käsku: ${jpackageExecutable}")
+        }
+
+        commandLine(
+                jpackageExecutable,
+                '--type', 'rpm',
+                '--dest', rpmDirectory,
+                '--name', linuxAppName,
+                '--app-image', linuxAppImageDirectory.get().asFile,
+                '--app-version', project.version.toString(),
+                '--vendor', 'Pannkoogihommiku planeerija',
+                '--description', 'Ürituse alaplaani ja elektrivajaduse planeerija',
+                '--resource-dir', linuxPackageResources.asFile,
+                '--linux-package-name', linuxAppName,
+                '--linux-app-release', '1',
+                '--linux-app-category', 'Office',
+                '--linux-menu-group', 'Office',
+                '--linux-shortcut'
         )
     }
 }

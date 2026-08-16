@@ -53,4 +53,17 @@ Linuxis saab luua iseseisva rakendusekausta, mis sisaldab vajalikku Java runtime
 
 Valmis rakendus asub kaustas `planner-gui/build/jpackage/pannkoogihommiku-planeerija`. Selle käivitaja on `bin/pannkoogihommiku-planeerija` ning kasutaja arvutisse ei pea olema eraldi Javat ega Gradle'it paigaldatud.
 
-Linuxi paigalduspaketti ja Windowsi distributsiooni ei ole veel loodud. `jpackage` paketid tuleb koostada ning kontrollida sellel operatsioonisüsteemil, millele need on mõeldud.
+Fedora RPM-paigalduspaketi loomiseks:
+
+```bash
+./gradlew :planner-gui:packageLinuxRpm
+```
+
+Valmis pakett asub kaustas `planner-gui/build/jpackage-rpm`. Selle saab paigaldada ja hiljem eemaldada järgmiselt:
+
+```bash
+sudo dnf install ./planner-gui/build/jpackage-rpm/pannkoogihommiku-planeerija-0.1.0-1.x86_64.rpm
+sudo dnf remove pannkoogihommiku-planeerija
+```
+
+RPM paigaldab rakenduse `/opt/pannkoogihommiku-planeerija` alla ja lisab rakenduste menüüsse kirje „Pannkoogihommiku planeerija”. Windowsi distributsiooni ei ole veel loodud. `jpackage` paketid tuleb koostada ning kontrollida sellel operatsioonisüsteemil, millele need on mõeldud.
