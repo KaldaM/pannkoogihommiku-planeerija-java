@@ -5489,7 +5489,7 @@ public class PancakePlannerApp extends Application {
             return false;
         }
 
-        return savePlanToFile(file);
+        return savePlanToFile(PlanFileNames.ensurePlanExtension(file));
     }
 
     private boolean savePlanToFile(File file) {
