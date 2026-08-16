@@ -66,4 +66,6 @@ sudo dnf install ./planner-gui/build/jpackage-rpm/pannkoogihommiku-planeerija-0.
 sudo dnf remove pannkoogihommiku-planeerija
 ```
 
-RPM paigaldab rakenduse `/opt/pannkoogihommiku-planeerija` alla ja lisab rakenduste menüüsse kirje „Pannkoogihommiku planeerija”. Windowsi distributsiooni ei ole veel loodud. `jpackage` paketid tuleb koostada ning kontrollida sellel operatsioonisüsteemil, millele need on mõeldud.
+RPM paigaldab rakenduse `/opt/pannkoogihommiku-planeerija` alla, lisab rakenduste menüüsse kirje „Pannkoogihommiku planeerija” ning seob `.pplan` failid rakendusega. Paigaldamise järel saab plaani avada failihalduris topeltklõpsuga. Rakenduse aknas, menüüs ja plaanifailidel kasutatakse projekti enda ikooni.
+
+Windowsi distributsiooni ei ole veel loodud. `jpackage` paketid tuleb koostada ning kontrollida sellel operatsioonisüsteemil, millele need on mõeldud.

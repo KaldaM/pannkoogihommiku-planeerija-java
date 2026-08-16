@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
 - Dokumendi viimane sisuline uuendus: 17. august 2026
-- Koodi viimane dokumenteeritud commit: `a4bbbe8` (`Add self-contained Linux application image`, 17. august 2026)
+- Koodi viimane dokumenteeritud commit: `93675b5` (`Add Fedora RPM packaging`, 17. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -427,7 +427,9 @@ Allolev ajajoon koondab 186 commitist tähenduslikud etapid. Täpne muudatuste l
 - `planner-gui` moodulisse lisati Gradle'i ülesanne `packageLinuxAppImage`, mis loob `jpackage` abil iseseisva rakendusekausta.
 - Rakendusepilt sisaldab Java 25 runtime'i, JavaFX-i, core'i ja kõiki muid käitusaegseid sõltuvusi; sihtarvutisse ei ole vaja eraldi Javat ega Gradle'it.
 - Mitte-modulaarse rakenduse jaoks lisati eraldi käivitusklass, JavaFX kaasatakse runtime'i päris moodulitena ning runtime piirati rakenduse kasutatavate Java moodulitega.
-- Lisati Fedora RPM-i koostamise ülesanne, mis loob menüükirjega iseseisva paigalduspaketi. Paketi metaandmed, sõltuvused, failipuud ja lahtipakitud rakenduse käivitumine on kontrollitud; süsteemi paigaldustest on järgmine käsitsi tehtav samm.
+- Lisati Fedora RPM-i koostamise ülesanne, mis loob menüükirjega iseseisva paigalduspaketi. Paigaldamine, menüüst käivitamine ja eemaldamine kontrolliti päris Fedora süsteemis.
+- Rakendus oskab käivitamisel saadud `.pplan` failitee kohe avada. RPM registreerib vastava MIME-tüübi ja failiseose, et plaani saaks failihalduris topeltklõpsuga avada.
+- Rakendusele, RPM-i menüükirjele ja `.pplan` failitüübile lisati ühine läbipaistva taustaga projektiikoon.
 
 ## 8. Kasutajatestides tehtud olulisemad õppetunnid
 
@@ -476,8 +478,8 @@ Vahetu järgmine samm on teha päris kasutusvooga kaasaskantavuse kontroll: vali
 - Käivitada puhas build ja testid Linuxis.
 - Kontrollida Linuxis JavaFX-i kaardivaadet, failidialooge, kasutaja eelistusi ning TXT-, PNG- ja PDF-eksporti.
 - Kontrollida Gradle'i kaudu loodavat `jpackage` rakenduse pilti koos Java runtime'i ja JavaFX-iga.
-- Paigaldada ja kontrollida loodud Fedora RPM ning koostada hiljem Windowsi distributsioon Windowsis.
-- Lisada rakenduse ikoon, versiooniinfo ning paigaldamise ja uuendamise juhised.
+- Kontrollida uuendatud Fedora RPM-is `.pplan` faili topeltklõpsuga avamist ja uut ikooni ning koostada hiljem Windowsi distributsioon Windowsis.
+- Täiendada enne avalikku väljalaset versiooniinfot ning paigaldamise ja uuendamise juhiseid.
 - Kontrollida paketti arvutis, kus Javat ega arenduskeskkonda pole paigaldatud.
 
 ### 9.4 Suurema süsteemi funktsioonid
@@ -505,7 +507,7 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 - Versioon 2 paketi lugemine ja kirjutamine on automaattestidega kaetud, kuid selle kaasaskantavus vajab veel käsitsi kontrolli päris PNG- ja JPEG-kaartidega mõlemal sihtplatvormil.
 - Vanad versioon 1 failid võivad viidata algsele kaardifailile absoluutse või platvormipõhise teega; kaart peab vana faili esmakordsel avamisel veel kättesaadav olema, et järgmine salvestamine saaks selle versioon 2 paketti lisada.
 - Undo/redo puudub, mistõttu sõltub vigade parandamine käsitsi muutmisest või varasemast salvestusest.
-- Fedora RPM-paketi build on olemas, kuid paigaldamist, menüükirjet ja eemaldamist tuleb veel päris süsteemis käsitsi kontrollida; Windowsi väljalaset ei ole.
+- Fedora RPM-i paigaldamine, menüüst käivitamine ja eemaldamine on kontrollitud; uus `.pplan` failiseos ning ikoon vajavad pärast uuesti paigaldamist veel käsitsi kontrolli. Windowsi väljalaset ei ole.
 - Kõiki platvormipõhiseid failidialooge ja eksportide äärejuhte ei ole Linuxis ega Windowsis veel süstemaatiliselt kontrollitud.
 - Automaatset CI buildi eri operatsioonisüsteemidel ei ole seadistatud.
 - Lohistatava ühenduspunkti JavaFX-i hiirekäitumist ei kata automaattest; see vajab käsitsi kontrollimist eri objektitüüpidega.
@@ -518,7 +520,7 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 2. Kontrolli vana versioon 1 projekti avamist, andmete säilimist ja samasse faili versioon 2 kujul salvestamist.
 3. Käivita puhas build, testid ja peamised kasutusvood Linuxis ning Windowsis.
 4. Tükelda `PancakePlannerApp` järk-järgult, alustades failivoo või kaarditööriistade vastutustest.
-5. Paigalda loodud Fedora RPM, kontrolli rakenduste menüüst käivitamist ja eemalda proovipakett.
+5. Paigalda uuendatud Fedora RPM ning kontrolli `.pplan` faili topeltklõpsuga avamist ja uusi ikoone.
 6. Loo Windowsis eraldi Windowsi proovipakett koos rakenduse runtime'iga.
 7. Seejärel vali järgmine suurem funktsionaalne lõik, näiteks alajaotuskilp või avalik veebivaade.
 

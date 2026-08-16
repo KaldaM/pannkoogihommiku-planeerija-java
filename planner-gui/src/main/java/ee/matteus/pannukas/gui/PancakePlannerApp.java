@@ -84,6 +84,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -102,6 +103,7 @@ import java.util.regex.Pattern;
 public class PancakePlannerApp extends Application {
     private static final String DEFAULT_MAP_PATH = "classpath:/maps/tavakaart.png";
     private static final String ORTHOPHOTO_MAP_PATH = "classpath:/maps/ortofoto.png";
+    private static final String APPLICATION_ICON_PATH = "/icons/pannukas.png";
     private static final String SELECTED_OBJECT_SECTION = "selectedObject";
     private static final String OBJECT_LIST_SECTION = "objectList";
     private static final String MAP_LAYERS_SECTION = "mapLayers";
@@ -279,7 +281,7 @@ public class PancakePlannerApp extends Application {
     @Override
     public void start(Stage stage) {
         this.stage = stage;
-        plan = planFactory.createEmptyPlan();
+        String startupPlanError = initializePlan();
         objectListHeight = loadObjectListHeightPreference();
 
         BorderPane root = new BorderPane();
@@ -302,6 +304,7 @@ public class PancakePlannerApp extends Application {
             }
         });
         stage.setScene(scene);
+        applyApplicationIcon(stage);
         stage.setMaximized(true);
         stage.setOnCloseRequest(event -> {
             if (!confirmDiscardUnsavedChanges()) {
@@ -310,6 +313,44 @@ public class PancakePlannerApp extends Application {
         });
         markClean();
         stage.show();
+        if (startupPlanError != null) {
+            showError("Plaanifaili avamine ebaõnnestus", startupPlanError);
+        }
+    }
+
+    private String initializePlan() {
+        plan = planFactory.createEmptyPlan();
+        Optional<Path> startupPlanFile = StartupPlanFileResolver.resolve(getParameters().getRaw());
+        if (startupPlanFile.isEmpty()) {
+            return null;
+        }
+
+        Path file = startupPlanFile.orElseThrow();
+        try {
+            plan = planFileService.load(file);
+            currentPlanFile = file.toFile();
+            rememberDirectory(currentPlanFile);
+            return null;
+        } catch (IOException | RuntimeException exception) {
+            String message = exception.getMessage();
+            return message == null || message.isBlank()
+                    ? "Valitud plaanifaili ei saanud avada: " + file
+                    : message;
+        }
+    }
+
+    private void applyApplicationIcon(Stage targetStage) {
+        try (InputStream input = PancakePlannerApp.class.getResourceAsStream(APPLICATION_ICON_PATH)) {
+            if (input == null) {
+                return;
+            }
+            Image icon = new Image(input);
+            if (!icon.isError()) {
+                targetStage.getIcons().add(icon);
+            }
+        } catch (IOException ignored) {
+            // Ikooni puudumine ei tohi takistada rakenduse käivitumist.
+        }
     }
 
     private ToolBar createToolbar() {

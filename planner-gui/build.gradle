@@ -26,6 +26,8 @@ def linuxPackageDirectory = layout.buildDirectory.dir('jpackage')
 def linuxAppImageDirectory = linuxPackageDirectory.map { it.dir(linuxAppName) }
 def linuxRpmDirectory = layout.buildDirectory.dir('jpackage-rpm')
 def linuxPackageResources = layout.projectDirectory.dir('src/main/jpackage/linux')
+def applicationIcon = layout.projectDirectory.file('src/main/resources/icons/pannukas.png')
+def planFileAssociation = layout.projectDirectory.file('src/main/jpackage/linux/pplan.properties')
 def javaFxRuntimeJars = configurations.runtimeClasspath.filter {
     it.name.startsWith('javafx-')
 }
@@ -53,6 +55,7 @@ tasks.register('packageLinuxAppImage', Exec) {
 
     inputs.dir(packageInputDirectory)
     inputs.files(javaFxRuntimeJars)
+    inputs.file(applicationIcon)
     outputs.dir(linuxAppImageDirectory)
 
     doFirst {
@@ -75,6 +78,7 @@ tasks.register('packageLinuxAppImage', Exec) {
                 '--name', linuxAppName,
                 '--app-version', project.version.toString(),
                 '--description', 'Ürituse alaplaani ja elektrivajaduse planeerija',
+                '--icon', applicationIcon.asFile,
                 '--input', packageInputDirectory.get().asFile,
                 '--main-jar', tasks.named('jar', Jar).get().archiveFileName.get(),
                 '--main-class', packagedMainClass,
@@ -95,6 +99,7 @@ tasks.register('packageLinuxRpm', Exec) {
 
     inputs.dir(linuxAppImageDirectory)
     inputs.dir(linuxPackageResources)
+    inputs.file(applicationIcon)
     outputs.dir(linuxRpmDirectory)
 
     doFirst {
@@ -120,6 +125,7 @@ tasks.register('packageLinuxRpm', Exec) {
                 '--vendor', 'Pannkoogihommiku planeerija',
                 '--description', 'Ürituse alaplaani ja elektrivajaduse planeerija',
                 '--resource-dir', linuxPackageResources.asFile,
+                '--file-associations', planFileAssociation.asFile,
                 '--linux-package-name', linuxAppName,
                 '--linux-app-release', '1',
                 '--linux-app-category', 'Office',
