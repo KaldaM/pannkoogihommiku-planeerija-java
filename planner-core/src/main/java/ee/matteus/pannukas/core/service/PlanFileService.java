@@ -19,24 +19,87 @@ import ee.matteus.pannukas.core.model.PowerSource;
 import ee.matteus.pannukas.core.model.TextObject;
 import ee.matteus.pannukas.core.model.Tent;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 public class PlanFileService {
-    public static final int CURRENT_FORMAT_VERSION = 1;
+    public static final int CURRENT_FORMAT_VERSION = 2;
+    private static final int LEGACY_FORMAT_VERSION = 1;
     private static final String FORMAT_VERSION_PROPERTY = "formatVersion";
+    private static final String PACKAGE_FORMAT = "pannukas-plan-package";
+    private static final String PLAN_FORMAT_V2 = "pannukas-plan-v2";
+    private static final String MANIFEST_ENTRY = "manifest.properties";
+    private static final String PLAN_ENTRY = "plan.properties";
+    private static final String MAP_ENTRY_PROPERTY = "mapEntry";
+    private static final long MAX_MANIFEST_BYTES = 64 * 1024;
+    private static final long MAX_PLAN_BYTES = 5 * 1024 * 1024;
+    private static final long MAX_MAP_BYTES = 50 * 1024 * 1024;
+    private static final long MAX_MAP_PIXELS = 50_000_000;
+    private static final int MAX_PACKAGE_ENTRIES = 20;
 
     public void save(EventPlan plan, Path file) throws IOException {
+        MapAsset mapAsset = mapAssetFor(plan);
+        String storedMapPath = mapAsset == null
+                ? plan.mapImagePath()
+                : "package:/" + mapAsset.entryName();
+        Properties planProperties = createPlanProperties(plan, storedMapPath);
+        Properties manifest = new Properties();
+        manifest.setProperty("format", PACKAGE_FORMAT);
+        manifest.setProperty(FORMAT_VERSION_PROPERTY, Integer.toString(CURRENT_FORMAT_VERSION));
+        manifest.setProperty("planEntry", PLAN_ENTRY);
+        if (mapAsset != null) {
+            manifest.setProperty(MAP_ENTRY_PROPERTY, mapAsset.entryName());
+        }
+
+        Path target = file.toAbsolutePath();
+        Path parent = target.getParent();
+        if (parent == null || !Files.isDirectory(parent)) {
+            throw new IOException("Plaani sihtkausta ei leitud: " + target);
+        }
+
+        Path temporaryFile = Files.createTempFile(parent, ".pplan-", ".tmp");
+        boolean saved = false;
+        try {
+            writePackage(temporaryFile, manifest, planProperties, mapAsset);
+            loadPackage(temporaryFile);
+            replaceFile(temporaryFile, target);
+            saved = true;
+        } finally {
+            if (!saved) {
+                Files.deleteIfExists(temporaryFile);
+            }
+        }
+
+        if (mapAsset != null) {
+            plan.setPackagedMapImage(mapAsset.entryName(), mapAsset.data());
+        }
+    }
+
+    private Properties createPlanProperties(EventPlan plan, String mapImagePath) {
         Properties properties = new Properties();
-        properties.setProperty("format", "pannukas-plan-v1");
+        properties.setProperty("format", PLAN_FORMAT_V2);
         properties.setProperty(FORMAT_VERSION_PROPERTY, Integer.toString(CURRENT_FORMAT_VERSION));
         properties.setProperty("plan.name", plan.name());
-        properties.setProperty("plan.mapImagePath", plan.mapImagePath());
+        properties.setProperty("plan.mapImagePath", mapImagePath);
         properties.setProperty("plan.pixelsPerMeter", Double.toString(plan.pixelsPerMeter()));
         properties.setProperty("plan.objectLabelFontSize", Double.toString(plan.objectLabelFontSize()));
         properties.setProperty("plan.cableLabelFontSize", Double.toString(plan.cableLabelFontSize()));
@@ -91,18 +154,23 @@ public class PlanFileService {
             }
         }
 
-        try (OutputStream output = Files.newOutputStream(file)) {
-            properties.store(output, "Pannkoogihommiku planeerija");
-        }
+        return properties;
     }
 
     public EventPlan load(Path file) throws IOException {
+        return isZipPackage(file) ? loadPackage(file) : loadLegacyPlan(file);
+    }
+
+    private EventPlan loadLegacyPlan(Path file) throws IOException {
         Properties properties = new Properties();
         try (InputStream input = Files.newInputStream(file)) {
             properties.load(input);
         }
-        validateFormatVersion(properties);
+        validateLegacyFormatVersion(properties);
+        return readPlan(properties);
+    }
 
+    private EventPlan readPlan(Properties properties) {
         EventPlan plan = new EventPlan(properties.getProperty("plan.name", "Pannkoogihommik"));
         plan.setMapImagePath(properties.getProperty("plan.mapImagePath", ""));
         plan.setPixelsPerMeter(doubleValue(properties, "plan.pixelsPerMeter", EventPlan.DEFAULT_PIXELS_PER_METER));
@@ -161,29 +229,305 @@ public class PlanFileService {
         return plan;
     }
 
-    private void validateFormatVersion(Properties properties) throws IOException {
+    private void validateLegacyFormatVersion(Properties properties) throws IOException {
         String value = properties.getProperty(FORMAT_VERSION_PROPERTY);
         if (value == null || value.isBlank()) {
             return;
         }
 
-        int formatVersion;
-        try {
-            formatVersion = Integer.parseInt(value.trim());
-        } catch (NumberFormatException exception) {
-            throw new IOException("Plaanifaili vormingu versioon ei ole korrektne: " + value, exception);
-        }
+        int formatVersion = parseFormatVersion(value);
 
         if (formatVersion > CURRENT_FORMAT_VERSION) {
-            throw new IOException(
-                    "Plaanifail on loodud uuema rakenduse versiooniga "
-                            + "(faili vorming " + formatVersion
-                            + ", toetatud kuni " + CURRENT_FORMAT_VERSION + "). "
-                            + "Faili avamiseks uuenda rakendust."
-            );
+            throw newerVersionException(formatVersion);
+        }
+        if (formatVersion > LEGACY_FORMAT_VERSION) {
+            throw new IOException("Versioon 2 plaanifail ei ole korrektne ZIP-pakett.");
         }
         if (formatVersion < 1) {
             throw new IOException("Plaanifaili vormingu versiooni " + formatVersion + " ei toetata.");
+        }
+    }
+
+    private EventPlan loadPackage(Path file) throws IOException {
+        try (ZipFile zipFile = new ZipFile(file.toFile())) {
+            validatePackageEntries(zipFile);
+            Properties manifest = readProperties(zipFile, MANIFEST_ENTRY, MAX_MANIFEST_BYTES);
+            if (!PACKAGE_FORMAT.equals(manifest.getProperty("format"))) {
+                throw new IOException("Plaanipaketi manifesti vorming ei ole korrektne.");
+            }
+
+            int formatVersion = parseFormatVersion(manifest.getProperty(FORMAT_VERSION_PROPERTY, ""));
+            if (formatVersion > CURRENT_FORMAT_VERSION) {
+                throw newerVersionException(formatVersion);
+            }
+            if (formatVersion != CURRENT_FORMAT_VERSION) {
+                throw new IOException("Plaanipaketi vormingu versiooni " + formatVersion + " ei toetata.");
+            }
+            if (!PLAN_ENTRY.equals(manifest.getProperty("planEntry"))) {
+                throw new IOException("Plaanipaketi plaaniandmete kirje ei ole korrektne.");
+            }
+
+            Properties planProperties = readProperties(zipFile, PLAN_ENTRY, MAX_PLAN_BYTES);
+            if (!PLAN_FORMAT_V2.equals(planProperties.getProperty("format"))) {
+                throw new IOException("Plaanipaketi plaaniandmete vorming ei ole korrektne.");
+            }
+            int planVersion = parseFormatVersion(planProperties.getProperty(FORMAT_VERSION_PROPERTY, ""));
+            if (planVersion != formatVersion) {
+                throw new IOException("Plaanipaketi manifesti ja plaaniandmete versioonid ei ühti.");
+            }
+
+            EventPlan plan = readPlan(planProperties);
+            String mapEntry = manifest.getProperty(MAP_ENTRY_PROPERTY, "").trim();
+            if (!mapEntry.isEmpty()) {
+                validateMapEntryName(mapEntry);
+                if (!("package:/" + mapEntry).equals(plan.mapImagePath())) {
+                    throw new IOException("Plaanipaketi kaardipildi viide ei ühti manifestiga.");
+                }
+                byte[] mapData = readEntry(zipFile, mapEntry, MAX_MAP_BYTES);
+                validateMapImage(mapData);
+                plan.setPackagedMapImage(mapEntry, mapData);
+            } else if (plan.mapImagePath().startsWith("package:/")) {
+                throw new IOException("Plaanipaketis viidatud kaardipilt puudub.");
+            } else if (!plan.mapImagePath().isBlank() && !plan.mapImagePath().startsWith("classpath:")) {
+                throw new IOException("Versioon 2 plaanipakett sisaldab välist kaardipildi viidet.");
+            }
+            return plan;
+        } catch (java.util.zip.ZipException exception) {
+            throw new IOException("Plaanipakett ei ole korrektne ZIP-fail.", exception);
+        } catch (RuntimeException exception) {
+            throw new IOException("Plaanipaketi andmed ei ole korrektsed.", exception);
+        }
+    }
+
+    private void writePackage(
+            Path file,
+            Properties manifest,
+            Properties planProperties,
+            MapAsset mapAsset
+    ) throws IOException {
+        try (OutputStream output = Files.newOutputStream(file);
+             ZipOutputStream zipOutput = new ZipOutputStream(output)) {
+            writePropertiesEntry(zipOutput, MANIFEST_ENTRY, manifest, "Pannkoogihommiku plaanipakett");
+            writePropertiesEntry(zipOutput, PLAN_ENTRY, planProperties, "Pannkoogihommiku plaaniandmed");
+            if (mapAsset != null) {
+                zipOutput.putNextEntry(new ZipEntry(mapAsset.entryName()));
+                zipOutput.write(mapAsset.data());
+                zipOutput.closeEntry();
+            }
+        }
+    }
+
+    private void writePropertiesEntry(
+            ZipOutputStream zipOutput,
+            String entryName,
+            Properties properties,
+            String comment
+    ) throws IOException {
+        zipOutput.putNextEntry(new ZipEntry(entryName));
+        properties.store(zipOutput, comment);
+        zipOutput.closeEntry();
+    }
+
+    private void replaceFile(Path temporaryFile, Path target) throws IOException {
+        try {
+            Files.move(
+                    temporaryFile,
+                    target,
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+        } catch (AtomicMoveNotSupportedException exception) {
+            Files.move(temporaryFile, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private boolean isZipPackage(Path file) throws IOException {
+        try (InputStream input = Files.newInputStream(file)) {
+            byte[] signature = input.readNBytes(4);
+            return signature.length == 4
+                    && signature[0] == 'P'
+                    && signature[1] == 'K'
+                    && ((signature[2] == 3 && signature[3] == 4)
+                    || (signature[2] == 5 && signature[3] == 6)
+                    || (signature[2] == 7 && signature[3] == 8));
+        }
+    }
+
+    private void validatePackageEntries(ZipFile zipFile) throws IOException {
+        Set<String> entryNames = new HashSet<>();
+        int entryCount = 0;
+        Enumeration<? extends ZipEntry> entries = zipFile.entries();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            entryCount++;
+            if (entryCount > MAX_PACKAGE_ENTRIES) {
+                throw new IOException("Plaanipakett sisaldab liiga palju kirjeid.");
+            }
+            String name = entry.getName();
+            if (name.isBlank()
+                    || name.startsWith("/")
+                    || name.startsWith("\\")
+                    || name.contains("\\")
+                    || name.equals("..")
+                    || name.startsWith("../")
+                    || name.endsWith("/..")
+                    || name.contains("/../")) {
+                throw new IOException("Plaanipakett sisaldab ebaturvalist kirje nime: " + name);
+            }
+            if (!entryNames.add(name)) {
+                throw new IOException("Plaanipakett sisaldab korduvat kirjet: " + name);
+            }
+        }
+    }
+
+    private Properties readProperties(ZipFile zipFile, String entryName, long maximumBytes) throws IOException {
+        byte[] data = readEntry(zipFile, entryName, maximumBytes);
+        Properties properties = new Properties();
+        try (InputStream input = new ByteArrayInputStream(data)) {
+            properties.load(input);
+        }
+        return properties;
+    }
+
+    private byte[] readEntry(ZipFile zipFile, String entryName, long maximumBytes) throws IOException {
+        ZipEntry entry = zipFile.getEntry(entryName);
+        if (entry == null || entry.isDirectory()) {
+            throw new IOException("Plaanipaketis puudub kirje: " + entryName);
+        }
+        if (entry.getSize() > maximumBytes) {
+            throw new IOException("Plaanipaketi kirje on liiga suur: " + entryName);
+        }
+
+        try (InputStream input = zipFile.getInputStream(entry);
+             ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            long total = 0;
+            int bytesRead;
+            while ((bytesRead = input.read(buffer)) != -1) {
+                total += bytesRead;
+                if (total > maximumBytes) {
+                    throw new IOException("Plaanipaketi kirje on liiga suur: " + entryName);
+                }
+                output.write(buffer, 0, bytesRead);
+            }
+            return output.toByteArray();
+        }
+    }
+
+    private MapAsset mapAssetFor(EventPlan plan) throws IOException {
+        if (plan.hasPackagedMapImage()) {
+            byte[] data = plan.packagedMapImage();
+            validateMapImage(data);
+            return new MapAsset(canonicalMapEntry(data), data);
+        }
+
+        String imagePath = plan.mapImagePath();
+        if (imagePath == null || imagePath.isBlank() || imagePath.startsWith("classpath:")) {
+            return null;
+        }
+        if (imagePath.startsWith("package:/")) {
+            throw new IOException("Plaanis viidatud pakitud kaardipilt puudub.");
+        }
+
+        Path source = Path.of(imagePath);
+        if (!Files.isRegularFile(source)) {
+            throw new IOException("Kaardipilti ei leitud: " + imagePath);
+        }
+        if (Files.size(source) > MAX_MAP_BYTES) {
+            throw new IOException("Kaardipilt on suurem kui 50 MB.");
+        }
+        byte[] data = Files.readAllBytes(source);
+        validateMapImage(data);
+        return new MapAsset(canonicalMapEntry(data), data);
+    }
+
+    private void validateMapEntryName(String entryName) throws IOException {
+        if (!(entryName.equals("assets/map.png")
+                || entryName.equals("assets/map.jpg")
+                || entryName.equals("assets/map.jpeg"))) {
+            throw new IOException("Plaanipaketi kaardipildi kirje nimi ei ole toetatud: " + entryName);
+        }
+    }
+
+    private void validateMapImage(byte[] data) throws IOException {
+        if (!isPng(data) && !isJpeg(data)) {
+            throw new IOException("Kaardipilt ei ole toetatud PNG- või JPEG-fail.");
+        }
+
+        try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(data))) {
+            if (input == null) {
+                throw new IOException("Kaardipildi sisu ei ole loetav.");
+            }
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
+            if (!readers.hasNext()) {
+                throw new IOException("Kaardipildi sisu ei ole loetav.");
+            }
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(input, true, true);
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                if (width <= 0 || height <= 0 || (long) width * height > MAX_MAP_PIXELS) {
+                    throw new IOException("Kaardipildi mõõtmed ei ole toetatud.");
+                }
+                reader.read(0);
+            } finally {
+                reader.dispose();
+            }
+        } catch (IOException | RuntimeException exception) {
+            throw new IOException("Kaardipildi sisu ei ole loetav.", exception);
+        }
+    }
+
+    private String canonicalMapEntry(byte[] data) {
+        return isPng(data) ? "assets/map.png" : "assets/map.jpg";
+    }
+
+    private boolean isPng(byte[] data) {
+        byte[] signature = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
+        if (data.length < signature.length) {
+            return false;
+        }
+        for (int index = 0; index < signature.length; index++) {
+            if (data[index] != signature[index]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isJpeg(byte[] data) {
+        return data.length >= 3
+                && data[0] == (byte) 0xFF
+                && data[1] == (byte) 0xD8
+                && data[2] == (byte) 0xFF;
+    }
+
+    private int parseFormatVersion(String value) throws IOException {
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException exception) {
+            throw new IOException("Plaanifaili vormingu versioon ei ole korrektne: " + value, exception);
+        }
+    }
+
+    private IOException newerVersionException(int formatVersion) {
+        return new IOException(
+                "Plaanifail on loodud uuema rakenduse versiooniga "
+                        + "(faili vorming " + formatVersion
+                        + ", toetatud kuni " + CURRENT_FORMAT_VERSION + "). "
+                        + "Faili avamiseks uuenda rakendust."
+        );
+    }
+
+    private record MapAsset(String entryName, byte[] data) {
+        private MapAsset {
+            data = data.clone();
+        }
+
+        @Override
+        public byte[] data() {
+            return data.clone();
         }
     }
 

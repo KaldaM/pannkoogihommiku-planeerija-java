@@ -14,6 +14,8 @@ public class EventPlan {
 
     private String name;
     private String mapImagePath;
+    private String packagedMapImageEntry = "";
+    private byte[] packagedMapImage = new byte[0];
     private double pixelsPerMeter = DEFAULT_PIXELS_PER_METER;
     private double objectLabelFontSize = DEFAULT_OBJECT_LABEL_FONT_SIZE;
     private double cableLabelFontSize = DEFAULT_CABLE_LABEL_FONT_SIZE;
@@ -54,6 +56,36 @@ public class EventPlan {
 
     public void setMapImagePath(String mapImagePath) {
         this.mapImagePath = mapImagePath == null ? "" : mapImagePath;
+        clearPackagedMapImage();
+    }
+
+    public boolean hasPackagedMapImage() {
+        return packagedMapImage.length > 0;
+    }
+
+    public String packagedMapImageEntry() {
+        return packagedMapImageEntry;
+    }
+
+    public byte[] packagedMapImage() {
+        return packagedMapImage.clone();
+    }
+
+    public void setPackagedMapImage(String entryName, byte[] imageData) {
+        if (entryName == null || entryName.isBlank()) {
+            throw new IllegalArgumentException("Pakitud kaardipildi kirje nimi ei tohi olla tühi.");
+        }
+        if (imageData == null || imageData.length == 0) {
+            throw new IllegalArgumentException("Pakitud kaardipilt ei tohi olla tühi.");
+        }
+        packagedMapImageEntry = entryName;
+        packagedMapImage = imageData.clone();
+        mapImagePath = "package:/" + entryName;
+    }
+
+    public void clearPackagedMapImage() {
+        packagedMapImageEntry = "";
+        packagedMapImage = new byte[0];
     }
 
     public double pixelsPerMeter() {

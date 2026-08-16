@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
-- Dokumendi viimane sisuline uuendus: 15. august 2026
-- Koodi viimane dokumenteeritud commit: `3b5d8a7` (`Use proper Gradle module dependency`, 15. august 2026)
+- Dokumendi viimane sisuline uuendus: 16. august 2026
+- Koodi viimane dokumenteeritud commit: `8bf5315` (`Upgrade to Java 25 and JavaFX 26`, 16. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -172,7 +172,15 @@ Need väärtused on planeerimise praktilised vaikeväärtused, mitte elektriproj
 
 ### 5.5 Salvestusvorming
 
-Plaan salvestatakse `.pplan` laiendiga Java properties-vormingus faili. Salvestatakse muu hulgas:
+Plaan salvestatakse ühe `.pplan` failina. Praegune vorminguversioon on `2` ja faili sisemine kuju on ZIP-pakett:
+
+| Paketi kirje | Sisu |
+| --- | --- |
+| `manifest.properties` | Paketi vorming, versioon ja sisufailide viited |
+| `plan.properties` | Plaani struktureeritud andmed |
+| `assets/map.png` või `assets/map.jpg` | Kasutaja valitud kaart, kui plaan seda kasutab |
+
+Plaaniandmetes salvestatakse muu hulgas:
 
 - plaani nimi, kaardi viide ja mõõtkava;
 - siltide kirjasuurused;
@@ -182,15 +190,15 @@ Plaan salvestatakse `.pplan` laiendiga Java properties-vormingus faili. Salvesta
 - kaablite trajektoorid, märkmed, jupid ja sildiasukohad;
 - kihtide, kaablitüüpide ja gruppide nähtavus.
 
-Uued failid sisaldavad täisarvulist `formatVersion` välja; praegune vorminguversioon on `1`. Versioonita fail loetakse tagasiühilduvuse huvides esimese versiooni failiks. Rakendus keeldub endast uuema vormingu avamisest ja palub kasutajal rakendust uuendada, selle asemel et tundmatuid andmeid vaikselt valesti tõlgendada. Eraldi migratsioonisüsteemi ei ole veel vaja läinud, kuid see tuleb lisada enne esimest murdvat vormingumuudatust.
+Kasutaja laaditud PNG- või JPEG-kaart lisatakse paketti binaarfailina, mitte Base64 tekstina. Projektiga kaasas olev vaikekaart jääb `classpath:` viiteks ja seda paketis ei dubleerita. Pärast edukat salvestamist saab plaani uuesti salvestada ka siis, kui algne kasutaja kaardifail on ümber nimetatud, teisaldatud või kustutatud.
 
-Kasutaja laaditud kaart salvestatakse praegu failiteena. Seetõttu võib plaan koos kaardiga teise arvutisse või teise operatsioonisüsteemi viimisel kaardi kaotada. Kokkulepitud järgmine arendustöö lahendab selle `.pplan` versioon 2 paketivorminguga; seda ei ole veel teostatud.
+Versioonita ja versioon 1 `.pplan` failid on tavalised Java properties-failid ning avanevad endiselt. Vana faili avamine seda ei muuda; järgmine salvestamine kirjutab faili versioon 2 paketina. Rakendus keeldub endast uuema vormingu avamisest ja palub kasutajal rakendust uuendada. Vigane või poolik pakett valideeritakse enne plaani kasutuselevõttu ning ebaõnnestunud salvestus ei kirjuta olemasolevat sihtfaili osaliselt üle.
 
 ### 5.6 Tähtsamad teenused ja GUI komponendid
 
 | Komponent | Vastutus |
 | --- | --- |
-| `PlanFileService` | Versioon 1 plaanifailide kirjutamine, lugemine ja vorminguversiooni kontroll |
+| `PlanFileService` | Versioon 2 pakettide kirjutamine ja valideeritud lugemine ning vanade versioonita ja versioon 1 failide lugemine |
 | `PlanFactory` | Uue plaani algseisu loomine |
 | `PowerSummaryService` | Elektrikappide koormuse ja vaba võimsuse arvutamine |
 | `GeometryCalculator` | Joonte pikkuse ning kujundite pindala ja ümbermõõdu arvutamine |
@@ -207,7 +215,7 @@ Kasutaja laaditud kaart salvestatakse praegu failiteena. Seetõttu võib plaan k
 - Repository sisaldab Gradle Wrapperi käivitajaid nii Windowsile kui Unixilaadsetele süsteemidele.
 - `planner-gui` sõltub `planner-core` moodulist Gradle'i projektisõltuvuse kaudu; core kompileeritakse eraldi teegiks.
 - Kasutaja eelistused salvestatakse Java `Preferences` API kaudu, mille tegeliku asukoha valib operatsioonisüsteem.
-- Linuxis kompileerimist, JavaFX-i käivitamist, failidialooge, kasutaja eelistusi ja eksporti ei ole veel tervikuna kontrollitud.
+- Rakenduse käivitamist ja põhilisi JavaFX-i töövooge on kontrollitud nii Linuxis kui Windowsis; väljastuspaketid vajavad kummalgi platvormil veel eraldi kontrolli.
 - Ühegi platvormi tavakasutaja paketti ega rakendusega kaasas olevat Java runtime'i ei ole veel loodud.
 
 ## 6. Praeguseks saavutatud funktsionaalsus
@@ -406,6 +414,14 @@ Allolev ajajoon koondab 186 commitist tähenduslikud etapid. Täpne muudatuste l
 - `.pplan` versioon 1 sai selge `formatVersion` välja, versioonita failide tagasiühilduva lugemise ja uuema vormingu kontrolli.
 - `planner-gui` hakkas core'i lähtekoodi uuesti kompileerimise asemel sõltuma korrektselt `planner-core` moodulist.
 
+### 16. august 2026: Java uuendus ja kaasaskantav plaanipakett
+
+- Projekt viidi Java 25 LTS-i ja JavaFX 26 peale ning põhilist käitumist kontrolliti Linuxis ja Windowsis.
+- `.pplan` versioon 2 muudeti ZIP-paketiks, mis sisaldab struktureeritud plaaniandmeid ja kasutaja valitud kaardipilti.
+- Versioonita ja versioon 1 properties-failide lugemine säilitati; vana fail uuendatakse alles kasutaja järgmisel salvestamisel.
+- Paketile lisati manifesti, sisekirjete, suuruste, kaardipildi ja vorminguversiooni kontroll ning olemasolevat faili kaitsev ajutise faili kaudu salvestamine.
+- Automaattestid katavad v1 migratsiooni, kaardiga ja kaardita v2 paketi, PNG- ja JPEG-kaardi, tundmatu tulevase versiooni ning valitud vigased paketid.
+
 ## 8. Kasutajatestides tehtud olulisemad õppetunnid
 
 Projekti väärtus ei ole ainult funktsioonide arvus. Korduv päris kasutamine tõi välja mitu üldistatavat disainiõppetundi:
@@ -427,9 +443,7 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 
 ### 9.1 Vahetu jätkamiskoht
 
-Järgmine kokkulepitud arendustöö on `.pplan` versioon 2 paketivorming. Seda ei ole veel ehitatud.
-
-Versioon 2 nõuded ja otsused:
+`.pplan` versioon 2 paketivorming on teostatud. Lahendus järgib järgmisi otsuseid:
 
 - kasutajale jääb plaan üheks `.pplan` failiks;
 - faili sisemine kuju on ZIP-pakett, mis sisaldab plaani struktureeritud andmeid ja kasutaja valitud kaardipilti;
@@ -439,6 +453,8 @@ Versioon 2 nõuded ja otsused:
 - vana faili avamine ei pea seda kohe muutma; järgmine salvestamine võib kirjutada plaani versioon 2 kujul;
 - vigane või poolik pakett ei tohi osaliselt laaditud plaani kasutajale korrektse plaanina näidata;
 - automaattestid peavad katma versioonita faili, versioon 1 faili, kaardiga ja kaardita versioon 2 paketi ning tundmatu tulevase versiooni.
+
+Vahetu järgmine samm on teha päris kasutusvooga kaasaskantavuse kontroll: valida kasutaja PNG- ja JPEG-kaart, salvestada plaan, teisaldada `.pplan` algsest kaardifailist eraldi ning avada see uuesti nii Linuxis kui Windowsis. Samuti tuleb kontrollida vana failiteega versioon 1 plaani avamist ja samasse faili versioon 2 kujul salvestamist.
 
 ### 9.2 Kvaliteet ja arhitektuur
 
@@ -479,11 +495,11 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 - Automaattestid katavad geomeetriat, seadmemudelit, salvestamise tagasiühilduvust, vooluarvutust, kaabli otspunkte ja tekstiaruannet, kuid kasutajaliidese sündmuste testikate on endiselt piiratud.
 - Peamine JavaFX-i rakendusklass on liiga suur ja koondab veel palju erinevaid vastutusi.
-- Praegune `.pplan` versioon 1 on properties-fail; versioon 2 paketivorming ja selle migratsioonitee on alles kavandatud.
-- Kasutaja enda kaardipildi viide ei ole teise arvutisse, teise kausta ega teise operatsioonisüsteemi liigutamisel kaasaskantav.
+- Versioon 2 paketi lugemine ja kirjutamine on automaattestidega kaetud, kuid selle kaasaskantavus vajab veel käsitsi kontrolli päris PNG- ja JPEG-kaartidega mõlemal sihtplatvormil.
+- Vanad versioon 1 failid võivad viidata algsele kaardifailile absoluutse või platvormipõhise teega; kaart peab vana faili esmakordsel avamisel veel kättesaadav olema, et järgmine salvestamine saaks selle versioon 2 paketti lisada.
 - Undo/redo puudub, mistõttu sõltub vigade parandamine käsitsi muutmisest või varasemast salvestusest.
 - Windowsi ega Linuxi installeri või iseseisva runtime'iga väljalaset ei ole.
-- Linuxis käivitamist ja platvormipõhiseid failidialooge ei ole veel kontrollitud.
+- Kõiki platvormipõhiseid failidialooge ja eksportide äärejuhte ei ole Linuxis ega Windowsis veel süstemaatiliselt kontrollitud.
 - Automaatset CI buildi eri operatsioonisüsteemidel ei ole seadistatud.
 - Lohistatava ühenduspunkti JavaFX-i hiirekäitumist ei kata automaattest; see vajab käsitsi kontrollimist eri objektitüüpidega.
 - Rakendusel ei ole veel veebivaadet, kasutajakontosid, õigusi ega keskset andmehoidlat.
@@ -491,20 +507,18 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 ## 11. Soovituslik tööjärjekord
 
-1. Määra `.pplan` versioon 2 paketi täpne sisemine struktuur ja vastutused core'i ning GUI vahel.
-2. Teosta versioon 2 lugemine ja kirjutamine koos kasutaja kaardipildi pakkimisega.
-3. Säilita versioonita ning versioon 1 properties-failide avamine ja kata mõlemad formaadid automaattestidega.
-4. Kontrolli plaani kaasaskantavust, liigutades ühe `.pplan` faili algsest kaardipildist eraldi asukohta.
-5. Käivita puhas build, testid ja peamised kasutusvood Linuxis ning paranda leitud platvormierinevused.
-6. Tükelda `PancakePlannerApp` järk-järgult, alustades failivoo või kaarditööriistade vastutustest.
-7. Loo Windowsi ja Linuxi proovipaketid koos rakenduse runtime'iga.
-8. Seejärel vali järgmine suurem funktsionaalne lõik, näiteks alajaotuskilp või avalik veebivaade.
+1. Kontrolli versioon 2 plaani kaasaskantavust päris PNG- ja JPEG-kaardiga, liigutades `.pplan` faili algsest kaardipildist eraldi asukohta.
+2. Kontrolli vana versioon 1 projekti avamist, andmete säilimist ja samasse faili versioon 2 kujul salvestamist.
+3. Käivita puhas build, testid ja peamised kasutusvood Linuxis ning Windowsis.
+4. Tükelda `PancakePlannerApp` järk-järgult, alustades failivoo või kaarditööriistade vastutustest.
+5. Loo Windowsi ja Linuxi proovipaketid koos rakenduse runtime'iga.
+6. Seejärel vali järgmine suurem funktsionaalne lõik, näiteks alajaotuskilp või avalik veebivaade.
 
 ## 12. Uue arendusvestluse alustamise juhis
 
 Uuele arendajale või tehisintellekti vestlusele tuleks anda vähemalt järgmine info:
 
-> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Kontrolli töökausta ja viimaseid committe ning võrdle dokumenti alati tegeliku koodiga. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. `planner-gui` sõltub `planner-core` moodulist; ära lisa core'i lähtekoode GUI source set'i. Säilita versioonita ja versioon 1 `.pplan` failide avamine. Järgmine kokkulepitud töö on ZIP-põhine `.pplan` versioon 2, mis sisaldab kasutaja valitud kaardipilti. Seda funktsiooni ei ole veel teostatud.
+> Ava esmalt `README.md` ja `docs/PROJEKTI_ULEVAADE.md`. Kontrolli töökausta ja viimaseid committe ning võrdle dokumenti alati tegeliku koodiga. Projektis tehakse üks kasutaja poolt kontrollitav muudatus korraga, see testitakse ning kasutaja commitib selle eraldi. `planner-gui` sõltub `planner-core` moodulist; ära lisa core'i lähtekoode GUI source set'i. Uued `.pplan` failid on versioon 2 ZIP-paketid ja sisaldavad kasutaja valitud kaardipilti. Säilita versioonita ja versioon 1 properties-failide avamine ning ära muuda vana faili enne kasutaja järgmist salvestamist.
 
 Tavaline kontroll enne muutmist:
 

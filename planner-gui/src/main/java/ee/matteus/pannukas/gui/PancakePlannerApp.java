@@ -78,6 +78,7 @@ import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
 import javax.imageio.ImageIO;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -2008,7 +2009,9 @@ public class PancakePlannerApp extends Application {
             plan.setPixelsPerMeter(pixelsPerMeter);
             plan.setObjectLabelFontSize(objectLabelFontSize);
             plan.setCableLabelFontSize(cableLabelFontSize);
-            plan.setMapImagePath(mapImagePath);
+            if (!plan.mapImagePath().equals(mapImagePath)) {
+                plan.setMapImagePath(mapImagePath);
+            }
             if (planNameField != null) {
                 planNameField.setText(plan.name());
             }
@@ -2756,6 +2759,13 @@ public class PancakePlannerApp extends Application {
     }
 
     private Image loadImage(String imagePath) {
+        if (plan.hasPackagedMapImage()) {
+            try (InputStream input = new ByteArrayInputStream(plan.packagedMapImage())) {
+                return new Image(input);
+            } catch (RuntimeException | IOException exception) {
+                return null;
+            }
+        }
         if (imagePath == null || imagePath.isBlank()) {
             return null;
         }

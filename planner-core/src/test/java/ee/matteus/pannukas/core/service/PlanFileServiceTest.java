@@ -13,13 +13,24 @@ import ee.matteus.pannukas.core.model.Tent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.Properties;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -36,14 +47,19 @@ class PlanFileServiceTest {
 
         service.save(plan, file);
 
-        Properties properties = new Properties();
-        try (InputStream input = Files.newInputStream(file)) {
-            properties.load(input);
+        try (ZipFile zipFile = new ZipFile(file.toFile())) {
+            Properties manifest = readProperties(zipFile, "manifest.properties");
+            Properties planProperties = readProperties(zipFile, "plan.properties");
+            assertEquals("pannukas-plan-package", manifest.getProperty("format"));
+            assertEquals(
+                    Integer.toString(PlanFileService.CURRENT_FORMAT_VERSION),
+                    manifest.getProperty("formatVersion")
+            );
+            assertEquals(
+                    Integer.toString(PlanFileService.CURRENT_FORMAT_VERSION),
+                    planProperties.getProperty("formatVersion")
+            );
         }
-        assertEquals(
-                Integer.toString(PlanFileService.CURRENT_FORMAT_VERSION),
-                properties.getProperty("formatVersion")
-        );
         assertEquals("Versiooniga plaan", service.load(file).name());
     }
 
@@ -63,19 +79,209 @@ class PlanFileServiceTest {
     }
 
     @Test
+    void loadsExplicitVersionOnePlan() throws IOException {
+        Path file = tempDirectory.resolve("version-one-plan.pplan");
+        Files.writeString(file, """
+                format=pannukas-plan-v1
+                formatVersion=1
+                plan.name=Versioon 1 plaan
+                objects.count=0
+                connections.count=0
+                """);
+
+        EventPlan loadedPlan = service.load(file);
+
+        assertEquals("Versioon 1 plaan", loadedPlan.name());
+    }
+
+    @Test
+    void upgradesVersionOnePlanOnNextSave() throws IOException {
+        Path file = tempDirectory.resolve("upgraded-plan.pplan");
+        byte[] mapImage = testPng();
+        Path sourceImage = tempDirectory.resolve("vana-kaart.png");
+        Files.write(sourceImage, mapImage);
+        Properties legacyProperties = new Properties();
+        legacyProperties.setProperty("format", "pannukas-plan-v1");
+        legacyProperties.setProperty("formatVersion", "1");
+        legacyProperties.setProperty("plan.name", "Uuendatav plaan");
+        legacyProperties.setProperty("plan.mapImagePath", sourceImage.toString());
+        legacyProperties.setProperty("objects.count", "0");
+        legacyProperties.setProperty("connections.count", "0");
+        try (var output = Files.newOutputStream(file)) {
+            legacyProperties.store(output, "Versioon 1 testplaan");
+        }
+        EventPlan plan = service.load(file);
+
+        service.save(plan, file);
+        Files.delete(sourceImage);
+
+        try (ZipFile zipFile = new ZipFile(file.toFile())) {
+            assertNotNull(zipFile.getEntry("manifest.properties"));
+            assertNotNull(zipFile.getEntry("plan.properties"));
+            assertNotNull(zipFile.getEntry("assets/map.png"));
+        }
+        EventPlan upgradedPlan = service.load(file);
+        assertEquals("Uuendatav plaan", upgradedPlan.name());
+        assertArrayEquals(mapImage, upgradedPlan.packagedMapImage());
+    }
+
+    @Test
     void rejectsPlanFromNewerFormatVersion() throws IOException {
         Path file = tempDirectory.resolve("future-plan.pplan");
+        writePackage(file, 3, null, null);
+
+        IOException exception = assertThrows(IOException.class, () -> service.load(file));
+
+        assertTrue(exception.getMessage().contains("uuema rakenduse versiooniga"));
+        assertTrue(exception.getMessage().contains("uuenda rakendust"));
+    }
+
+    @Test
+    void rejectsPlainPropertiesFileMarkedAsVersionTwo() throws IOException {
+        Path file = tempDirectory.resolve("invalid-version-two.pplan");
         Files.writeString(file, """
                 formatVersion=2
-                plan.name=Tuleviku plaan
+                plan.name=Vale versioon 2
                 objects.count=0
                 connections.count=0
                 """);
 
         IOException exception = assertThrows(IOException.class, () -> service.load(file));
 
-        assertTrue(exception.getMessage().contains("uuema rakenduse versiooniga"));
-        assertTrue(exception.getMessage().contains("uuenda rakendust"));
+        assertTrue(exception.getMessage().contains("ZIP-pakett"));
+    }
+
+    @Test
+    void savesAndLoadsVersionTwoPackageWithoutMapImage() throws IOException {
+        EventPlan plan = new EventPlan("Kaardita plaan");
+        Path file = tempDirectory.resolve("without-map.pplan");
+
+        service.save(plan, file);
+        EventPlan loadedPlan = service.load(file);
+
+        assertEquals("Kaardita plaan", loadedPlan.name());
+        assertEquals("", loadedPlan.mapImagePath());
+        assertFalse(loadedPlan.hasPackagedMapImage());
+        try (ZipFile zipFile = new ZipFile(file.toFile())) {
+            Properties manifest = readProperties(zipFile, "manifest.properties");
+            assertNull(manifest.getProperty("mapEntry"));
+        }
+    }
+
+    @Test
+    void embedsUserMapImageAndKeepsItForLaterSaves() throws IOException {
+        byte[] mapImage = testPng();
+        Path sourceImage = tempDirectory.resolve("kasutaja-kaart.png");
+        Files.write(sourceImage, mapImage);
+        EventPlan plan = new EventPlan("Kaardiga plaan");
+        plan.setMapImagePath(sourceImage.toString());
+        Path firstFile = tempDirectory.resolve("with-map.pplan");
+
+        service.save(plan, firstFile);
+
+        assertTrue(plan.hasPackagedMapImage());
+        assertEquals("package:/assets/map.png", plan.mapImagePath());
+        Files.delete(sourceImage);
+        Path secondFile = tempDirectory.resolve("resaved-with-map.pplan");
+        service.save(plan, secondFile);
+
+        EventPlan loadedPlan = service.load(secondFile);
+        assertTrue(loadedPlan.hasPackagedMapImage());
+        assertEquals("assets/map.png", loadedPlan.packagedMapImageEntry());
+        assertEquals("package:/assets/map.png", loadedPlan.mapImagePath());
+        assertArrayEquals(mapImage, loadedPlan.packagedMapImage());
+        try (ZipFile zipFile = new ZipFile(secondFile.toFile())) {
+            assertNotNull(zipFile.getEntry("assets/map.png"));
+        }
+    }
+
+    @Test
+    void embedsJpegMapUsingCanonicalPackageEntry() throws IOException {
+        byte[] mapImage = testJpeg();
+        Path sourceImage = tempDirectory.resolve("kasutaja-kaart.jpeg");
+        Files.write(sourceImage, mapImage);
+        EventPlan plan = new EventPlan("JPEG-kaardiga plaan");
+        plan.setMapImagePath(sourceImage.toString());
+        Path file = tempDirectory.resolve("with-jpeg-map.pplan");
+
+        service.save(plan, file);
+        EventPlan loadedPlan = service.load(file);
+
+        assertEquals("package:/assets/map.jpg", loadedPlan.mapImagePath());
+        assertArrayEquals(mapImage, loadedPlan.packagedMapImage());
+        try (ZipFile zipFile = new ZipFile(file.toFile())) {
+            assertNotNull(zipFile.getEntry("assets/map.jpg"));
+        }
+    }
+
+    @Test
+    void keepsClasspathMapReferenceWithoutEmbeddingIt() throws IOException {
+        EventPlan plan = new EventPlan("Vaikekaart");
+        plan.setMapImagePath("classpath:/maps/tavakaart.png");
+        Path file = tempDirectory.resolve("classpath-map.pplan");
+
+        service.save(plan, file);
+        EventPlan loadedPlan = service.load(file);
+
+        assertEquals("classpath:/maps/tavakaart.png", loadedPlan.mapImagePath());
+        assertFalse(loadedPlan.hasPackagedMapImage());
+    }
+
+    @Test
+    void rejectsIncompleteVersionTwoPackage() throws IOException {
+        Path file = tempDirectory.resolve("incomplete.pplan");
+        writePackage(file, 2, null, null);
+
+        IOException exception = assertThrows(IOException.class, () -> service.load(file));
+
+        assertTrue(exception.getMessage().contains("plan.properties"));
+    }
+
+    @Test
+    void rejectsPackageWithInvalidMapImage() throws IOException {
+        Path file = tempDirectory.resolve("invalid-map.pplan");
+        byte[] invalidPng = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
+        writePackage(file, 2, """
+                format=pannukas-plan-v2
+                formatVersion=2
+                plan.name=Vigase kaardiga plaan
+                plan.mapImagePath=package:/assets/map.png
+                objects.count=0
+                connections.count=0
+                """, invalidPng);
+
+        IOException exception = assertThrows(IOException.class, () -> service.load(file));
+
+        assertTrue(exception.getMessage().contains("Kaardipildi"));
+    }
+
+    @Test
+    void reportsMalformedPlanDataAsFileError() throws IOException {
+        Path file = tempDirectory.resolve("malformed-data.pplan");
+        writePackage(file, 2, """
+                format=pannukas-plan-v2
+                formatVersion=2
+                plan.name=Vigaste andmetega plaan
+                objects.count=mitte-arv
+                connections.count=0
+                """, null);
+
+        IOException exception = assertThrows(IOException.class, () -> service.load(file));
+
+        assertTrue(exception.getMessage().contains("andmed ei ole korrektsed"));
+    }
+
+    @Test
+    void failedSaveDoesNotOverwriteExistingPlanFile() throws IOException {
+        Path file = tempDirectory.resolve("existing.pplan");
+        Files.writeString(file, "existing content");
+        EventPlan plan = new EventPlan("Puuduva kaardiga plaan");
+        plan.setMapImagePath(tempDirectory.resolve("missing-map.png").toString());
+
+        IOException exception = assertThrows(IOException.class, () -> service.save(plan, file));
+
+        assertTrue(exception.getMessage().contains("Kaardipilti ei leitud"));
+        assertEquals("existing content", Files.readString(file));
     }
 
     @Test
@@ -266,5 +472,56 @@ class PlanFileServiceTest {
         assertEquals(new Position(4, -6), loadedTent.powerConnectionOffset());
         assertEquals(new Position(-12, 8), loadedArea.powerConnectionOffset());
         assertEquals(new Position(15, 20), loadedLine.powerConnectionOffset());
+    }
+
+    private Properties readProperties(ZipFile zipFile, String entryName) throws IOException {
+        Properties properties = new Properties();
+        ZipEntry entry = zipFile.getEntry(entryName);
+        assertNotNull(entry);
+        try (InputStream input = zipFile.getInputStream(entry)) {
+            properties.load(input);
+        }
+        return properties;
+    }
+
+    private void writePackage(Path file, int formatVersion, String planContents, byte[] mapImage) throws IOException {
+        Properties manifest = new Properties();
+        manifest.setProperty("format", "pannukas-plan-package");
+        manifest.setProperty("formatVersion", Integer.toString(formatVersion));
+        manifest.setProperty("planEntry", "plan.properties");
+        if (mapImage != null) {
+            manifest.setProperty("mapEntry", "assets/map.png");
+        }
+
+        try (ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(file))) {
+            output.putNextEntry(new ZipEntry("manifest.properties"));
+            manifest.store(output, "Test manifest");
+            output.closeEntry();
+            if (planContents != null) {
+                output.putNextEntry(new ZipEntry("plan.properties"));
+                output.write(planContents.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1));
+                output.closeEntry();
+            }
+            if (mapImage != null) {
+                output.putNextEntry(new ZipEntry("assets/map.png"));
+                output.write(mapImage);
+                output.closeEntry();
+            }
+        }
+    }
+
+    private byte[] testPng() {
+        return Base64.getDecoder().decode(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+        );
+    }
+
+    private byte[] testJpeg() throws IOException {
+        BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+        image.setRGB(0, 0, 0x336699);
+        try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            assertTrue(ImageIO.write(image, "jpeg", output));
+            return output.toByteArray();
+        }
     }
 }
