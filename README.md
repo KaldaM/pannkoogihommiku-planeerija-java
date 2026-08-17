@@ -37,6 +37,8 @@ Projekt avaneb IntelliJ IDEA-s Gradle'i projektina. Rakendus käivitub maksimeer
 
 Automaattestid katavad muu hulgas domeenimudelit, vooluarvutusi, geomeetriat, eksporti ning `.pplan` failide tagasiühilduvust ja paketivormingut. JavaFX-i kasutajaliidese sündmuste testikate vajab veel laiendamist.
 
+GitHub Actions käivitab iga push'i ja pull request'i korral Java 25-ga automaatselt puhta `test`-töövoo.
+
 ## Plaanifailid
 
 Uued `.pplan` failid salvestatakse versioon 2 ZIP-paketina. Pakett sisaldab plaani andmeid ja kasutaja valitud PNG- või JPEG-kaarti, mistõttu piisab plaani teise arvutisse viimiseks ühest `.pplan` failist. Projektiga kaasas olevatele vaikekaartidele säilitatakse paketis viide ning neid ei dubleerita.

@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
 - Dokumendi viimane sisuline uuendus: 17. august 2026
-- Koodi viimane dokumenteeritud commit: `93675b5` (`Add Fedora RPM packaging`, 17. august 2026)
+- Koodi viimane dokumenteeritud commit: `241f309` (`Fix Linux application and file type icons`, 17. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -464,7 +464,7 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 - vigane või poolik pakett ei tohi osaliselt laaditud plaani kasutajale korrektse plaanina näidata;
 - automaattestid peavad katma versioonita faili, versioon 1 faili, kaardiga ja kaardita versioon 2 paketi ning tundmatu tulevase versiooni.
 
-Vahetu järgmine samm on teha päris kasutusvooga kaasaskantavuse kontroll: valida kasutaja PNG- ja JPEG-kaart, salvestada plaan, teisaldada `.pplan` algsest kaardifailist eraldi ning avada see uuesti nii Linuxis kui Windowsis. Samuti tuleb kontrollida vana failiteega versioon 1 plaani avamist ja samasse faili versioon 2 kujul salvestamist.
+Versioon 2 praktilises kasutustestis avanesid nii uus paketivormingus plaan kui ka vana plaan. Järgmine platvormitöö on Windowsi iseseisva paigalduspaketi loomine; Linuxis saab samal ajal alustada `PancakePlannerApp` vastutuste järk-järgulist eraldamist.
 
 ### 9.2 Kvaliteet ja arhitektuur
 
@@ -479,7 +479,7 @@ Vahetu järgmine samm on teha päris kasutusvooga kaasaskantavuse kontroll: vali
 - Käivitada puhas build ja testid Linuxis.
 - Kontrollida Linuxis JavaFX-i kaardivaadet, failidialooge, kasutaja eelistusi ning TXT-, PNG- ja PDF-eksporti.
 - Kontrollida Gradle'i kaudu loodavat `jpackage` rakenduse pilti koos Java runtime'i ja JavaFX-iga.
-- Kontrollida uuendatud Fedora RPM-is `.pplan` faili topeltklõpsuga avamist ja uut ikooni ning koostada hiljem Windowsi distributsioon Windowsis.
+- Fedora RPM-is on kontrollitud paigaldamine, menüüst käivitamine, `.pplan` faili topeltklõpsuga avamine, rakenduse ja failitüübi ikoonid ning eemaldamine. Järgmisena tuleb koostada Windowsi distributsioon Windowsis.
 - Täiendada enne avalikku väljalaset versiooniinfot ning paigaldamise ja uuendamise juhiseid.
 - Kontrollida paketti arvutis, kus Javat ega arenduskeskkonda pole paigaldatud.
 
@@ -505,25 +505,23 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 - Automaattestid katavad geomeetriat, seadmemudelit, salvestamise tagasiühilduvust, vooluarvutust, kaabli otspunkte ja tekstiaruannet, kuid kasutajaliidese sündmuste testikate on endiselt piiratud.
 - Peamine JavaFX-i rakendusklass on liiga suur ja koondab veel palju erinevaid vastutusi.
-- Versioon 2 paketi lugemine ja kirjutamine on automaattestidega kaetud, kuid selle kaasaskantavus vajab veel käsitsi kontrolli päris PNG- ja JPEG-kaartidega mõlemal sihtplatvormil.
+- Versioon 2 paketi lugemine ja kirjutamine on automaattestidega kaetud ning uue ja vana plaani praktiline avamine on kontrollitud. Eri kaardipildivormingute ja platvormide kombinatsioone tuleb regressioonide vältimiseks edaspidi siiski korrata.
 - Vanad versioon 1 failid võivad viidata algsele kaardifailile absoluutse või platvormipõhise teega; kaart peab vana faili esmakordsel avamisel veel kättesaadav olema, et järgmine salvestamine saaks selle versioon 2 paketti lisada.
 - Undo/redo puudub, mistõttu sõltub vigade parandamine käsitsi muutmisest või varasemast salvestusest.
-- Fedora RPM-i paigaldamine, menüüst käivitamine ja eemaldamine on kontrollitud; uus `.pplan` failiseos ning ikoon vajavad pärast uuesti paigaldamist veel käsitsi kontrolli. Windowsi väljalaset ei ole.
+- Fedora RPM-i paigaldamine, menüüst käivitamine, `.pplan` failiseos, ikoonid ja eemaldamine on kontrollitud. JavaFX-i Linuxi failidialoog ei kuva kohandatud MIME-ikooni, kuigi Dolphin ja süsteemi failiseos seda teevad. Windowsi väljalaset ei ole.
 - Kõiki platvormipõhiseid failidialooge ja eksportide äärejuhte ei ole Linuxis ega Windowsis veel süstemaatiliselt kontrollitud.
-- Automaatset CI buildi eri operatsioonisüsteemidel ei ole seadistatud.
+- GitHub Actions kontrollib push'e ja pull request'e Java 25 Linuxi `clean test` töövooga; mitme operatsioonisüsteemi CI-d ja automaatset release-buildi veel ei ole.
 - Lohistatava ühenduspunkti JavaFX-i hiirekäitumist ei kata automaattest; see vajab käsitsi kontrollimist eri objektitüüpidega.
 - Rakendusel ei ole veel veebivaadet, kasutajakontosid, õigusi ega keskset andmehoidlat.
 - Tartu kaardiandmetega otseliidestust ei ole.
 
 ## 11. Soovituslik tööjärjekord
 
-1. Kontrolli versioon 2 plaani kaasaskantavust päris PNG- ja JPEG-kaardiga, liigutades `.pplan` faili algsest kaardipildist eraldi asukohta.
-2. Kontrolli vana versioon 1 projekti avamist, andmete säilimist ja samasse faili versioon 2 kujul salvestamist.
-3. Käivita puhas build, testid ja peamised kasutusvood Linuxis ning Windowsis.
-4. Tükelda `PancakePlannerApp` järk-järgult, alustades failivoo või kaarditööriistade vastutustest.
-5. Paigalda uuendatud Fedora RPM ning kontrolli `.pplan` faili topeltklõpsuga avamist ja uusi ikoone.
-6. Loo Windowsis eraldi Windowsi proovipakett koos rakenduse runtime'iga.
-7. Seejärel vali järgmine suurem funktsionaalne lõik, näiteks alajaotuskilp või avalik veebivaade.
+1. Kontrolli uut GitHub Actionsi `clean test` töövoogu pärast esimest push'i.
+2. Loo Windowsis eraldi Windowsi proovipakett koos rakenduse runtime'iga.
+3. Tükelda `PancakePlannerApp` järk-järgult, alustades failivoo või kaarditööriistade vastutustest.
+4. Laienda CI hiljem Windowsi testide ning versioonisildi põhise release-buildiga.
+5. Seejärel vali järgmine suurem funktsionaalne lõik, näiteks alajaotuskilp või avalik veebivaade.
 
 ## 12. Uue arendusvestluse alustamise juhis
 
