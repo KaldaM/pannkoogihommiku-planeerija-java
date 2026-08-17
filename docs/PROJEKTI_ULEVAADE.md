@@ -430,6 +430,7 @@ Allolev ajajoon koondab 186 commitist tähenduslikud etapid. Täpne muudatuste l
 - Lisati Fedora RPM-i koostamise ülesanne, mis loob menüükirjega iseseisva paigalduspaketi. Paigaldamine, menüüst käivitamine ja eemaldamine kontrolliti päris Fedora süsteemis.
 - Rakendus oskab käivitamisel saadud `.pplan` failitee kohe avada. RPM registreerib vastava MIME-tüübi ja failiseose, et plaani saaks failihalduris topeltklõpsuga avada.
 - Rakendusele, RPM-i menüükirjele ja `.pplan` failitüübile lisati ühine läbipaistva taustaga projektiikoon.
+- Fedora ikooniteema jaoks paigaldatakse rakenduse- ja MIME-ikoon standardsesse hicolor-teemasse mitmes mõõdus. RPM-i pakendamisetapile antakse rakenduseikoon uuesti ette, et `jpackage` ei asendaks seda Java vaikeikooniga, ning uuendusejärgne `%posttrans` samm taastab töölauaregistreeringud pärast vana paketi eemaldusskripti lõppu.
 
 ## 8. Kasutajatestides tehtud olulisemad õppetunnid
 

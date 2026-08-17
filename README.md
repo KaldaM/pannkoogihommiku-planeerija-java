@@ -62,7 +62,7 @@ Fedora RPM-paigalduspaketi loomiseks:
 Valmis pakett asub kaustas `planner-gui/build/jpackage-rpm`. Selle saab paigaldada ja hiljem eemaldada järgmiselt:
 
 ```bash
-sudo dnf install ./planner-gui/build/jpackage-rpm/pannkoogihommiku-planeerija-0.1.0-1.x86_64.rpm
+sudo dnf install ./planner-gui/build/jpackage-rpm/pannkoogihommiku-planeerija-0.1.0-3.x86_64.rpm
 sudo dnf remove pannkoogihommiku-planeerija
 ```
 

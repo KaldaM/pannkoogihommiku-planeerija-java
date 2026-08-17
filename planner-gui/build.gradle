@@ -26,8 +26,18 @@ def linuxPackageDirectory = layout.buildDirectory.dir('jpackage')
 def linuxAppImageDirectory = linuxPackageDirectory.map { it.dir(linuxAppName) }
 def linuxRpmDirectory = layout.buildDirectory.dir('jpackage-rpm')
 def linuxPackageResources = layout.projectDirectory.dir('src/main/jpackage/linux')
-def applicationIcon = layout.projectDirectory.file('src/main/resources/icons/pannukas.png')
+def applicationIcon = layout.projectDirectory.file('src/main/resources/icons/pannukas-app-256.png')
+def planFileIcon = layout.projectDirectory.file('src/main/resources/icons/pannukas-mime-128.png')
 def planFileAssociation = layout.projectDirectory.file('src/main/jpackage/linux/pplan.properties')
+def linuxThemeIcons = files(
+        'src/main/resources/icons/pannukas-16.png',
+        'src/main/resources/icons/pannukas-22.png',
+        'src/main/resources/icons/pannukas-32.png',
+        'src/main/resources/icons/pannukas-48.png',
+        'src/main/resources/icons/pannukas-64.png',
+        planFileIcon,
+        applicationIcon
+)
 def javaFxRuntimeJars = configurations.runtimeClasspath.filter {
     it.name.startsWith('javafx-')
 }
@@ -56,6 +66,7 @@ tasks.register('packageLinuxAppImage', Exec) {
     inputs.dir(packageInputDirectory)
     inputs.files(javaFxRuntimeJars)
     inputs.file(applicationIcon)
+    inputs.files(linuxThemeIcons)
     outputs.dir(linuxAppImageDirectory)
 
     doFirst {
@@ -87,6 +98,13 @@ tasks.register('packageLinuxAppImage', Exec) {
                 '--java-options', '--enable-native-access=javafx.graphics'
         )
     }
+
+    doLast {
+        copy {
+            from linuxThemeIcons
+            into linuxAppImageDirectory.get().dir('lib/icons').asFile
+        }
+    }
 }
 
 tasks.register('packageLinuxRpm', Exec) {
@@ -100,6 +118,7 @@ tasks.register('packageLinuxRpm', Exec) {
     inputs.dir(linuxAppImageDirectory)
     inputs.dir(linuxPackageResources)
     inputs.file(applicationIcon)
+    inputs.file(planFileIcon)
     outputs.dir(linuxRpmDirectory)
 
     doFirst {
@@ -124,10 +143,11 @@ tasks.register('packageLinuxRpm', Exec) {
                 '--app-version', project.version.toString(),
                 '--vendor', 'Pannkoogihommiku planeerija',
                 '--description', 'Ürituse alaplaani ja elektrivajaduse planeerija',
+                '--icon', applicationIcon.asFile,
                 '--resource-dir', linuxPackageResources.asFile,
                 '--file-associations', planFileAssociation.asFile,
                 '--linux-package-name', linuxAppName,
-                '--linux-app-release', '1',
+                '--linux-app-release', '3',
                 '--linux-app-category', 'Office',
                 '--linux-menu-group', 'Office',
                 '--linux-shortcut'

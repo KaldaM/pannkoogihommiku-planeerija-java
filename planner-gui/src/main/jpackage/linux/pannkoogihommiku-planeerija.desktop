@@ -2,7 +2,7 @@
 Name=Pannkoogihommiku planeerija
 Comment=APPLICATION_DESCRIPTION
 Exec=APPLICATION_LAUNCHER %f
-Icon=APPLICATION_ICON
+Icon=pannkoogihommiku-planeerija
 Terminal=false
 Type=Application
 Categories=DEPLOY_BUNDLE_CATEGORY
