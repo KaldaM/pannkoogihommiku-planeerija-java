@@ -47,6 +47,28 @@ Rakendus avab edasi ka vanad versioonita ja versioon 1 properties-vormingus `.pp
 
 ## Tavakasutajale jagamine
 
+### Windows
+
+Windowsis saab luua iseseisva rakendusepildi, mis sisaldab vajalikku Java runtime'i, JavaFX-i ja kõiki muid käitusaegseid sõltuvusi:
+
+```powershell
+.\gradlew.bat :planner-gui:packageWindowsAppImage
+```
+
+Valmis rakendus asub kaustas `planner-gui/build/jpackage-windows/Pannkoogihommiku planeerija`.
+
+Windowsi EXE-paigaldaja loomiseks peavad lisaks Java 25-le olema paigaldatud [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) ja ametlik [WiX Toolset 4](https://docs.firegiant.com/wix/using-wix/). Seejärel tuleb käivitada:
+
+```powershell
+.\gradlew.bat :planner-gui:packageWindowsInstaller
+```
+
+Paigaldaja luuakse kausta `planner-gui/build/jpackage-windows-installer`. Paigaldatud rakendus lisatakse Start-menüüsse ning `.pplan` failitüüp seotakse rakendusega, nii et plaani saab avada topeltklõpsuga. Kasutaja arvutisse ei pea olema eraldi Javat, Gradle'it ega repository't paigaldatud.
+
+Kohalik arendusbuild ei ole digitaalselt allkirjastatud. Avalikult levitatav paigaldaja tuleb enne väljalaset usaldusväärse koodisigneerimise sertifikaadiga allkirjastada.
+
+### Linux
+
 Linuxis saab luua iseseisva rakendusekausta, mis sisaldab vajalikku Java runtime'i ja JavaFX-i:
 
 ```bash
@@ -70,4 +92,4 @@ sudo dnf remove pannkoogihommiku-planeerija
 
 RPM paigaldab rakenduse `/opt/pannkoogihommiku-planeerija` alla, lisab rakenduste menüüsse kirje „Pannkoogihommiku planeerija” ning seob `.pplan` failid rakendusega. Paigaldamise järel saab plaani avada failihalduris topeltklõpsuga. Rakenduse aknas, menüüs ja plaanifailidel kasutatakse projekti enda ikooni.
 
-Windowsi distributsiooni ei ole veel loodud. `jpackage` paketid tuleb koostada ning kontrollida sellel operatsioonisüsteemil, millele need on mõeldud.
+`jpackage` paketid tuleb koostada ning kontrollida sellel operatsioonisüsteemil, millele need on mõeldud.

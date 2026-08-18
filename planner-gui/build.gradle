@@ -19,16 +19,24 @@ application {
 }
 
 def linuxAppName = 'pannkoogihommiku-planeerija'
+def windowsAppName = 'Pannkoogihommiku planeerija'
 def packagedMainClass = 'ee.matteus.pannukas.gui.PancakePlannerLauncher'
 def packagedJavaModules = 'javafx.controls,javafx.fxml,javafx.swing,java.logging,java.prefs,java.scripting,jdk.jfr,jdk.unsupported.desktop'
 def packageInputDirectory = layout.buildDirectory.dir('jpackage-input')
+def windowsPackageInputDirectory = layout.buildDirectory.dir('jpackage-input-windows')
 def linuxPackageDirectory = layout.buildDirectory.dir('jpackage')
 def linuxAppImageDirectory = linuxPackageDirectory.map { it.dir(linuxAppName) }
 def linuxRpmDirectory = layout.buildDirectory.dir('jpackage-rpm')
+def windowsPackageDirectory = layout.buildDirectory.dir('jpackage-windows')
+def windowsAppImageDirectory = windowsPackageDirectory.map { it.dir(windowsAppName) }
+def windowsInstallerDirectory = layout.buildDirectory.dir('jpackage-windows-installer')
 def linuxPackageResources = layout.projectDirectory.dir('src/main/jpackage/linux')
 def applicationIcon = layout.projectDirectory.file('src/main/resources/icons/pannukas-app-256.png')
+def windowsApplicationIcon = layout.projectDirectory.file('src/main/resources/icons/pannukas-app.ico')
 def planFileIcon = layout.projectDirectory.file('src/main/resources/icons/pannukas-mime-128.png')
+def windowsPlanFileIcon = layout.projectDirectory.file('src/main/resources/icons/pannukas-plan.ico')
 def planFileAssociation = layout.projectDirectory.file('src/main/jpackage/linux/pplan.properties')
+def windowsPlanFileAssociation = layout.projectDirectory.file('src/main/jpackage/windows/pplan.properties')
 def linuxThemeIcons = files(
         'src/main/resources/icons/pannukas-16.png',
         'src/main/resources/icons/pannukas-22.png',
@@ -53,6 +61,112 @@ tasks.register('prepareLinuxPackageInput', Sync) {
         exclude 'javafx-*.jar'
     }
     into packageInputDirectory
+}
+
+tasks.register('prepareWindowsPackageInput', Sync) {
+    group = 'distribution'
+    description = 'Prepares application classpath files for the Windows jpackage build.'
+    dependsOn tasks.named('installDist')
+    from(layout.buildDirectory.dir("install/${project.name}/lib")) {
+        exclude 'javafx-*.jar'
+    }
+    into windowsPackageInputDirectory
+}
+
+tasks.register('packageWindowsAppImage', Exec) {
+    group = 'distribution'
+    description = 'Builds a self-contained Windows application image with jpackage.'
+    dependsOn tasks.named('prepareWindowsPackageInput')
+    onlyIf {
+        System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')
+    }
+
+    inputs.dir(windowsPackageInputDirectory)
+    inputs.files(javaFxRuntimeJars)
+    inputs.file(windowsApplicationIcon)
+    outputs.dir(windowsAppImageDirectory)
+
+    doFirst {
+        delete(windowsAppImageDirectory)
+
+        File javaExecutable = packagingLauncher.get().executablePath.asFile
+        File jpackageExecutable = new File(javaExecutable.parentFile, 'jpackage.exe')
+        if (!jpackageExecutable.isFile()) {
+            throw new GradleException("Java 25 tööriistaahelast ei leitud jpackage käsku: ${jpackageExecutable}")
+        }
+        String javaFxModulePath = javaFxRuntimeJars.files
+                .sort { first, second -> first.name <=> second.name }
+                .collect { it.absolutePath }
+                .join(File.pathSeparator)
+
+        commandLine(
+                jpackageExecutable,
+                '--type', 'app-image',
+                '--dest', windowsPackageDirectory.get().asFile,
+                '--name', windowsAppName,
+                '--app-version', project.version.toString(),
+                '--vendor', 'Pannkoogihommiku planeerija',
+                '--description', 'Ürituse alaplaani ja elektrivajaduse planeerija',
+                '--icon', windowsApplicationIcon.asFile,
+                '--input', windowsPackageInputDirectory.get().asFile,
+                '--main-jar', tasks.named('jar', Jar).get().archiveFileName.get(),
+                '--main-class', packagedMainClass,
+                '--module-path', javaFxModulePath,
+                '--add-modules', packagedJavaModules,
+                '--java-options', '--enable-native-access=javafx.graphics'
+        )
+    }
+}
+
+tasks.register('packageWindowsInstaller', Exec) {
+    group = 'distribution'
+    description = 'Builds a Windows EXE installer from the self-contained application image.'
+    dependsOn tasks.named('packageWindowsAppImage')
+    onlyIf {
+        System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')
+    }
+
+    inputs.dir(windowsAppImageDirectory)
+    inputs.file(windowsApplicationIcon)
+    inputs.file(windowsPlanFileIcon)
+    inputs.file(windowsPlanFileAssociation)
+    outputs.dir(windowsInstallerDirectory)
+
+    doFirst {
+        delete(windowsInstallerDirectory)
+        File installerDirectory = windowsInstallerDirectory.get().asFile
+        if (!installerDirectory.mkdirs() && !installerDirectory.isDirectory()) {
+            throw new GradleException("Windowsi paigaldaja väljundkausta ei saanud luua: ${installerDirectory}")
+        }
+
+        File javaExecutable = packagingLauncher.get().executablePath.asFile
+        File jpackageExecutable = new File(javaExecutable.parentFile, 'jpackage.exe')
+        if (!jpackageExecutable.isFile()) {
+            throw new GradleException("Java 25 tööriistaahelast ei leitud jpackage käsku: ${jpackageExecutable}")
+        }
+
+        File dotnetToolDirectory = new File(System.getProperty('user.home'), '.dotnet/tools')
+        if (dotnetToolDirectory.isDirectory()) {
+            environment 'PATH', System.getenv('PATH') + File.pathSeparator + dotnetToolDirectory.absolutePath
+        }
+
+        commandLine(
+                jpackageExecutable,
+                '--type', 'exe',
+                '--dest', installerDirectory,
+                '--name', windowsAppName,
+                '--app-image', windowsAppImageDirectory.get().asFile,
+                '--app-version', project.version.toString(),
+                '--vendor', 'Pannkoogihommiku planeerija',
+                '--description', 'Ürituse alaplaani ja elektrivajaduse planeerija',
+                '--icon', windowsApplicationIcon.asFile,
+                '--file-associations', windowsPlanFileAssociation.asFile,
+                '--win-menu',
+                '--win-menu-group', windowsAppName,
+                '--win-dir-chooser',
+                '--win-upgrade-uuid', '37407861-1917-4691-8209-e21e3810fb3e'
+        )
+    }
 }
 
 tasks.register('packageLinuxAppImage', Exec) {

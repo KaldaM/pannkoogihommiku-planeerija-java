@@ -1,7 +1,7 @@
 # Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
 
-- Dokumendi viimane sisuline uuendus: 17. august 2026
-- Koodi viimane dokumenteeritud commit: `241f309` (`Fix Linux application and file type icons`, 17. august 2026)
+- Dokumendi viimane sisuline uuendus: 18. august 2026
+- Koodi viimane dokumenteeritud commit: `37edd27` (`Add GitHub Actions test workflow`, 17. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -44,7 +44,7 @@ Rakendus peab võimaldama koostada ürituse alaplaani, kus kasutaja saab:
 - salvestada töö ning hiljem samast kohast jätkata;
 - eksportida plaan teistele arusaadavasse vormi.
 
-Oluline lõppnõue on see, et tavakasutaja ei peaks rakenduse käivitamiseks paigaldama IntelliJ IDEA-t, Javat ega kasutama käsurida. Selleks on tulevikus vaja sihtplatvormi paigaldus- või käivituspaketti koos rakenduse enda Java runtime'iga. Windowsi ja Linuxi paketid tuleb koostada ning kontrollida eraldi, sest `jpackage` loob paketi sellel platvormil, kus build käivitatakse.
+Oluline lõppnõue on see, et tavakasutaja ei peaks rakenduse käivitamiseks paigaldama IntelliJ IDEA-t, Javat ega kasutama käsurida. Selle jaoks on olemas sihtplatvormil loodavad Windowsi EXE- ja Fedora RPM-paigaldajad ning iseseisvad rakendusepildid, mis sisaldavad rakenduse enda Java runtime'i. Windowsi ja Linuxi paketid koostatakse ning kontrollitakse eraldi, sest `jpackage` loob paketi sellel platvormil, kus build käivitatakse.
 
 ### 3.2 Bakalaureusetöö suurem visioon
 
@@ -133,6 +133,8 @@ Java 25 valiti praeguse pika toe versioonina. JavaFX 26 kasutamine võimaldab s�
 - mõõdulint ja trajektooride redaktorid;
 - TXT-, PNG- ja PDF-eksport.
 
+Sama mooduli Gradle'i pakendamisülesanded loovad Java 25 `jpackage` abil platvormipõhised iseseisvad rakendusepildid ning Windowsi EXE- ja Fedora RPM-paigaldajad. `PancakePlannerLauncher` on pakendatud rakenduste käivitusklass ja edastab avamisel saadud `.pplan` failitee olemasolevale rakenduse laadimisvoole.
+
 `planner-gui` sõltub Gradle'is tavapäraselt `planner-core` moodulist. Core kompileeritakse eraldi teegiks ning selle lähtekoode ei kaasata GUI moodulisse teist korda.
 
 Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi abiklassidesse tõstetud. Sellest hoolimata on `PancakePlannerApp` endiselt väga suur ning vajab edasise kasvu eel vaadeteks, kontrolleriteks ja tööriistadeks jagamist.
@@ -203,6 +205,8 @@ Versioonita ja versioon 1 `.pplan` failid on tavalised Java properties-failid ni
 | `PowerSummaryService` | Elektrikappide koormuse ja vaba võimsuse arvutamine |
 | `GeometryCalculator` | Joonte pikkuse ning kujundite pindala ja ümbermõõdu arvutamine |
 | `PancakePlannerApp` | Rakenduse põhivaade, tööriistad, dialoogid ja kasutaja tegevuste sidumine mudeliga |
+| `PancakePlannerLauncher` | Pakendatud rakenduse käivitamine ja käsurealt või failiseosest saadud plaanitee edastamine |
+| Gradle'i `package*` ülesanded | Platvormipõhiste rakendusepiltide ja paigaldajate loomine koos runtime'i, JavaFX-i, ikoonide ning failiseostega |
 | `CablePathHelper`, `CableRouteEditor`, `CableRouteGeometry` | Voolukaabli tee moodustamine ning vahepunktide muutmise loogika |
 | `CableDisplayHelper`, `CablePolylineHelper` | Kaablite visuaalne esitus ja reaalajas uuendamine |
 | `ReportTextExporter`, `PdfReportExporter` | Teksti- ja PDF-aruannete loomine |
@@ -320,7 +324,7 @@ Jooned ja alad kasutavad telgiga sama seadmete ning vooluühenduste mudelit. Nen
 - Salvestamata muudatuste nähtav olek.
 - Enne uue plaani loomist, teise plaani avamist või rakenduse sulgemist pakutakse muudatuste salvestamist.
 - Varem loodud plaanifailid on püsinud uute versioonidega avatavad.
-- Uued failid märgitakse `formatVersion=1` väärtusega; versioonita vanad failid loetakse versiooniks 1 ning uuema tundmatu versiooni avamine lõpetatakse selge veateatega.
+- Uued failid salvestatakse `formatVersion=2` ZIP-pakettidena; versioonita vanad failid loetakse versiooniks 1 ning uuema tundmatu versiooni avamine lõpetatakse selge veateatega.
 - Tekstiraporti eksport.
 - Kaardipildi eksport PNG-na valitava ulatusega.
 - PDF-eksport koos ühes dialoogis valitavate sisu- ja kompaktsusvalikutega.
@@ -432,6 +436,14 @@ Allolev ajajoon koondab 186 commitist tähenduslikud etapid. Täpne muudatuste l
 - Rakendusele, RPM-i menüükirjele ja `.pplan` failitüübile lisati ühine läbipaistva taustaga projektiikoon.
 - Fedora ikooniteema jaoks paigaldatakse rakenduse- ja MIME-ikoon standardsesse hicolor-teemasse mitmes mõõdus. RPM-i pakendamisetapile antakse rakenduseikoon uuesti ette, et `jpackage` ei asendaks seda Java vaikeikooniga, ning uuendusejärgne `%posttrans` samm taastab töölauaregistreeringud pärast vana paketi eemaldusskripti lõppu.
 
+### 18. august 2026: Windowsi iseseisev rakendus ja paigaldaja
+
+- Lisati `packageWindowsAppImage`, mis loob Windowsis rakendusepildi koos Java 25 runtime'i, JavaFX-i, core'i ja muude käitusaegsete sõltuvustega.
+- Lisati `packageWindowsInstaller`, mis loob Java 25 `jpackage` ja ametliku WiX Toolset 4 abil EXE-paigaldaja.
+- Paigaldaja lisab rakenduse Start-menüüsse ja registreerib `.pplan` failitüübi koos eraldi plaaniikooniga; failiseose avamiskäsk kasutab olemasolevat `PancakePlannerLauncher` klassi.
+- Windowsi jaoks lisati mitut mõõtu sisaldavad ICO-failid rakendusele, paigaldajale ja plaanifailile. Linuxi PNG-ikoonid ning pakendamisülesanded jäid eraldi ja muutmata.
+- Kontrolliti rakendusepildi käivitumist, EXE-paigaldaja loomist ja paigaldamist, Start-menüü otseteed, ikoone, versioon 1 ning versioon 2 `.pplan` failide avamist Windowsi failiseose kaudu ja rakenduse puhast eemaldamist.
+
 ## 8. Kasutajatestides tehtud olulisemad õppetunnid
 
 Projekti väärtus ei ole ainult funktsioonide arvus. Korduv päris kasutamine tõi välja mitu üldistatavat disainiõppetundi:
@@ -453,18 +465,7 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 
 ### 9.1 Vahetu jätkamiskoht
 
-`.pplan` versioon 2 paketivorming on teostatud. Lahendus järgib järgmisi otsuseid:
-
-- kasutajale jääb plaan üheks `.pplan` failiks;
-- faili sisemine kuju on ZIP-pakett, mis sisaldab plaani struktureeritud andmeid ja kasutaja valitud kaardipilti;
-- kaardipilti ei kodeerita properties-faili Base64 tekstina, et vältida tarbetut mahu kasvu;
-- versioon 1 tavalised properties-failid, sealhulgas versiooniväljata vanad failid, peavad edasi avanema;
-- uued paketid peavad kandma vorminguversiooni `2` ning endast uuema versiooni korral peab rakendus andma arusaadava veateate;
-- vana faili avamine ei pea seda kohe muutma; järgmine salvestamine võib kirjutada plaani versioon 2 kujul;
-- vigane või poolik pakett ei tohi osaliselt laaditud plaani kasutajale korrektse plaanina näidata;
-- automaattestid peavad katma versioonita faili, versioon 1 faili, kaardiga ja kaardita versioon 2 paketi ning tundmatu tulevase versiooni.
-
-Versioon 2 praktilises kasutustestis avanesid nii uus paketivormingus plaan kui ka vana plaan. Järgmine platvormitöö on Windowsi iseseisva paigalduspaketi loomine; Linuxis saab samal ajal alustada `PancakePlannerApp` vastutuste järk-järgulist eraldamist.
+`.pplan` versioon 2 paketivorming ning Windowsi ja Fedora iseseisvad paigaldajad on teostatud. Vahetu järgmine tehniline töö on valida `PancakePlannerApp` klassist üks selge vastutus, näiteks failivoog või kaarditööriistad, ning eraldada see väikese regressiooniriskiga omaette komponendiks. Pakendamise puhul on enne avalikku väljalaset vaja veel kontrolli puhtas Windowsi arvutis, kus Javat ega arendustööriistu pole paigaldatud, ning koodisigneerimise lahendust.
 
 ### 9.2 Kvaliteet ja arhitektuur
 
@@ -478,10 +479,11 @@ Versioon 2 praktilises kasutustestis avanesid nii uus paketivormingus plaan kui 
 
 - Käivitada puhas build ja testid Linuxis.
 - Kontrollida Linuxis JavaFX-i kaardivaadet, failidialooge, kasutaja eelistusi ning TXT-, PNG- ja PDF-eksporti.
-- Kontrollida Gradle'i kaudu loodavat `jpackage` rakenduse pilti koos Java runtime'i ja JavaFX-iga.
-- Fedora RPM-is on kontrollitud paigaldamine, menüüst käivitamine, `.pplan` faili topeltklõpsuga avamine, rakenduse ja failitüübi ikoonid ning eemaldamine. Järgmisena tuleb koostada Windowsi distributsioon Windowsis.
+- Hoida Windowsi ja Linuxi `jpackage` sisendid ning väljundid eraldi, et ühe platvormi pakendamine ei rikuks teist.
+- Fedora RPM-is ja Windowsi EXE-paigaldajas on kontrollitud paigaldamine, menüüst käivitamine, `.pplan` faili topeltklõpsuga avamine, rakenduse ja failitüübi ikoonid ning eemaldamine.
 - Täiendada enne avalikku väljalaset versiooniinfot ning paigaldamise ja uuendamise juhiseid.
 - Kontrollida paketti arvutis, kus Javat ega arenduskeskkonda pole paigaldatud.
+- Allkirjastada avalikult levitatav Windowsi paigaldaja usaldusväärse koodisigneerimise sertifikaadiga.
 
 ### 9.4 Suurema süsteemi funktsioonid
 
@@ -508,7 +510,8 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 - Versioon 2 paketi lugemine ja kirjutamine on automaattestidega kaetud ning uue ja vana plaani praktiline avamine on kontrollitud. Eri kaardipildivormingute ja platvormide kombinatsioone tuleb regressioonide vältimiseks edaspidi siiski korrata.
 - Vanad versioon 1 failid võivad viidata algsele kaardifailile absoluutse või platvormipõhise teega; kaart peab vana faili esmakordsel avamisel veel kättesaadav olema, et järgmine salvestamine saaks selle versioon 2 paketti lisada.
 - Undo/redo puudub, mistõttu sõltub vigade parandamine käsitsi muutmisest või varasemast salvestusest.
-- Fedora RPM-i paigaldamine, menüüst käivitamine, `.pplan` failiseos, ikoonid ja eemaldamine on kontrollitud. JavaFX-i Linuxi failidialoog ei kuva kohandatud MIME-ikooni, kuigi Dolphin ja süsteemi failiseos seda teevad. Windowsi väljalaset ei ole.
+- Fedora RPM-i ja Windowsi EXE-paigaldaja paigaldamine, menüüst käivitamine, `.pplan` failiseos, ikoonid ja eemaldamine on kontrollitud. JavaFX-i Linuxi failidialoog ei kuva kohandatud MIME-ikooni, kuigi Dolphin ja süsteemi failiseos seda teevad.
+- Windowsi kohalik arenduspaigaldaja ei ole digitaalselt allkirjastatud ning võib seetõttu avalikul levitamisel kuvada SmartScreeni hoiatuse.
 - Kõiki platvormipõhiseid failidialooge ja eksportide äärejuhte ei ole Linuxis ega Windowsis veel süstemaatiliselt kontrollitud.
 - GitHub Actions kontrollib push'e ja pull request'e Java 25 Linuxi `clean test` töövooga; mitme operatsioonisüsteemi CI-d ja automaatset release-buildi veel ei ole.
 - Lohistatava ühenduspunkti JavaFX-i hiirekäitumist ei kata automaattest; see vajab käsitsi kontrollimist eri objektitüüpidega.
@@ -517,10 +520,10 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 ## 11. Soovituslik tööjärjekord
 
-1. Kontrolli uut GitHub Actionsi `clean test` töövoogu pärast esimest push'i.
-2. Loo Windowsis eraldi Windowsi proovipakett koos rakenduse runtime'iga.
-3. Tükelda `PancakePlannerApp` järk-järgult, alustades failivoo või kaarditööriistade vastutustest.
-4. Laienda CI hiljem Windowsi testide ning versioonisildi põhise release-buildiga.
+1. Kontrolli Windowsi paigaldajat veel puhtas arvutis, kus Javat, Gradle'it ega WiX-i pole paigaldatud.
+2. Tükelda `PancakePlannerApp` järk-järgult, alustades failivoo või kaarditööriistade vastutustest.
+3. Laienda CI hiljem Windowsi testide ning versioonisildi põhise release-buildiga.
+4. Lahenda avaliku Windowsi väljalaske koodisigneerimine ja versioonihaldus.
 5. Seejärel vali järgmine suurem funktsionaalne lõik, näiteks alajaotuskilp või avalik veebivaade.
 
 ## 12. Uue arendusvestluse alustamise juhis
