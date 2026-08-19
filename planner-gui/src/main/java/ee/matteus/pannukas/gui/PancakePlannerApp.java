@@ -2209,19 +2209,11 @@ public class PancakePlannerApp extends Application {
         if (!planDocumentState.hasUnsavedChanges()) {
             return true;
         }
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Salvestamata muudatused");
-        alert.setHeaderText("Plaanis on salvestamata muudatusi");
-        alert.setContentText("Kas soovid enne jätkamist plaani salvestada?");
-        ButtonType saveButton = new ButtonType("Salvesta");
-        ButtonType discardButton = new ButtonType("Ära salvesta");
-        alert.getButtonTypes().setAll(saveButton, discardButton, ButtonType.CANCEL);
-
-        ButtonType choice = alert.showAndWait().orElse(ButtonType.CANCEL);
-        if (choice == saveButton) {
-            return savePlan();
-        }
-        return choice == discardButton;
+        return switch (PlanFileDialogs.confirmUnsavedChanges()) {
+            case SAVE -> savePlan();
+            case DISCARD -> true;
+            case CANCEL -> false;
+        };
     }
 
     private void redrawMap() {
@@ -5515,18 +5507,16 @@ public class PancakePlannerApp extends Application {
     }
 
     private boolean savePlanAs() {
-        FileChooser fileChooser = createPlanFileChooser();
-        applyInitialDirectory(fileChooser);
-        File currentPlanFile = planFileSession.currentFile();
-        if (currentPlanFile != null) {
-            fileChooser.setInitialFileName(currentPlanFile.getName());
-        }
-        File file = fileChooser.showSaveDialog(stage);
-        if (file == null) {
+        Optional<File> selectedFile = PlanFileDialogs.choosePlanToSave(
+                stage,
+                planFileSession.initialDirectory(),
+                planFileSession.currentFile()
+        );
+        if (selectedFile.isEmpty()) {
             return false;
         }
 
-        return savePlanToFile(PlanFileNames.ensurePlanExtension(file));
+        return savePlanToFile(selectedFile.get());
     }
 
     private boolean savePlanToFile(File file) {
@@ -5835,26 +5825,17 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        FileChooser fileChooser = createPlanFileChooser();
-        applyInitialDirectory(fileChooser);
-        File file = fileChooser.showOpenDialog(stage);
-        if (file == null) {
+        Optional<File> selectedFile = PlanFileDialogs.choosePlanToOpen(stage, planFileSession.initialDirectory());
+        if (selectedFile.isEmpty()) {
             return;
         }
 
         try {
-            plan = planFileSession.load(file);
+            plan = planFileSession.load(selectedFile.get());
             resetPlanViewState();
         } catch (IOException | RuntimeException exception) {
             showError("Faili avamine ebaõnnestus", exception.getMessage());
         }
-    }
-
-    private FileChooser createPlanFileChooser() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Pannkoogihommiku plaan");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Plaanifail", "*.pplan"));
-        return fileChooser;
     }
 
     private void applyInitialDirectory(FileChooser fileChooser) {
