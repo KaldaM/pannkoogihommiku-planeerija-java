@@ -137,7 +137,7 @@ Sama mooduli Gradle'i pakendamisülesanded loovad Java 25 `jpackage` abil platvo
 
 `planner-gui` sõltub Gradle'is tavapäraselt `planner-core` moodulist. Core kompileeritakse eraldi teegiks ning selle lähtekoode ei kaasata GUI moodulisse teist korda.
 
-Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi abiklassidesse tõstetud. Plaanifaili lugemise ja kirjutamise käivitamine ning aktiivse faili ja viimati kasutatud kausta seisund on koondatud `PlanFileSession` klassi. Salvestamata muudatuste seisund ning sellest tuletatud akna pealkiri ja salvestusoleku tekst asuvad `PlanDocumentState` klassis. Plaanifaili valimise ja salvestamata muudatuste kinnitamise JavaFX-i dialoogid asuvad `PlanFileDialogs` klassis, plaani üldandmete sisestusdialoog `PlanSettingsDialog` klassis ning uue objekti omaduste sisestamine `PlacementDetailsDialog` klassis. Sellest hoolimata on `PancakePlannerApp` endiselt väga suur ning vajab edasise kasvu eel vaadeteks, kontrolleriteks ja tööriistadeks jagamist.
+Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi abiklassidesse tõstetud. Plaanifaili lugemise ja kirjutamise käivitamine ning aktiivse faili ja viimati kasutatud kausta seisund on koondatud `PlanFileSession` klassi. Salvestamata muudatuste seisund ning sellest tuletatud akna pealkiri ja salvestusoleku tekst asuvad `PlanDocumentState` klassis. Plaanifaili valimise ja salvestamata muudatuste kinnitamise JavaFX-i dialoogid asuvad `PlanFileDialogs` klassis, plaani üldandmete sisestusdialoog `PlanSettingsDialog` klassis ning uue objekti omaduste sisestamine `PlacementDetailsDialog` klassis. Markerite ikoonide JavaFX-kujundid loob `MarkerIconFactory`. Sellest hoolimata on `PancakePlannerApp` endiselt väga suur ning vajab edasise kasvu eel vaadeteks, kontrolleriteks ja tööriistadeks jagamist.
 
 ### 5.3 Olulisemad domeeniklassid
 
@@ -209,6 +209,7 @@ Versioonita ja versioon 1 `.pplan` failid on tavalised Java properties-failid ni
 | `PlanFileDialogs` | Plaanifaili avamis- ja salvestusdialoogid ning salvestamata muudatuste valiku küsimine |
 | `PlanSettingsDialog` | Plaani nime, mõõtkava, sildisuuruste ja kaardipildi valikute sisestusdialoog |
 | `PlacementDetailsDialog` | Uue objekti tüübiomaduste sisestamine ja sisendi valideerimine enne kaardile paigutamist |
+| `MarkerIconFactory` | Markeriliikidele vastavate JavaFX-ikoonide loomine |
 | `PancakePlannerApp` | Rakenduse põhivaade, tööriistad, dialoogid ja kasutaja tegevuste sidumine mudeliga |
 | `PancakePlannerLauncher` | Pakendatud rakenduse käivitamine ja käsurealt või failiseosest saadud plaanitee edastamine |
 | Gradle'i `package*` ülesanded | Platvormipõhiste rakendusepiltide ja paigaldajate loomine koos runtime'i, JavaFX-i, ikoonide ning failiseostega |
