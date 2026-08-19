@@ -137,7 +137,7 @@ Sama mooduli Gradle'i pakendamisülesanded loovad Java 25 `jpackage` abil platvo
 
 `planner-gui` sõltub Gradle'is tavapäraselt `planner-core` moodulist. Core kompileeritakse eraldi teegiks ning selle lähtekoode ei kaasata GUI moodulisse teist korda.
 
-Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi abiklassidesse tõstetud. Plaanifaili lugemise ja kirjutamise käivitamine ning aktiivse faili ja viimati kasutatud kausta seisund on koondatud `PlanFileSession` klassi. Sellest hoolimata on `PancakePlannerApp` endiselt väga suur ning vajab edasise kasvu eel vaadeteks, kontrolleriteks ja tööriistadeks jagamist.
+Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi abiklassidesse tõstetud. Plaanifaili lugemise ja kirjutamise käivitamine ning aktiivse faili ja viimati kasutatud kausta seisund on koondatud `PlanFileSession` klassi. Salvestamata muudatuste seisund ning sellest tuletatud akna pealkiri ja salvestusoleku tekst asuvad `PlanDocumentState` klassis. Sellest hoolimata on `PancakePlannerApp` endiselt väga suur ning vajab edasise kasvu eel vaadeteks, kontrolleriteks ja tööriistadeks jagamist.
 
 ### 5.3 Olulisemad domeeniklassid
 
@@ -205,6 +205,7 @@ Versioonita ja versioon 1 `.pplan` failid on tavalised Java properties-failid ni
 | `PowerSummaryService` | Elektrikappide koormuse ja vaba võimsuse arvutamine |
 | `GeometryCalculator` | Joonte pikkuse ning kujundite pindala ja ümbermõõdu arvutamine |
 | `PlanFileSession` | Plaanifaili laadimise ja salvestamise vahendamine ning aktiivse faili ja viimati kasutatud kausta seisund |
+| `PlanDocumentState` | Salvestamata muudatuste seisund ning akna pealkirja ja salvestusoleku teksti moodustamine |
 | `PancakePlannerApp` | Rakenduse põhivaade, tööriistad, dialoogid ja kasutaja tegevuste sidumine mudeliga |
 | `PancakePlannerLauncher` | Pakendatud rakenduse käivitamine ja käsurealt või failiseosest saadud plaanitee edastamine |
 | Gradle'i `package*` ülesanded | Platvormipõhiste rakendusepiltide ja paigaldajate loomine koos runtime'i, JavaFX-i, ikoonide ning failiseostega |

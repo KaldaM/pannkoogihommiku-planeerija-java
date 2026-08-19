@@ -129,6 +129,7 @@ public class PancakePlannerApp extends Application {
     private final PowerSummaryService powerSummaryService = new PowerSummaryService();
     private final ReportTextExporter reportTextExporter = new ReportTextExporter(powerSummaryService);
     private final PlanFileSession planFileSession = new PlanFileSession();
+    private final PlanDocumentState planDocumentState = new PlanDocumentState();
     private final Preferences preferences = Preferences.userNodeForPackage(PancakePlannerApp.class);
 
     private EventPlan plan;
@@ -272,7 +273,6 @@ public class PancakePlannerApp extends Application {
     private boolean pendingLineObjectPlacement;
     private boolean pendingAreaObjectPlacement;
     private MarkerType pendingPlacementMarkerType;
-    private boolean unsavedChanges;
     private Stage stage;
 
     @Override
@@ -2119,12 +2119,12 @@ public class PancakePlannerApp extends Application {
     }
 
     private void markDirty() {
-        unsavedChanges = true;
+        planDocumentState.markDirty();
         updateWindowTitle();
     }
 
     private void markClean() {
-        unsavedChanges = false;
+        planDocumentState.markClean();
         updateWindowTitle();
     }
 
@@ -2132,9 +2132,7 @@ public class PancakePlannerApp extends Application {
         if (stage == null) {
             return;
         }
-        File currentPlanFile = planFileSession.currentFile();
-        String fileName = currentPlanFile == null ? "" : " - " + currentPlanFile.getName();
-        stage.setTitle("%sPannkoogihommiku planeerija%s".formatted(unsavedChanges ? "* " : "", fileName));
+        stage.setTitle(planDocumentState.windowTitle(planFileSession.currentFile()));
         updatePlanTitleLabel();
         updateSaveStatusLabel();
     }
@@ -2150,8 +2148,8 @@ public class PancakePlannerApp extends Application {
         if (saveStatusLabel == null) {
             return;
         }
-        saveStatusLabel.setText(unsavedChanges ? "Salvestamata muudatused" : "Salvestatud");
-        saveStatusLabel.setStyle(unsavedChanges
+        saveStatusLabel.setText(planDocumentState.saveStatusText());
+        saveStatusLabel.setStyle(planDocumentState.hasUnsavedChanges()
                 ? "-fx-text-fill: #b45309; -fx-font-weight: bold;"
                 : "-fx-text-fill: #166534; -fx-font-weight: bold;");
     }
@@ -2208,7 +2206,7 @@ public class PancakePlannerApp extends Application {
     }
 
     private boolean confirmDiscardUnsavedChanges() {
-        if (!unsavedChanges) {
+        if (!planDocumentState.hasUnsavedChanges()) {
             return true;
         }
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
