@@ -20,7 +20,6 @@ import ee.matteus.pannukas.core.model.PowerSource;
 import ee.matteus.pannukas.core.model.TextObject;
 import ee.matteus.pannukas.core.model.Tent;
 import ee.matteus.pannukas.core.service.PlanFactory;
-import ee.matteus.pannukas.core.service.PlanFileService;
 import ee.matteus.pannukas.core.service.GeometryCalculator;
 import ee.matteus.pannukas.core.service.PowerSummary;
 import ee.matteus.pannukas.core.service.PowerSummaryService;
@@ -129,7 +128,7 @@ public class PancakePlannerApp extends Application {
     private final PlanFactory planFactory = new PlanFactory();
     private final PowerSummaryService powerSummaryService = new PowerSummaryService();
     private final ReportTextExporter reportTextExporter = new ReportTextExporter(powerSummaryService);
-    private final PlanFileService planFileService = new PlanFileService();
+    private final PlanFileSession planFileSession = new PlanFileSession();
     private final Preferences preferences = Preferences.userNodeForPackage(PancakePlannerApp.class);
 
     private EventPlan plan;
@@ -138,8 +137,6 @@ public class PancakePlannerApp extends Application {
     private ScrollPane mapScrollPane;
     private Scale mapScale;
     private ImageView mapImageView;
-    private File currentPlanFile;
-    private File lastUsedDirectory;
     private double zoomLevel = 1.0;
     private double mapWidth = MIN_MAP_WIDTH;
     private double mapHeight = MIN_MAP_HEIGHT;
@@ -327,9 +324,7 @@ public class PancakePlannerApp extends Application {
 
         Path file = startupPlanFile.orElseThrow();
         try {
-            plan = planFileService.load(file);
-            currentPlanFile = file.toFile();
-            rememberDirectory(currentPlanFile);
+            plan = planFileSession.load(file.toFile());
             return null;
         } catch (IOException | RuntimeException exception) {
             String message = exception.getMessage();
@@ -1994,7 +1989,7 @@ public class PancakePlannerApp extends Application {
             if (file != null) {
                 selectedMapPath[0] = file.getAbsolutePath();
                 mapLabel.setText(selectedMapPath[0]);
-                rememberDirectory(file);
+                planFileSession.rememberDirectory(file);
             }
         });
         Button setScaleFromMeasurementButton = new Button("Määra mõõdulindi järgi");
@@ -2078,7 +2073,7 @@ public class PancakePlannerApp extends Application {
         }
 
         plan = planFactory.createEmptyPlan();
-        currentPlanFile = null;
+        planFileSession.clearCurrentFile();
         resetPlanViewState();
     }
 
@@ -2137,6 +2132,7 @@ public class PancakePlannerApp extends Application {
         if (stage == null) {
             return;
         }
+        File currentPlanFile = planFileSession.currentFile();
         String fileName = currentPlanFile == null ? "" : " - " + currentPlanFile.getName();
         stage.setTitle("%sPannkoogihommiku planeerija%s".formatted(unsavedChanges ? "* " : "", fileName));
         updatePlanTitleLabel();
@@ -5512,6 +5508,7 @@ public class PancakePlannerApp extends Application {
     }
 
     private boolean savePlan() {
+        File currentPlanFile = planFileSession.currentFile();
         if (currentPlanFile == null) {
             return savePlanAs();
         }
@@ -5522,6 +5519,7 @@ public class PancakePlannerApp extends Application {
     private boolean savePlanAs() {
         FileChooser fileChooser = createPlanFileChooser();
         applyInitialDirectory(fileChooser);
+        File currentPlanFile = planFileSession.currentFile();
         if (currentPlanFile != null) {
             fileChooser.setInitialFileName(currentPlanFile.getName());
         }
@@ -5535,9 +5533,7 @@ public class PancakePlannerApp extends Application {
 
     private boolean savePlanToFile(File file) {
         try {
-            planFileService.save(plan, file.toPath());
-            currentPlanFile = file;
-            rememberDirectory(file);
+            planFileSession.save(plan, file);
             markClean();
             return true;
         } catch (IOException exception) {
@@ -5556,9 +5552,9 @@ public class PancakePlannerApp extends Application {
 
         Optional<File> selectedFile = ExportFileChooser.chooseSummaryFile(
                 stage,
-                initialDirectory(),
+                planFileSession.initialDirectory(),
                 plan.name(),
-                currentPlanFile
+                planFileSession.currentFile()
         );
         if (selectedFile.isEmpty()) {
             return;
@@ -5567,7 +5563,7 @@ public class PancakePlannerApp extends Application {
         File file = selectedFile.get();
         try {
             Files.writeString(file.toPath(), summaryText(selectedReportScope.get()), StandardCharsets.UTF_8);
-            rememberDirectory(file);
+            planFileSession.rememberDirectory(file);
         } catch (IOException exception) {
             showError("Eksportimine ebaõnnestus", exception.getMessage());
         }
@@ -5583,9 +5579,9 @@ public class PancakePlannerApp extends Application {
 
         Optional<File> selectedFile = ExportFileChooser.chooseMapImageFile(
                 stage,
-                initialDirectory(),
+                planFileSession.initialDirectory(),
                 plan.name(),
-                currentPlanFile
+                planFileSession.currentFile()
         );
         if (selectedFile.isEmpty()) {
             return;
@@ -5595,7 +5591,7 @@ public class PancakePlannerApp extends Application {
         try {
             WritableImage image = snapshotMapImage(selectedScope.get());
             ImageIO.write(SwingFXUtils.fromFXImage(image, null), "png", file);
-            rememberDirectory(file);
+            planFileSession.rememberDirectory(file);
             saveStatusLabel.setText("Pilt eksporditud");
             saveStatusLabel.setStyle("-fx-text-fill: #166534; -fx-font-weight: bold;");
         } catch (IOException exception) {
@@ -5614,9 +5610,9 @@ public class PancakePlannerApp extends Application {
 
         Optional<File> selectedFile = ExportFileChooser.choosePdfFile(
                 stage,
-                initialDirectory(),
+                planFileSession.initialDirectory(),
                 plan.name(),
-                currentPlanFile
+                planFileSession.currentFile()
         );
         if (selectedFile.isEmpty()) {
             return;
@@ -5632,7 +5628,7 @@ public class PancakePlannerApp extends Application {
                     summaryText(options.reportScope())
             );
 
-            rememberDirectory(file);
+            planFileSession.rememberDirectory(file);
             saveStatusLabel.setText("PDF eksporditud");
             saveStatusLabel.setStyle("-fx-text-fill: #166534; -fx-font-weight: bold;");
         } catch (IOException exception) {
@@ -5826,7 +5822,7 @@ public class PancakePlannerApp extends Application {
             return;
         }
 
-        rememberDirectory(file);
+        planFileSession.rememberDirectory(file);
         setMapImage(file.getAbsolutePath());
     }
 
@@ -5849,9 +5845,7 @@ public class PancakePlannerApp extends Application {
         }
 
         try {
-            plan = planFileService.load(file.toPath());
-            currentPlanFile = file;
-            rememberDirectory(file);
+            plan = planFileSession.load(file);
             resetPlanViewState();
         } catch (IOException | RuntimeException exception) {
             showError("Faili avamine ebaõnnestus", exception.getMessage());
@@ -5866,27 +5860,9 @@ public class PancakePlannerApp extends Application {
     }
 
     private void applyInitialDirectory(FileChooser fileChooser) {
-        File directory = initialDirectory();
+        File directory = planFileSession.initialDirectory();
         if (directory != null && directory.isDirectory()) {
             fileChooser.setInitialDirectory(directory);
-        }
-    }
-
-    private File initialDirectory() {
-        if (lastUsedDirectory != null && lastUsedDirectory.isDirectory()) {
-            return lastUsedDirectory;
-        }
-        if (currentPlanFile != null
-                && currentPlanFile.getParentFile() != null
-                && currentPlanFile.getParentFile().isDirectory()) {
-            return currentPlanFile.getParentFile();
-        }
-        return null;
-    }
-
-    private void rememberDirectory(File file) {
-        if (file != null && file.getParentFile() != null && file.getParentFile().isDirectory()) {
-            lastUsedDirectory = file.getParentFile();
         }
     }
 
