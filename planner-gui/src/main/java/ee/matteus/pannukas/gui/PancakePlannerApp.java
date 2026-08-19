@@ -1953,77 +1953,32 @@ public class PancakePlannerApp extends Application {
     }
 
     private void showPlanSettingsDialog() {
-        TextField dialogPlanNameField = new TextField(plan.name());
-        TextField dialogPixelsPerMeterField = new TextField(formatMeters(plan.pixelsPerMeter()));
-        dialogPixelsPerMeterField.setPromptText("px/m");
-        Slider dialogObjectLabelFontSizeSlider = createPixelSlider(
+        PlanSettingsDialog.Settings initialSettings = new PlanSettingsDialog.Settings(
+                plan.name(),
+                formatMeters(plan.pixelsPerMeter()),
+                plan.objectLabelFontSize(),
+                plan.cableLabelFontSize(),
+                plan.mapImagePath(),
+                DEFAULT_MAP_PATH,
+                ORTHOPHOTO_MAP_PATH
+        );
+        PlanSettingsDialog.show(
+                stage,
+                initialSettings,
+                planFileSession.initialDirectory(),
                 MIN_FONT_SIZE_PIXELS,
                 MAX_FONT_SIZE_PIXELS,
-                plan.objectLabelFontSize()
-        );
-        Slider dialogCableLabelFontSizeSlider = createPixelSlider(
-                MIN_FONT_SIZE_PIXELS,
-                MAX_FONT_SIZE_PIXELS,
-                plan.cableLabelFontSize()
-        );
-        Label mapLabel = new Label(plan.mapImagePath().isBlank() ? "Kaarti pole valitud" : plan.mapImagePath());
-
-        final String[] selectedMapPath = {plan.mapImagePath()};
-        Button defaultMapButton = new Button("Tavakaart");
-        defaultMapButton.setOnAction(event -> {
-            selectedMapPath[0] = DEFAULT_MAP_PATH;
-            mapLabel.setText(selectedMapPath[0]);
-        });
-        Button orthophotoButton = new Button("Ortofoto");
-        orthophotoButton.setOnAction(event -> {
-            selectedMapPath[0] = ORTHOPHOTO_MAP_PATH;
-            mapLabel.setText(selectedMapPath[0]);
-        });
-        Button loadMapButton = new Button("Laadi kaart");
-        loadMapButton.setOnAction(event -> {
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Vali kaart");
-            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Pildifailid", "*.png", "*.jpg", "*.jpeg"));
-            applyInitialDirectory(fileChooser);
-            File file = fileChooser.showOpenDialog(stage);
-            if (file != null) {
-                selectedMapPath[0] = file.getAbsolutePath();
-                mapLabel.setText(selectedMapPath[0]);
-                planFileSession.rememberDirectory(file);
-            }
-        });
-        Button setScaleFromMeasurementButton = new Button("Määra mõõdulindi järgi");
-        setScaleFromMeasurementButton.setTooltip(new Tooltip("Arvutab piksleid meetri kohta viimase mõõdulindi joone põhjal"));
-        setScaleFromMeasurementButton.setOnAction(event -> {
-            if (setScaleFromLastMeasurement()) {
-                dialogPixelsPerMeterField.setText(formatMeters(plan.pixelsPerMeter()));
-            }
-        });
-
-        GridPane form = detailGrid();
-        form.addRow(0, new Label("Plaani nimi"), dialogPlanNameField);
-        form.addRow(1, new Label("Piksleid meetri kohta"), new HBox(8, dialogPixelsPerMeterField, setScaleFromMeasurementButton));
-        form.addRow(2, new Label("Objektisildi suurus"), pixelControl(dialogObjectLabelFontSizeSlider));
-        form.addRow(3, new Label("Kaablisildi suurus"), pixelControl(dialogCableLabelFontSizeSlider));
-        form.addRow(4, new Label("Kaart"), new HBox(8, defaultMapButton, orthophotoButton, loadMapButton));
-        form.addRow(5, new Label("Valitud kaart"), mapLabel);
-
-        Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
-        dialog.setTitle("Plaani andmed");
-        dialog.setHeaderText("Muuda plaani andmeid");
-        dialog.getDialogPane().setContent(form);
-        dialog.showAndWait().ifPresent(buttonType -> {
-            if (buttonType != ButtonType.OK) {
-                return;
-            }
-            applyPlanSettings(
-                    dialogPlanNameField.getText(),
-                    dialogPixelsPerMeterField.getText(),
-                    dialogObjectLabelFontSizeSlider.getValue(),
-                    dialogCableLabelFontSizeSlider.getValue(),
-                    selectedMapPath[0]
-            );
-        });
+                () -> setScaleFromLastMeasurement()
+                        ? Optional.of(formatMeters(plan.pixelsPerMeter()))
+                        : Optional.empty(),
+                planFileSession::rememberDirectory
+        ).ifPresent(settings -> applyPlanSettings(
+                settings.planName(),
+                settings.pixelsPerMeterText(),
+                settings.objectLabelFontSize(),
+                settings.cableLabelFontSize(),
+                settings.mapImagePath()
+        ));
     }
 
     private void applyPlanSettings(
