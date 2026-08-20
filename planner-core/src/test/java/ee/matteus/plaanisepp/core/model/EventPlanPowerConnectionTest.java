@@ -93,6 +93,57 @@ class EventPlanPowerConnectionTest {
         assertEquals(connectionId, plan.findPowerConnectionForConsumer(tent.id()).orElseThrow().id());
     }
 
+    @Test
+    void assignsEquipmentOnlyToConnectionForItsOwnContainer() {
+        EventPlan plan = new EventPlan("Test");
+        PowerSource source = powerSource();
+        Tent firstTent = new Tent("tent-1", "Esimene telk", new Position(0, 0));
+        Equipment equipment = new Equipment("equipment-1", "Pliit", 1200);
+        firstTent.addEquipment(equipment);
+        Tent secondTent = new Tent("tent-2", "Teine telk", new Position(10, 10));
+        secondTent.addEquipment(new Equipment("equipment-2", "Soojendi", 1000));
+        plan.addObject(source);
+        plan.addObject(firstTent);
+        plan.addObject(secondTent);
+        String firstConnectionId = plan.connectToPower(
+                source.id(), firstTent.id(), ConnectorType.SCHUKO_230V, "outlet"
+        ).orElseThrow().id();
+        String secondConnectionId = plan.connectToPower(
+                source.id(), secondTent.id(), ConnectorType.SCHUKO_230V, "outlet"
+        ).orElseThrow().id();
+
+        assertEquals(
+                EquipmentPowerAssignmentResult.CONNECTION_BELONGS_TO_ANOTHER_CONSUMER,
+                plan.assignEquipmentToPowerConnection(firstTent.id(), equipment.id(), secondConnectionId)
+        );
+        assertTrue(equipment.usesDefaultPower());
+
+        assertEquals(
+                EquipmentPowerAssignmentResult.SUCCESS,
+                plan.assignEquipmentToPowerConnection(firstTent.id(), equipment.id(), firstConnectionId)
+        );
+        assertEquals(firstConnectionId, equipment.powerConnectionId());
+    }
+
+    @Test
+    void clearsEquipmentOverrideWhenReferencedConnectionIsRemoved() {
+        EventPlan plan = new EventPlan("Test");
+        PowerSource source = powerSource();
+        Tent tent = new Tent("tent", "Telk", new Position(0, 0));
+        Equipment equipment = new Equipment("equipment", "Pliit", 1200);
+        tent.addEquipment(equipment);
+        plan.addObject(source);
+        plan.addObject(tent);
+        String connectionId = plan.connectToPower(
+                source.id(), tent.id(), ConnectorType.SCHUKO_230V, "outlet"
+        ).orElseThrow().id();
+        plan.assignEquipmentToPowerConnection(tent.id(), equipment.id(), connectionId);
+
+        plan.disconnectPower(tent.id());
+
+        assertTrue(equipment.usesDefaultPower());
+    }
+
     private PowerSource powerSource() {
         PowerSource source = new PowerSource("source", "Kapp", new Position(50, 50));
         source.addOutlet(new PowerOutlet("outlet", ConnectorType.SCHUKO_230V, 11000));

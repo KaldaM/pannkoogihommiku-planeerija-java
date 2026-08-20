@@ -6,6 +6,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class EventPlan {
     public static final double DEFAULT_PIXELS_PER_METER = 24.0;
@@ -127,7 +129,7 @@ public class EventPlan {
 
     public void removeObject(String objectId) {
         objects.removeIf(object -> object.id().equals(objectId));
-        powerConnections.removeIf(connection ->
+        removePowerConnections(connection ->
                 connection.sourceId().equals(objectId) || connection.consumerId().equals(objectId));
     }
 
@@ -451,11 +453,85 @@ public class EventPlan {
     }
 
     public void disconnectPower(String consumerId) {
-        powerConnections.removeIf(connection -> connection.consumerId().equals(consumerId));
+        removePowerConnections(connection -> connection.consumerId().equals(consumerId));
     }
 
     public void disconnectPowerFromOutlet(String outletId) {
-        powerConnections.removeIf(connection -> connection.outletId().equals(outletId));
+        removePowerConnections(connection -> connection.outletId().equals(outletId));
+    }
+
+    public EquipmentPowerAssignmentResult assignEquipmentToPowerConnection(
+            String containerId,
+            String equipmentId,
+            String connectionId
+    ) {
+        EquipmentContainer container = findEquipmentContainer(containerId).orElse(null);
+        if (container == null) {
+            return EquipmentPowerAssignmentResult.CONTAINER_NOT_FOUND;
+        }
+
+        Equipment equipment = container.equipment().stream()
+                .filter(item -> item.id().equals(equipmentId))
+                .findFirst()
+                .orElse(null);
+        if (equipment == null) {
+            return EquipmentPowerAssignmentResult.EQUIPMENT_NOT_FOUND;
+        }
+
+        PowerConnection connection = powerConnections.stream()
+                .filter(item -> item.id().equals(connectionId))
+                .findFirst()
+                .orElse(null);
+        if (connection == null) {
+            return EquipmentPowerAssignmentResult.CONNECTION_NOT_FOUND;
+        }
+        if (!connection.consumerId().equals(containerId)) {
+            return EquipmentPowerAssignmentResult.CONNECTION_BELONGS_TO_ANOTHER_CONSUMER;
+        }
+
+        equipment.assignPowerConnection(connection.id());
+        return EquipmentPowerAssignmentResult.SUCCESS;
+    }
+
+    public EquipmentPowerAssignmentResult useDefaultPowerForEquipment(String containerId, String equipmentId) {
+        EquipmentContainer container = findEquipmentContainer(containerId).orElse(null);
+        if (container == null) {
+            return EquipmentPowerAssignmentResult.CONTAINER_NOT_FOUND;
+        }
+
+        Equipment equipment = container.equipment().stream()
+                .filter(item -> item.id().equals(equipmentId))
+                .findFirst()
+                .orElse(null);
+        if (equipment == null) {
+            return EquipmentPowerAssignmentResult.EQUIPMENT_NOT_FOUND;
+        }
+
+        equipment.useDefaultPower();
+        return EquipmentPowerAssignmentResult.SUCCESS;
+    }
+
+    private Optional<EquipmentContainer> findEquipmentContainer(String containerId) {
+        return findObject(containerId)
+                .filter(EquipmentContainer.class::isInstance)
+                .map(EquipmentContainer.class::cast);
+    }
+
+    private void removePowerConnections(Predicate<PowerConnection> predicate) {
+        Set<String> removedConnectionIds = powerConnections.stream()
+                .filter(predicate)
+                .map(PowerConnection::id)
+                .collect(Collectors.toSet());
+        powerConnections.removeIf(predicate);
+        if (removedConnectionIds.isEmpty()) {
+            return;
+        }
+        objects.stream()
+                .filter(EquipmentContainer.class::isInstance)
+                .map(EquipmentContainer.class::cast)
+                .flatMap(container -> container.equipment().stream())
+                .filter(equipment -> removedConnectionIds.contains(equipment.powerConnectionId()))
+                .forEach(Equipment::useDefaultPower);
     }
 
     public void updateConnectorTypeForOutlet(String outletId, ConnectorType connectorType) {
