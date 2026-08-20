@@ -13,13 +13,19 @@ javafx {
     modules = ['javafx.controls', 'javafx.fxml', 'javafx.swing']
 }
 
+def applicationExecutableName = 'plaanisepp'
+def applicationDisplayName = 'Plaanisepp'
+def applicationDescription = 'Sündmusala ja elektrivajaduse planeerija'
+def applicationVendor = 'Plaanisepp'
+
 application {
+    applicationName = applicationExecutableName
     mainClass = 'ee.matteus.pannukas.gui.PlaaniseppApp'
     applicationDefaultJvmArgs = ['--enable-native-access=javafx.graphics']
 }
 
-def linuxAppName = 'plaanisepp'
-def windowsAppName = 'Plaanisepp'
+def linuxAppName = applicationExecutableName
+def windowsAppName = applicationDisplayName
 def packagedMainClass = 'ee.matteus.pannukas.gui.PlaaniseppLauncher'
 def packagedJavaModules = 'javafx.controls,javafx.fxml,javafx.swing,java.logging,java.prefs,java.scripting,jdk.jfr,jdk.unsupported.desktop'
 def packageInputDirectory = layout.buildDirectory.dir('jpackage-input')
@@ -57,7 +63,7 @@ tasks.register('prepareLinuxPackageInput', Sync) {
     group = 'distribution'
     description = 'Prepares application classpath files for the Linux jpackage build.'
     dependsOn tasks.named('installDist')
-    from(layout.buildDirectory.dir("install/${project.name}/lib")) {
+    from(layout.buildDirectory.dir("install/${applicationExecutableName}/lib")) {
         exclude 'javafx-*.jar'
     }
     into packageInputDirectory
@@ -67,7 +73,7 @@ tasks.register('prepareWindowsPackageInput', Sync) {
     group = 'distribution'
     description = 'Prepares application classpath files for the Windows jpackage build.'
     dependsOn tasks.named('installDist')
-    from(layout.buildDirectory.dir("install/${project.name}/lib")) {
+    from(layout.buildDirectory.dir("install/${applicationExecutableName}/lib")) {
         exclude 'javafx-*.jar'
     }
     into windowsPackageInputDirectory
@@ -105,8 +111,8 @@ tasks.register('packageWindowsAppImage', Exec) {
                 '--dest', windowsPackageDirectory.get().asFile,
                 '--name', windowsAppName,
                 '--app-version', project.version.toString(),
-                '--vendor', 'Plaanisepp',
-                '--description', 'Sündmusala ja elektrivajaduse planeerija',
+                '--vendor', applicationVendor,
+                '--description', applicationDescription,
                 '--icon', windowsApplicationIcon.asFile,
                 '--input', windowsPackageInputDirectory.get().asFile,
                 '--main-jar', tasks.named('jar', Jar).get().archiveFileName.get(),
@@ -157,8 +163,8 @@ tasks.register('packageWindowsInstaller', Exec) {
                 '--name', windowsAppName,
                 '--app-image', windowsAppImageDirectory.get().asFile,
                 '--app-version', project.version.toString(),
-                '--vendor', 'Plaanisepp',
-                '--description', 'Sündmusala ja elektrivajaduse planeerija',
+                '--vendor', applicationVendor,
+                '--description', applicationDescription,
                 '--icon', windowsApplicationIcon.asFile,
                 '--file-associations', windowsPlanFileAssociation.asFile,
                 '--win-menu',
@@ -202,7 +208,7 @@ tasks.register('packageLinuxAppImage', Exec) {
                 '--dest', linuxPackageDirectory.get().asFile,
                 '--name', linuxAppName,
                 '--app-version', project.version.toString(),
-                '--description', 'Sündmusala ja elektrivajaduse planeerija',
+                '--description', applicationDescription,
                 '--icon', applicationIcon.asFile,
                 '--input', packageInputDirectory.get().asFile,
                 '--main-jar', tasks.named('jar', Jar).get().archiveFileName.get(),
@@ -255,8 +261,8 @@ tasks.register('packageLinuxRpm', Exec) {
                 '--name', linuxAppName,
                 '--app-image', linuxAppImageDirectory.get().asFile,
                 '--app-version', project.version.toString(),
-                '--vendor', 'Plaanisepp',
-                '--description', 'Sündmusala ja elektrivajaduse planeerija',
+                '--vendor', applicationVendor,
+                '--description', applicationDescription,
                 '--icon', applicationIcon.asFile,
                 '--resource-dir', linuxPackageResources.asFile,
                 '--file-associations', planFileAssociation.asFile,
