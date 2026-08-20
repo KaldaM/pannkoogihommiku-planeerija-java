@@ -1,7 +1,6 @@
 package ee.matteus.plaanisepp.core.service;
 
 import ee.matteus.plaanisepp.core.model.EventPlan;
-import ee.matteus.plaanisepp.core.model.PowerConsumer;
 import ee.matteus.plaanisepp.core.model.PowerSource;
 
 import java.util.List;
@@ -16,11 +15,7 @@ public class PowerSummaryService {
     private int usedWatts(EventPlan plan, PowerSource source) {
         return plan.powerConnections().stream()
                 .filter(connection -> connection.sourceId().equals(source.id()))
-                .map(connection -> plan.findObject(connection.consumerId()))
-                .flatMap(Optional -> Optional.stream())
-                .filter(PowerConsumer.class::isInstance)
-                .map(PowerConsumer.class::cast)
-                .mapToInt(PowerConsumer::requiredWatts)
+                .mapToInt(plan::powerDemandWatts)
                 .sum();
     }
 }

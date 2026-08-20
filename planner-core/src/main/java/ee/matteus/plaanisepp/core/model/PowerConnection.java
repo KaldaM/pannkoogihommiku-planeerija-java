@@ -13,7 +13,8 @@ public record PowerConnection(
         String cableLengthNotes,
         List<Position> routePoints,
         boolean customCableLabelPosition,
-        Position cableLabelOffset
+        Position cableLabelOffset,
+        boolean defaultForConsumer
 ) {
     public PowerConnection(String sourceId, String consumerId, ConnectorType connectorType) {
         this(sourceId, consumerId, connectorType, "");
@@ -62,7 +63,7 @@ public record PowerConnection(
             Position cableLabelOffset
     ) {
         this("", sourceId, consumerId, connectorType, outletId, cableNotes, cableLengthNotes, routePoints,
-                customCableLabelPosition, cableLabelOffset);
+                customCableLabelPosition, cableLabelOffset, true);
     }
 
     public PowerConnection {

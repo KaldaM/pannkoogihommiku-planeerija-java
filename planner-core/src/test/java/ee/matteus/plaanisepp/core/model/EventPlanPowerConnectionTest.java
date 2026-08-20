@@ -139,9 +139,72 @@ class EventPlanPowerConnectionTest {
         ).orElseThrow().id();
         plan.assignEquipmentToPowerConnection(tent.id(), equipment.id(), connectionId);
 
-        plan.disconnectPower(tent.id());
+        assertTrue(plan.disconnectPowerConnection(connectionId));
 
         assertTrue(equipment.usesDefaultPower());
+    }
+
+    @Test
+    void distributesEquipmentDemandBetweenDefaultAndAlternativeConnections() {
+        EventPlan plan = new EventPlan("Test");
+        PowerSource defaultSource = powerSource();
+        PowerSource alternativeSource = new PowerSource("source-2", "Teine kapp", new Position(100, 100));
+        alternativeSource.addOutlet(new PowerOutlet("outlet-2", ConnectorType.SCHUKO_230V, 11000));
+        Tent tent = new Tent("tent", "Telk", new Position(0, 0));
+        Equipment defaultEquipment = new Equipment("equipment-1", "Pliit", 1200);
+        Equipment alternativeEquipment = new Equipment("equipment-2", "Külmik", 500);
+        tent.addEquipment(defaultEquipment);
+        tent.addEquipment(alternativeEquipment);
+        plan.addObject(defaultSource);
+        plan.addObject(alternativeSource);
+        plan.addObject(tent);
+        PowerConnection defaultConnection = plan.connectToPower(
+                defaultSource.id(), tent.id(), ConnectorType.SCHUKO_230V, "outlet"
+        ).orElseThrow();
+        PowerConnection alternativeConnection = plan.addAlternativePowerConnection(
+                alternativeSource.id(), tent.id(), ConnectorType.SCHUKO_230V, "outlet-2"
+        ).orElseThrow();
+
+        assertTrue(defaultConnection.defaultForConsumer());
+        assertFalse(alternativeConnection.defaultForConsumer());
+        assertEquals(2, plan.findPowerConnectionsForConsumer(tent.id()).size());
+
+        plan.assignEquipmentToPowerConnection(tent.id(), alternativeEquipment.id(), alternativeConnection.id());
+
+        assertEquals(1200, plan.powerDemandWatts(defaultConnection));
+        assertEquals(500, plan.powerDemandWatts(alternativeConnection));
+        assertEquals(1200, new PowerSummaryService().summaries(plan).get(0).usedWatts());
+        assertEquals(500, new PowerSummaryService().summaries(plan).get(1).usedWatts());
+    }
+
+    @Test
+    void reconnectingDefaultPowerKeepsAlternativeConnection() {
+        EventPlan plan = new EventPlan("Test");
+        PowerSource source = powerSource();
+        Tent tent = new Tent("tent", "Telk", new Position(0, 0));
+        tent.addEquipment(new Equipment("Pliit", 1200));
+        plan.addObject(source);
+        plan.addObject(tent);
+        PowerConnection defaultConnection = plan.connectToPower(
+                source.id(), tent.id(), ConnectorType.SCHUKO_230V, "outlet"
+        ).orElseThrow();
+        PowerConnection alternativeConnection = plan.addAlternativePowerConnection(
+                source.id(), tent.id(), ConnectorType.SCHUKO_230V, "outlet"
+        ).orElseThrow();
+
+        PowerConnection reconnected = plan.connectToPower(
+                source.id(), tent.id(), ConnectorType.SCHUKO_230V, "outlet"
+        ).orElseThrow();
+        plan.updateCableNotes(tent.id(), "Vaiketoite kaabel");
+
+        assertEquals(defaultConnection.id(), reconnected.id());
+        assertEquals(2, plan.findPowerConnectionsForConsumer(tent.id()).size());
+        assertTrue(plan.powerConnections().stream().anyMatch(connection ->
+                connection.id().equals(alternativeConnection.id())));
+        assertEquals(
+                "Vaiketoite kaabel",
+                plan.findPowerConnectionForConsumer(tent.id()).orElseThrow().cableNotes()
+        );
     }
 
     private PowerSource powerSource() {
