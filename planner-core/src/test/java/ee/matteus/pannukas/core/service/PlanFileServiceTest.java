@@ -369,10 +369,10 @@ class PlanFileServiceTest {
     void savesAndLoadsAreaAndLineEquipment() throws IOException {
         EventPlan plan = new EventPlan("Test");
         AreaObject area = new AreaObject("area-1", "Lava", new Position(10, 20));
-        area.addEquipment(new Equipment("Valgusti", 500));
-        area.addEquipment(new Equipment("Soojendi", 1500));
+        area.addEquipment(new Equipment("equipment-1", "Valgusti", 500));
+        area.addEquipment(new Equipment("equipment-2", "Soojendi", 1500));
         LineObject line = new LineObject("line-1", "Valguskett", new Position(30, 40));
-        line.addEquipment(new Equipment("Lambid", 750));
+        line.addEquipment(new Equipment("equipment-3", "Lambid", 750));
         plan.addObject(area);
         plan.addObject(line);
         Path file = tempDirectory.resolve("area-line-equipment.pplan");
@@ -382,13 +382,41 @@ class PlanFileServiceTest {
 
         AreaObject loadedArea = (AreaObject) loadedPlan.objects().get(0);
         assertEquals(2, loadedArea.equipment().size());
+        assertEquals("equipment-1", loadedArea.equipment().get(0).id());
+        assertEquals("equipment-2", loadedArea.equipment().get(1).id());
         assertEquals("Valgusti", loadedArea.equipment().get(0).name());
         assertEquals(2000, loadedArea.requiredWatts());
 
         LineObject loadedLine = (LineObject) loadedPlan.objects().get(1);
         assertEquals(1, loadedLine.equipment().size());
+        assertEquals("equipment-3", loadedLine.equipment().getFirst().id());
         assertEquals("Lambid", loadedLine.equipment().getFirst().name());
         assertEquals(750, loadedLine.requiredWatts());
+    }
+
+    @Test
+    void assignsIdWhenOlderEquipmentHasNone() throws IOException {
+        Path file = tempDirectory.resolve("old-equipment-plan.pplan");
+        Files.writeString(file, """
+                plan.name=Vana plaan
+                objects.count=1
+                object.0.type=TENT
+                object.0.id=tent-1
+                object.0.name=Telk
+                object.0.x=10
+                object.0.y=20
+                object.0.equipment.count=1
+                object.0.equipment.0.name=Pliit
+                object.0.equipment.0.requiredWatts=1200
+                connections.count=0
+                """);
+
+        EventPlan loadedPlan = service.load(file);
+
+        Tent loadedTent = (Tent) loadedPlan.objects().getFirst();
+        assertEquals(1, loadedTent.equipment().size());
+        assertFalse(loadedTent.equipment().getFirst().id().isBlank());
+        assertEquals("Pliit", loadedTent.equipment().getFirst().name());
     }
 
     @Test

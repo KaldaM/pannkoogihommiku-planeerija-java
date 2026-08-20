@@ -777,6 +777,7 @@ public class PlanFileService {
         for (int index = 0; index < container.equipment().size(); index++) {
             Equipment item = container.equipment().get(index);
             String equipmentPrefix = prefix + "equipment." + index + ".";
+            properties.setProperty(equipmentPrefix + "id", item.id());
             properties.setProperty(equipmentPrefix + "name", item.name());
             properties.setProperty(equipmentPrefix + "requiredWatts", Integer.toString(item.requiredWatts()));
         }
@@ -787,6 +788,7 @@ public class PlanFileService {
         for (int index = 0; index < equipmentCount; index++) {
             String equipmentPrefix = prefix + "equipment." + index + ".";
             container.addEquipment(new Equipment(
+                    properties.getProperty(equipmentPrefix + "id", ""),
                     properties.getProperty(equipmentPrefix + "name", "Seade"),
                     intValue(properties, equipmentPrefix + "requiredWatts", 0)
             ));

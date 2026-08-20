@@ -5,9 +5,22 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class EquipmentContainerTest {
+    @Test
+    void equipmentHasStableUniqueId() {
+        Equipment first = new Equipment("Valgusti", 500);
+        Equipment second = new Equipment("Valgusti", 500);
+        Equipment loaded = new Equipment("equipment-1", "Soojendi", 1500);
+
+        assertFalse(first.id().isBlank());
+        assertNotEquals(first.id(), second.id());
+        assertEquals("equipment-1", loaded.id());
+    }
+
     @Test
     void tentAreaAndLineShareEquipmentBehavior() {
         List<EquipmentContainer> containers = List.of(
