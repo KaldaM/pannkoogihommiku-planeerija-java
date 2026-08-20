@@ -3,7 +3,7 @@ package ee.matteus.pannukas.gui;
 import java.io.File;
 
 final class ExportFileNames {
-    private static final String DEFAULT_BASE_NAME = "pannkoogihommik";
+    private static final String DEFAULT_BASE_NAME = "plaan";
 
     private ExportFileNames() {
     }

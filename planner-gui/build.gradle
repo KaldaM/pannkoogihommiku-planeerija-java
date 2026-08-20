@@ -18,8 +18,8 @@ application {
     applicationDefaultJvmArgs = ['--enable-native-access=javafx.graphics']
 }
 
-def linuxAppName = 'pannkoogihommiku-planeerija'
-def windowsAppName = 'Pannkoogihommiku planeerija'
+def linuxAppName = 'plaanisepp'
+def windowsAppName = 'Plaanisepp'
 def packagedMainClass = 'ee.matteus.pannukas.gui.PancakePlannerLauncher'
 def packagedJavaModules = 'javafx.controls,javafx.fxml,javafx.swing,java.logging,java.prefs,java.scripting,jdk.jfr,jdk.unsupported.desktop'
 def packageInputDirectory = layout.buildDirectory.dir('jpackage-input')
@@ -105,8 +105,8 @@ tasks.register('packageWindowsAppImage', Exec) {
                 '--dest', windowsPackageDirectory.get().asFile,
                 '--name', windowsAppName,
                 '--app-version', project.version.toString(),
-                '--vendor', 'Pannkoogihommiku planeerija',
-                '--description', 'Ürituse alaplaani ja elektrivajaduse planeerija',
+                '--vendor', 'Plaanisepp',
+                '--description', 'Sündmusala ja elektrivajaduse planeerija',
                 '--icon', windowsApplicationIcon.asFile,
                 '--input', windowsPackageInputDirectory.get().asFile,
                 '--main-jar', tasks.named('jar', Jar).get().archiveFileName.get(),
@@ -157,8 +157,8 @@ tasks.register('packageWindowsInstaller', Exec) {
                 '--name', windowsAppName,
                 '--app-image', windowsAppImageDirectory.get().asFile,
                 '--app-version', project.version.toString(),
-                '--vendor', 'Pannkoogihommiku planeerija',
-                '--description', 'Ürituse alaplaani ja elektrivajaduse planeerija',
+                '--vendor', 'Plaanisepp',
+                '--description', 'Sündmusala ja elektrivajaduse planeerija',
                 '--icon', windowsApplicationIcon.asFile,
                 '--file-associations', windowsPlanFileAssociation.asFile,
                 '--win-menu',
@@ -202,7 +202,7 @@ tasks.register('packageLinuxAppImage', Exec) {
                 '--dest', linuxPackageDirectory.get().asFile,
                 '--name', linuxAppName,
                 '--app-version', project.version.toString(),
-                '--description', 'Ürituse alaplaani ja elektrivajaduse planeerija',
+                '--description', 'Sündmusala ja elektrivajaduse planeerija',
                 '--icon', applicationIcon.asFile,
                 '--input', packageInputDirectory.get().asFile,
                 '--main-jar', tasks.named('jar', Jar).get().archiveFileName.get(),
@@ -255,13 +255,13 @@ tasks.register('packageLinuxRpm', Exec) {
                 '--name', linuxAppName,
                 '--app-image', linuxAppImageDirectory.get().asFile,
                 '--app-version', project.version.toString(),
-                '--vendor', 'Pannkoogihommiku planeerija',
-                '--description', 'Ürituse alaplaani ja elektrivajaduse planeerija',
+                '--vendor', 'Plaanisepp',
+                '--description', 'Sündmusala ja elektrivajaduse planeerija',
                 '--icon', applicationIcon.asFile,
                 '--resource-dir', linuxPackageResources.asFile,
                 '--file-associations', planFileAssociation.asFile,
                 '--linux-package-name', linuxAppName,
-                '--linux-app-release', '3',
+                '--linux-app-release', '4',
                 '--linux-app-category', 'Office',
                 '--linux-menu-group', 'Office',
                 '--linux-shortcut'

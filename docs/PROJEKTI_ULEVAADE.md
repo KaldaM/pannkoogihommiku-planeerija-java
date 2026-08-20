@@ -1,7 +1,7 @@
-# Pannkoogihommiku planeerija: eesmärgid, areng ja hetkeseis
+# Plaanisepp: eesmärgid, areng ja hetkeseis
 
-- Dokumendi viimane sisuline uuendus: 18. august 2026
-- Koodi viimane dokumenteeritud commit: `37edd27` (`Add GitHub Actions test workflow`, 17. august 2026)
+- Dokumendi viimane sisuline uuendus: 20. august 2026
+- Koodi viimane dokumenteeritud commit: `e53fb3a` (`Extract marker icon factory from application`, 20. august 2026)
 - Projekti versioon: `0.1.0`
 
 ## 1. Dokumendi eesmärk
@@ -30,7 +30,7 @@ Pikemas vaates on projekt bakalaureusetöö prototüüp ja õppematerjal. Praegu
 
 ## 3. Algsed eesmärgid
 
-### 3.1 Pannkoogihommiku planeerija põhieesmärk
+### 3.1 Plaanisepa põhieesmärk
 
 Rakendus peab võimaldama koostada ürituse alaplaani, kus kasutaja saab:
 
@@ -48,7 +48,7 @@ Oluline lõppnõue on see, et tavakasutaja ei peaks rakenduse käivitamiseks pai
 
 ### 3.2 Bakalaureusetöö suurem visioon
 
-Pannkoogihommiku planeerija kohal on laiem ürituste tehnilise ja korraldusliku planeerimise süsteemi idee.
+Plaanisepa kohal on laiem ürituste tehnilise ja korraldusliku planeerimise süsteemi idee.
 
 Alus võiks olla kas:
 
@@ -471,7 +471,7 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 
 ### 9.1 Vahetu jätkamiskoht
 
-`.pplan` versioon 2 paketivorming ning Windowsi ja Fedora iseseisvad paigaldajad on teostatud. Vahetu järgmine tehniline töö on valida `PancakePlannerApp` klassist üks selge vastutus, näiteks failivoog või kaarditööriistad, ning eraldada see väikese regressiooniriskiga omaette komponendiks. Pakendamise puhul on enne avalikku väljalaset vaja veel kontrolli puhtas Windowsi arvutis, kus Javat ega arendustööriistu pole paigaldatud, ning koodisigneerimise lahendust.
+`.pplan` versioon 2 paketivorming, Windowsi ja Fedora paigaldajad ning esimene `PancakePlannerApp` klassi refaktoreerimisseeria on teostatud. Rakenduse uueks nimeks valiti **Plaanisepp** ning kasutajale nähtav nimi ja pakendid nimetati ümber, säilitades tagasiühilduvad tehnilised identifikaatorid. Sügis-eelse väljalaske kriitiline funktsioon on alajaotuskilpide ning objekti vaiketoitest erineva seadmepõhise vooluallika lisamine. Elektri külgpaneeli visuaalne ümberkujundamine tehakse pärast uue elektrimudeli valmimist. Täpsem tööjärjekord ja vastuvõtukriteeriumid on failis `docs/ARENDUSPLAAN.md`.
 
 ### 9.2 Kvaliteet ja arhitektuur
 
@@ -526,11 +526,13 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 
 ## 11. Soovituslik tööjärjekord
 
-1. Kontrolli Windowsi paigaldajat veel puhtas arvutis, kus Javat, Gradle'it ega WiX-i pole paigaldatud.
-2. Tükelda `PancakePlannerApp` järk-järgult, alustades failivoo või kaarditööriistade vastutustest.
-3. Laienda CI hiljem Windowsi testide ning versioonisildi põhise release-buildiga.
-4. Lahenda avaliku Windowsi väljalaske koodisigneerimine ja versioonihaldus.
-5. Seejärel vali järgmine suurem funktsionaalne lõik, näiteks alajaotuskilp või avalik veebivaade.
+1. Vali rakendusele üritusteülese kasutusega nimi ja fikseeri ümbernimetamise ulatus.
+2. Lisa alajaotuskilbid, objekti vaiketoide ja seadmepõhised toiteerandid koos tagasiühilduva failimigratsiooniga.
+3. Muuda elektri kokkuvõte uue mudeli põhjal interaktiivseks ning lisa väljundite koormusribad.
+4. Lisa kahekordse Shift-klahviga objekti kiirotsing ja kaardil esiletõstmine.
+5. Lisa suumiliugur ning `Alt + hiirerull` suumimine.
+6. Jätka `PancakePlannerApp` tükeldamist funktsioonidega seotud väikeste sammudena.
+7. Laienda CI hiljem Windowsi testide ning versioonisildi põhise release-buildiga ja lahenda avaliku väljalaske koodisigneerimine.
 
 ## 12. Uue arendusvestluse alustamise juhis
 

@@ -3,7 +3,7 @@ package ee.matteus.pannukas.gui;
 import java.io.File;
 
 final class PlanDocumentState {
-    private static final String APPLICATION_TITLE = "Pannkoogihommiku planeerija";
+    private static final String APPLICATION_TITLE = "Plaanisepp";
 
     private boolean unsavedChanges;
 

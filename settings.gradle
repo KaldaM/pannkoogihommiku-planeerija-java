@@ -16,5 +16,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'pannkoogihommiku-planeerija'
+rootProject.name = 'plaanisepp'
 include 'planner-core', 'planner-gui'

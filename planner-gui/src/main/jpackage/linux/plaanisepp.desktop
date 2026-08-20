@@ -1,8 +1,8 @@
 [Desktop Entry]
-Name=Pannkoogihommiku planeerija
+Name=Plaanisepp
 Comment=APPLICATION_DESCRIPTION
 Exec=APPLICATION_LAUNCHER %f
-Icon=pannkoogihommiku-planeerija
+Icon=plaanisepp
 Terminal=false
 Type=Application
 Categories=DEPLOY_BUNDLE_CATEGORY

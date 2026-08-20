@@ -14,7 +14,7 @@ class PlanDocumentStateTest {
         PlanDocumentState state = new PlanDocumentState();
 
         assertFalse(state.hasUnsavedChanges());
-        assertEquals("Pannkoogihommiku planeerija", state.windowTitle(null));
+        assertEquals("Plaanisepp", state.windowTitle(null));
         assertEquals("Salvestatud", state.saveStatusText());
     }
 
@@ -26,7 +26,7 @@ class PlanDocumentStateTest {
 
         assertTrue(state.hasUnsavedChanges());
         assertEquals(
-                "* Pannkoogihommiku planeerija - test.pplan",
+                "* Plaanisepp - test.pplan",
                 state.windowTitle(new File("test.pplan"))
         );
         assertEquals("Salvestamata muudatused", state.saveStatusText());
@@ -40,7 +40,7 @@ class PlanDocumentStateTest {
         state.markClean();
 
         assertFalse(state.hasUnsavedChanges());
-        assertEquals("Pannkoogihommiku planeerija - test.pplan", state.windowTitle(new File("test.pplan")));
+        assertEquals("Plaanisepp - test.pplan", state.windowTitle(new File("test.pplan")));
         assertEquals("Salvestatud", state.saveStatusText());
     }
 }

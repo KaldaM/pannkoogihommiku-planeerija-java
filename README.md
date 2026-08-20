@@ -1,10 +1,10 @@
-# Pannkoogihommiku planeerija
+# Plaanisepp
 
-JavaFX-is tehtud töölauarakendus ürituse alaplaani ja elektrivajaduse planeerimiseks. Rakenduses saab paigutada kaardile telke, elektrikappe ja teisi objekte, ühendada tarbijaid konkreetsete väljunditega, koostada kaablite trajektoore ning salvestada ja eksportida valminud plaani.
+Plaanisepp on JavaFX-is tehtud töölauarakendus sündmusala ja elektrivajaduse planeerimiseks. Rakenduses saab paigutada kaardile telke, elektrikappe ja teisi objekte, ühendada tarbijaid konkreetsete väljunditega, koostada kaablite trajektoore ning salvestada ja eksportida valminud plaani.
 
 Projekt sai alguse varasema ühefaililise Pythoni rakenduse objektorienteeritud ümbertegemisest. Pikem eesmärk on kasutada siin kujunevat arhitektuuri ja kasutuskogemust bakalaureusetööna arendatava suurema ürituste planeerimise süsteemi alusena.
 
-Põhjalik ülevaade algsetest eesmärkidest, senisest arendusest, praegusest seisust ja järgmistest töödest asub failis [docs/PROJEKTI_ULEVAADE.md](docs/PROJEKTI_ULEVAADE.md).
+Põhjalik ülevaade algsetest eesmärkidest, senisest arendusest ja praegusest seisust asub failis [docs/PROJEKTI_ULEVAADE.md](docs/PROJEKTI_ULEVAADE.md). Kavandatud kasutajaliidese muudatused ja nimevahetuse otsused on koondatud faili [docs/ARENDUSPLAAN.md](docs/ARENDUSPLAAN.md).
 
 ## Moodulid
 
@@ -55,7 +55,7 @@ Windowsis saab luua iseseisva rakendusepildi, mis sisaldab vajalikku Java runtim
 .\gradlew.bat :planner-gui:packageWindowsAppImage
 ```
 
-Valmis rakendus asub kaustas `planner-gui/build/jpackage-windows/Pannkoogihommiku planeerija`.
+Valmis rakendus asub kaustas `planner-gui/build/jpackage-windows/Plaanisepp`.
 
 Windowsi EXE-paigaldaja loomiseks peavad lisaks Java 25-le olema paigaldatud [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) ja ametlik [WiX Toolset 4](https://docs.firegiant.com/wix/using-wix/). Seejärel tuleb käivitada:
 
@@ -75,7 +75,7 @@ Linuxis saab luua iseseisva rakendusekausta, mis sisaldab vajalikku Java runtime
 ./gradlew :planner-gui:packageLinuxAppImage
 ```
 
-Valmis rakendus asub kaustas `planner-gui/build/jpackage/pannkoogihommiku-planeerija`. Selle käivitaja on `bin/pannkoogihommiku-planeerija` ning kasutaja arvutisse ei pea olema eraldi Javat ega Gradle'it paigaldatud.
+Valmis rakendus asub kaustas `planner-gui/build/jpackage/plaanisepp`. Selle käivitaja on `bin/plaanisepp` ning kasutaja arvutisse ei pea olema eraldi Javat ega Gradle'it paigaldatud.
 
 Fedora RPM-paigalduspaketi loomiseks:
 
@@ -86,10 +86,10 @@ Fedora RPM-paigalduspaketi loomiseks:
 Valmis pakett asub kaustas `planner-gui/build/jpackage-rpm`. Selle saab paigaldada ja hiljem eemaldada järgmiselt:
 
 ```bash
-sudo dnf install ./planner-gui/build/jpackage-rpm/pannkoogihommiku-planeerija-0.1.0-3.x86_64.rpm
-sudo dnf remove pannkoogihommiku-planeerija
+sudo dnf install ./planner-gui/build/jpackage-rpm/plaanisepp-0.1.1-4.x86_64.rpm
+sudo dnf remove plaanisepp
 ```
 
-RPM paigaldab rakenduse `/opt/pannkoogihommiku-planeerija` alla, lisab rakenduste menüüsse kirje „Pannkoogihommiku planeerija” ning seob `.pplan` failid rakendusega. Paigaldamise järel saab plaani avada failihalduris topeltklõpsuga. Rakenduse aknas, menüüs ja plaanifailidel kasutatakse projekti enda ikooni.
+RPM paigaldab rakenduse `/opt/plaanisepp` alla, lisab rakenduste menüüsse kirje „Plaanisepp” ning seob `.pplan` failid rakendusega. Uus RPM asendab varasema tehnilise nimega `pannkoogihommiku-planeerija` paketi. Paigaldamise järel saab plaani avada failihalduris topeltklõpsuga. Rakenduse aknas, menüüs ja plaanifailidel kasutatakse projekti enda ikooni.
 
 `jpackage` paketid tuleb koostada ning kontrollida sellel operatsioonisüsteemil, millele need on mõeldud.

@@ -14,6 +14,8 @@ Prefix: APPLICATION_PREFIX
 %endif
 
 Provides: APPLICATION_PACKAGE
+Provides: pannkoogihommiku-planeerija
+Obsoletes: pannkoogihommiku-planeerija
 
 %if "xAPPLICATION_GROUP" != "x"
 Group: APPLICATION_GROUP
@@ -64,7 +66,7 @@ for size in 16 22 32 48 64 128 256; do
   esac
   install -d -m 755 "%{buildroot}/usr/share/icons/hicolor/${size}x${size}/apps"
   install -d -m 755 "%{buildroot}/usr/share/icons/hicolor/${size}x${size}/mimetypes"
-  install -m 644 "$source_icon" "%{buildroot}/usr/share/icons/hicolor/${size}x${size}/apps/pannkoogihommiku-planeerija.png"
+  install -m 644 "$source_icon" "%{buildroot}/usr/share/icons/hicolor/${size}x${size}/apps/plaanisepp.png"
   install -m 644 "$source_icon" "%{buildroot}/usr/share/icons/hicolor/${size}x${size}/mimetypes/application-x-pannkoogihommiku-plan.png"
   install -m 644 "$source_icon" "%{buildroot}/usr/share/icons/hicolor/${size}x${size}/mimetypes/pannkoogihommiku-plan.png"
 done

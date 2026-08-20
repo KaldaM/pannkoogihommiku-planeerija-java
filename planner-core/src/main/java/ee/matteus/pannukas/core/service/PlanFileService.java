@@ -307,8 +307,8 @@ public class PlanFileService {
     ) throws IOException {
         try (OutputStream output = Files.newOutputStream(file);
              ZipOutputStream zipOutput = new ZipOutputStream(output)) {
-            writePropertiesEntry(zipOutput, MANIFEST_ENTRY, manifest, "Pannkoogihommiku plaanipakett");
-            writePropertiesEntry(zipOutput, PLAN_ENTRY, planProperties, "Pannkoogihommiku plaaniandmed");
+            writePropertiesEntry(zipOutput, MANIFEST_ENTRY, manifest, "Plaanisepa plaanipakett");
+            writePropertiesEntry(zipOutput, PLAN_ENTRY, planProperties, "Plaanisepa plaaniandmed");
             if (mapAsset != null) {
                 zipOutput.putNextEntry(new ZipEntry(mapAsset.entryName()));
                 zipOutput.write(mapAsset.data());

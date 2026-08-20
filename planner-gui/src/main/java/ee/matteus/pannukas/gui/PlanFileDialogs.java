@@ -47,7 +47,7 @@ final class PlanFileDialogs {
 
     private static FileChooser createPlanFileChooser(File initialDirectory) {
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Pannkoogihommiku plaan");
+        fileChooser.setTitle("Plaanisepa plaan");
         if (initialDirectory != null && initialDirectory.isDirectory()) {
             fileChooser.setInitialDirectory(initialDirectory);
         }
