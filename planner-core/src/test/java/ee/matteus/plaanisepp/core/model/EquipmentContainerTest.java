@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EquipmentContainerTest {
     @Test
@@ -19,6 +20,24 @@ class EquipmentContainerTest {
         assertFalse(first.id().isBlank());
         assertNotEquals(first.id(), second.id());
         assertEquals("equipment-1", loaded.id());
+    }
+
+    @Test
+    void equipmentUsesDefaultPowerUntilAlternativeConnectionIsAssigned() {
+        Equipment equipment = new Equipment("equipment-1", "Soojendi", 1500);
+
+        assertTrue(equipment.usesDefaultPower());
+        assertEquals("", equipment.powerConnectionId());
+
+        equipment.assignPowerConnection(" connection-2 ");
+
+        assertFalse(equipment.usesDefaultPower());
+        assertEquals("connection-2", equipment.powerConnectionId());
+
+        equipment.useDefaultPower();
+
+        assertTrue(equipment.usesDefaultPower());
+        assertEquals("", equipment.powerConnectionId());
     }
 
     @Test

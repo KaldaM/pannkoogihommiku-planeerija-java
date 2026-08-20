@@ -98,7 +98,7 @@ Praegune `PowerConnection` seob ühe allika terve tarbiva objektiga, sisaldab sa
 5. Lisada kasutajaliideses objekti vaiketoide ning seadmereal valitav erand.
 6. Uuendada kaablite joonistamine, kokkuvõtted, TXT/PDF-eksport ja külgpaneel.
 
-Teise etapi esimene eeldus on teostatud: `Equipment` elemendil on püsiv ID, mis salvestub valikulise väljana ka versioon 2 faili. Vanema ID-ta seadme laadimisel luuakse ID automaatselt. Vaiketoite ja seadmepõhise erandi mudel lisatakse koos versioon 3 vorminguga.
+Teise etapi eeldustest on teostatud seadme ja vooluühenduse püsivad ID-d. `Equipment` saab domeenimudelis kasutada objekti vaiketoidet või viidata erandina kindlale `PowerConnection` ID-le. Seadme püsiv ID salvestub valikulise väljana ka versioon 2 faili ning vanema ID-ta seadme laadimisel luuakse ID automaatselt. Seadmepõhise toiteviite salvestamine lisatakse koos versioon 3 vorminguga.
 
 ### Vastuvõtukriteeriumid
 
