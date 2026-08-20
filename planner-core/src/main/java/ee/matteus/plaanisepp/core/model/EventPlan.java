@@ -779,6 +779,13 @@ public class EventPlan {
         return powerDemandWatts(connection, new HashSet<>());
     }
 
+    public int outletDemandWatts(String outletId) {
+        return powerConnections.stream()
+                .filter(connection -> connection.outletId().equals(outletId))
+                .mapToInt(this::powerDemandWatts)
+                .sum();
+    }
+
     private int powerDemandWatts(PowerConnection connection, Set<String> visitedSourceIds) {
         return findObject(connection.consumerId())
                 .map(object -> {

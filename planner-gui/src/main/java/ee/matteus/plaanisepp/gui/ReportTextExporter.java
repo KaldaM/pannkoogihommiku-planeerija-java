@@ -113,8 +113,8 @@ final class ReportTextExporter {
             String lineSeparator
     ) {
         int usedWatts = usedWatts(plan, outlet.id());
-        List<PlannerObject> consumers = connectedConsumers(plan, source.id(), outlet.id());
-        if (reportScope == ReportExportScope.COMPACT && usedWatts == 0 && consumers.isEmpty()) {
+        List<PowerConnection> connections = connectedConnections(plan, source.id(), outlet.id());
+        if (reportScope == ReportExportScope.COMPACT && usedWatts == 0 && connections.isEmpty()) {
             return;
         }
         builder.append("  ")
@@ -127,17 +127,20 @@ final class ReportTextExporter {
                 .append(remainingWattsText(outlet.capacityWatts() - usedWatts))
                 .append(lineSeparator);
 
-        if (consumers.isEmpty()) {
+        if (connections.isEmpty()) {
             builder.append("    Tarbijaid pole").append(lineSeparator);
             return;
         }
 
-        for (PlannerObject consumerObject : consumers) {
-            PowerConsumer consumer = (PowerConsumer) consumerObject;
+        for (PowerConnection connection : connections) {
+            PlannerObject consumerObject = plan.findObject(connection.consumerId()).orElse(null);
+            if (!(consumerObject instanceof PowerConsumer consumer)) {
+                continue;
+            }
             builder.append("    - ")
                     .append(consumer.name())
                     .append(": ")
-                    .append(consumer.requiredWatts())
+                    .append(plan.powerDemandWatts(connection))
                     .append(" W");
             if (!consumerObject.groupName().isBlank()) {
                 builder.append(" (").append(consumerObject.groupName()).append(")");
@@ -147,6 +150,12 @@ final class ReportTextExporter {
                 continue;
             }
             for (Equipment equipment : container.equipment()) {
+                boolean usesConnection = equipment.usesDefaultPower()
+                        ? connection.defaultForConsumer()
+                        : connection.id().equals(equipment.powerConnectionId());
+                if (!usesConnection) {
+                    continue;
+                }
                 builder.append("      * ")
                         .append(equipment.name())
                         .append(": ")
@@ -157,13 +166,10 @@ final class ReportTextExporter {
         }
     }
 
-    private List<PlannerObject> connectedConsumers(EventPlan plan, String sourceId, String outletId) {
+    private List<PowerConnection> connectedConnections(EventPlan plan, String sourceId, String outletId) {
         return plan.powerConnections().stream()
                 .filter(connection -> connection.sourceId().equals(sourceId))
                 .filter(connection -> connection.outletId().equals(outletId))
-                .map(connection -> plan.findObject(connection.consumerId()))
-                .flatMap(optional -> optional.stream())
-                .filter(PowerConsumer.class::isInstance)
                 .toList();
     }
 
@@ -408,14 +414,7 @@ final class ReportTextExporter {
     }
 
     private int usedWatts(EventPlan plan, String outletId) {
-        return plan.powerConnections().stream()
-                .filter(connection -> connection.outletId().equals(outletId))
-                .map(connection -> plan.findObject(connection.consumerId()))
-                .flatMap(optional -> optional.stream())
-                .filter(PowerConsumer.class::isInstance)
-                .map(PowerConsumer.class::cast)
-                .mapToInt(PowerConsumer::requiredWatts)
-                .sum();
+        return plan.outletDemandWatts(outletId);
     }
 
     private String outletDisplayName(PowerOutlet outlet, int matchingIndex) {

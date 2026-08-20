@@ -5067,21 +5067,14 @@ public class PlaaniseppApp extends Application {
                     .ifPresent(consumer -> summaryList.getItems().add("%s- %s: %d W (%s)".formatted(
                             rowPrefix,
                             consumer.name(),
-                            consumer.requiredWatts(),
+                            plan.powerDemandWatts(connection),
                             connection.connectorType().displayName()
                     )));
         }
     }
 
     private int usedWatts(String outletId) {
-        return plan.powerConnections().stream()
-                .filter(connection -> connection.outletId().equals(outletId))
-                .map(connection -> plan.findObject(connection.consumerId()))
-                .flatMap(optional -> optional.stream())
-                .filter(PowerConsumer.class::isInstance)
-                .map(PowerConsumer.class::cast)
-                .mapToInt(PowerConsumer::requiredWatts)
-                .sum();
+        return plan.outletDemandWatts(outletId);
     }
 
     private void addCableSummary() {
