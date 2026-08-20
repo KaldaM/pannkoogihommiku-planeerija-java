@@ -4,6 +4,7 @@ import ee.matteus.plaanisepp.core.model.ConnectorType;
 import ee.matteus.plaanisepp.core.model.AreaObject;
 import ee.matteus.plaanisepp.core.model.CustomObject;
 import ee.matteus.plaanisepp.core.model.CustomObjectShape;
+import ee.matteus.plaanisepp.core.model.DistributionPanel;
 import ee.matteus.plaanisepp.core.model.Equipment;
 import ee.matteus.plaanisepp.core.model.EquipmentContainer;
 import ee.matteus.plaanisepp.core.model.EventPlan;
@@ -267,6 +268,7 @@ public class PlaaniseppApp extends Application {
     private CustomObjectShape pendingPlacementShape;
     private boolean pendingTentPlacement;
     private boolean pendingPowerSourcePlacement;
+    private PlacementType pendingPowerSourcePlacementType;
     private boolean pendingCustomObjectPlacement;
     private boolean pendingTextObjectPlacement;
     private boolean pendingMarkerPlacement;
@@ -1350,7 +1352,7 @@ public class PlaaniseppApp extends Application {
 
         switch (selectedType) {
             case TENT -> addTent();
-            case POWER_SOURCE -> addPowerSource();
+            case POWER_SOURCE, DISTRIBUTION_PANEL -> addPowerSource(selectedType);
             case CUSTOM_OBJECT -> addCustomObject();
             case TEXT_OBJECT -> addTextObject();
             case MARKER_OBJECT -> addMarkerObject();
@@ -1411,8 +1413,9 @@ public class PlaaniseppApp extends Application {
         markDirty();
     }
 
-    private void addPowerSource() {
+    private void addPowerSource(PlacementType placementType) {
         pendingPowerSourcePlacement = !pendingPowerSourcePlacement;
+        pendingPowerSourcePlacementType = pendingPowerSourcePlacement ? placementType : null;
         pendingTentPlacement = false;
         pendingCustomObjectPlacement = false;
         pendingTextObjectPlacement = false;
@@ -1425,7 +1428,12 @@ public class PlaaniseppApp extends Application {
     }
 
     private void placePowerSource(Position position) {
-        PowerSource source = new PowerSource(planFactory.newId(), placementNameOrDefault(PlacementType.POWER_SOURCE), position);
+        PlacementType placementType = pendingPowerSourcePlacementType == PlacementType.DISTRIBUTION_PANEL
+                ? PlacementType.DISTRIBUTION_PANEL
+                : PlacementType.POWER_SOURCE;
+        PowerSource source = placementType == PlacementType.DISTRIBUTION_PANEL
+                ? new DistributionPanel(planFactory.newId(), placementNameOrDefault(placementType), position)
+                : new PowerSource(planFactory.newId(), placementNameOrDefault(placementType), position);
         source.addOutlet(new PowerOutlet(
                 planFactory.newId(),
                 ConnectorType.SCHUKO_230V,
@@ -1435,6 +1443,7 @@ public class PlaaniseppApp extends Application {
         plan.addObject(source);
         clearPendingPlacementDetails();
         pendingPowerSourcePlacement = false;
+        pendingPowerSourcePlacementType = null;
         refreshPlacementButtons();
         updateMapToolStatus();
         refreshGroupFilters();
@@ -1710,6 +1719,7 @@ public class PlaaniseppApp extends Application {
         pendingPlacementFontSizePixels = null;
         pendingPlacementShape = null;
         pendingPlacementMarkerType = null;
+        pendingPowerSourcePlacementType = null;
         pendingShapePoints.clear();
     }
 
@@ -1916,7 +1926,9 @@ public class PlaaniseppApp extends Application {
             return;
         }
         if (pendingPowerSourcePlacement) {
-            mapToolStatusLabel.setText("Paiguta elektrikapp kaardile");
+            mapToolStatusLabel.setText(pendingPowerSourcePlacementType == PlacementType.DISTRIBUTION_PANEL
+                    ? "Paiguta alajaotuskilp kaardile"
+                    : "Paiguta elektrikapp kaardile");
             return;
         }
         if (pendingCustomObjectPlacement) {
@@ -3788,6 +3800,9 @@ public class PlaaniseppApp extends Application {
         if (object instanceof Tent) {
             return "Telk";
         }
+        if (object instanceof DistributionPanel) {
+            return "Alajaotuskilp";
+        }
         if (object instanceof PowerSource) {
             return "Elektrikapp";
         }
@@ -3906,7 +3921,9 @@ public class PlaaniseppApp extends Application {
             tentCopy.setOpacity(tent.opacity());
             copy = tentCopy;
         } else if (original instanceof PowerSource source) {
-            PowerSource sourceCopy = new PowerSource(planFactory.newId(), duplicateName(source), copyPosition);
+            PowerSource sourceCopy = original instanceof DistributionPanel
+                    ? new DistributionPanel(planFactory.newId(), duplicateName(source), copyPosition)
+                    : new PowerSource(planFactory.newId(), duplicateName(source), copyPosition);
             for (PowerOutlet outlet : source.outlets()) {
                 sourceCopy.addOutlet(new PowerOutlet(
                         planFactory.newId(),
@@ -4479,6 +4496,9 @@ public class PlaaniseppApp extends Application {
         powerSourceComboBox.getItems().clear();
         powerSourceComboBox.getItems().add(PowerSourceChoice.none());
         for (PowerSource source : plan.powerSources()) {
+            if (selectedObject != null && source.id().equals(selectedObject.id())) {
+                continue;
+            }
             powerSourceComboBox.getItems().add(new PowerSourceChoice(source.id(), source.name()));
         }
 

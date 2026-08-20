@@ -93,7 +93,7 @@ Praegune `PowerConnection` seob ühe allika terve tarbiva objektiga, sisaldab sa
 
 1. Kirjeldada uued domeenitüübid ja migratsioonireeglid automaattestidega.
 2. Lisada seadmetele püsivad ID-d ning vaiketoite ja erandi lahendamine.
-3. Lisada alajaotuskilp ja tsüklivaba üles-/allavoolu koormusarvutus. Domeenimudel, rekursiivne arvutus ja `.pplan` v3 salvestamine on teostatud; kasutajaliidese tugi on järgmine samm.
+3. Lisada alajaotuskilp ja tsüklivaba üles-/allavoolu koormusarvutus. Domeenimudel, rekursiivne arvutus ja `.pplan` v3 salvestamine on teostatud. Alajaotuskilbi saab kasutajaliidesest kaardile lisada, selle väljundeid hallata ja olemasolevate vooluvalikutega ülesvoolu ühendada; täpsemad valideerimisteated ja seadmepõhiste erandite kasutajaliides on järgmised sammud.
 4. Laiendada `.pplan` lugemist ja kirjutamist koos versioon 1/2 migratsioonitestidega.
 5. Lisada kasutajaliideses objekti vaiketoide ning seadmereal valitav erand.
 6. Uuendada kaablite joonistamine, kokkuvõtted, TXT/PDF-eksport ja külgpaneel.

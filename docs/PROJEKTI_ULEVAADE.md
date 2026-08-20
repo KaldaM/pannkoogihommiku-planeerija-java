@@ -458,6 +458,7 @@ Allolev ajajoon koondab 186 commitist tähenduslikud etapid. Täpne muudatuste l
 - Ühel tarbival objektil võib olla üks vaiketoide ja mitu alternatiivset ühendust ning seade võib kasutada vaiketoidet või viidata konkreetsele ühendusele.
 - Koormusarvutus jagab seadmete võimsuse nende tegelike ühenduste ja allikate vahel.
 - `.pplan` versioon 3 lisas ühenduse vaiketoite rolli, seadmepõhiste ühenduseviidete ja alajaotuskilpide säilitamise; v1 ja v2 avanevad tagasiühilduvalt.
+- Alajaotuskilbi saab objektitüüpide valikust kaardile lisada; sama detailipaneel võimaldab hallata nii kilbi väljundeid kui ka selle ülesvoolu toidet.
 - Automaattestid katavad v2 migratsiooni, v3 ringreisi, mitme ühenduse koormusjaotuse ja vigase ühenduseviite turvalise lähtestamise.
 
 ## 8. Kasutajatestides tehtud olulisemad õppetunnid

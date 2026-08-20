@@ -222,7 +222,7 @@ final class PlacementDetailsDialog {
             case TENT -> 5;
             case CUSTOM_OBJECT -> 6;
             case MARKER_OBJECT, AREA_OBJECT, LINE_OBJECT, TEXT_OBJECT -> 3;
-            case POWER_SOURCE -> 2;
+            case POWER_SOURCE, DISTRIBUTION_PANEL -> 2;
         };
     }
 
@@ -503,6 +503,7 @@ record PlacementDetails(
 enum PlacementType {
     TENT("Telk", "Uus telk", "#e74c3c", true),
     POWER_SOURCE("Elektrikapp", "Uus kapp", "#2563eb", false),
+    DISTRIBUTION_PANEL("Alajaotuskilp", "Uus alajaotuskilp", "#2563eb", false),
     CUSTOM_OBJECT("Objekt", "Uus objekt", "#9ca3af", true),
     TEXT_OBJECT("Tekst", "Uus tekst", "#111827", true),
     MARKER_OBJECT("Marker", "Uus marker", MarkerType.WC.defaultColorHex(), true),
