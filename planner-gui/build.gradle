@@ -20,13 +20,13 @@ def applicationVendor = 'Plaanisepp'
 
 application {
     applicationName = applicationExecutableName
-    mainClass = 'ee.matteus.pannukas.gui.PlaaniseppApp'
+    mainClass = 'ee.matteus.plaanisepp.gui.PlaaniseppApp'
     applicationDefaultJvmArgs = ['--enable-native-access=javafx.graphics']
 }
 
 def linuxAppName = applicationExecutableName
 def windowsAppName = applicationDisplayName
-def packagedMainClass = 'ee.matteus.pannukas.gui.PlaaniseppLauncher'
+def packagedMainClass = 'ee.matteus.plaanisepp.gui.PlaaniseppLauncher'
 def packagedJavaModules = 'javafx.controls,javafx.fxml,javafx.swing,java.logging,java.prefs,java.scripting,jdk.jfr,jdk.unsupported.desktop'
 def packageInputDirectory = layout.buildDirectory.dir('jpackage-input')
 def windowsPackageInputDirectory = layout.buildDirectory.dir('jpackage-input-windows')

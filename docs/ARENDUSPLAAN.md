@@ -23,7 +23,7 @@ Rakenduse nimeks valiti 20. augustil 2026 **Plaanisepp**. Nimi kirjeldab plaanid
 
 **Plaanisepp** sobib pannkoogihommikust laiemale sündmuste planeerimisele ning katab nii kaardi, objektide, elektri kui ka kaablite tervikuks vormimise. Nimi kasutab ainult ASCII-tähti, on hõlpsasti käänatav ja sobib rakenduse, paigaldaja ning võimaliku tulevase veebiteenuse nimeks.
 
-Kasutajale nähtav nimi ja pakendinimed muudetakse kohe. Tagasiühilduvuse tõttu säilivad eraldi ajalooliste tehniliste identifikaatoritena Java paketid `ee.matteus.pannukas`, `.pplan` sisemised vormingutunnused, MIME-tüüp, eelistuste asukoht ja Windowsi uuenduse UUID.
+Kasutajale nähtav nimi, pakendinimed ja Java paketid muudetakse Plaanisepa järgi. Tagasiühilduvuse tõttu säilivad eraldi ajalooliste tehniliste identifikaatoritena `.pplan` sisemised vormingutunnused, MIME-tüüp, eelistuste asukoht `/ee/matteus/pannukas/gui` ja Windowsi uuenduse UUID.
 
 ### Ümbernimetamise ulatus
 

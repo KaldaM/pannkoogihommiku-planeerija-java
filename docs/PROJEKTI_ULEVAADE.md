@@ -472,7 +472,7 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 
 ### 9.1 Vahetu jätkamiskoht
 
-`.pplan` versioon 2 paketivorming, Windowsi ja Fedora paigaldajad ning esimene `PlaaniseppApp` klassi refaktoreerimisseeria on teostatud. Rakenduse uueks nimeks valiti **Plaanisepp** ning kasutajale nähtav nimi ja pakendid nimetati ümber, säilitades tagasiühilduvad tehnilised identifikaatorid. Sügis-eelse väljalaske kriitilise elektrimudeli esimese eeldusena on seadmetel nüüd püsivad ID-d. Järgmine samm on objekti vaiketoite, seadmepõhise vooluallika ja alajaotuskilpide lisamine. Elektri külgpaneeli visuaalne ümberkujundamine tehakse pärast uue elektrimudeli valmimist. Täpsem tööjärjekord ja vastuvõtukriteeriumid on failis `docs/ARENDUSPLAAN.md`.
+`.pplan` versioon 2 paketivorming, Windowsi ja Fedora paigaldajad ning esimene `PlaaniseppApp` klassi refaktoreerimisseeria on teostatud. Rakenduse uueks nimeks valiti **Plaanisepp** ning kasutajale nähtav nimi, pakendid ja Java paketid nimetati ümber. Ajalooline Preferences-sõlm ning failivormingu ja paigaldajate ühilduvusidentifikaatorid säilivad. Sügis-eelse väljalaske kriitilise elektrimudeli esimese eeldusena on seadmetel nüüd püsivad ID-d. Järgmine samm on objekti vaiketoite, seadmepõhise vooluallika ja alajaotuskilpide lisamine. Elektri külgpaneeli visuaalne ümberkujundamine tehakse pärast uue elektrimudeli valmimist. Täpsem tööjärjekord ja vastuvõtukriteeriumid on failis `docs/ARENDUSPLAAN.md`.
 
 ### 9.2 Kvaliteet ja arhitektuur
 

@@ -3,7 +3,7 @@ plugins {
 }
 
 allprojects {
-    group = 'ee.matteus.pannukas'
+    group = 'ee.matteus.plaanisepp'
     version = '0.1.1'
 }
 

@@ -1,0 +1,92 @@
+package ee.matteus.plaanisepp.core.model;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class LineObject extends PlannerObject implements EquipmentContainer {
+    public static final double DEFAULT_WIDTH_PIXELS = 3.0;
+
+    private final List<Position> points = new ArrayList<>();
+    private final List<Equipment> equipment = new ArrayList<>();
+    private String colorHex;
+    private double widthPixels;
+    private Position powerConnectionOffset = new Position(0, 0);
+
+    public LineObject(String id, String name, Position position) {
+        super(id, name, position);
+        this.colorHex = "#0f766e";
+        this.widthPixels = DEFAULT_WIDTH_PIXELS;
+    }
+
+    public List<Position> points() {
+        return Collections.unmodifiableList(points);
+    }
+
+    public void setPoints(List<Position> points) {
+        this.points.clear();
+        if (points != null) {
+            this.points.addAll(points.stream()
+                    .filter(point -> point != null)
+                    .toList());
+        }
+    }
+
+    @Override
+    public void moveTo(Position position) {
+        if (locked()) {
+            return;
+        }
+        double deltaX = position.x() - position().x();
+        double deltaY = position.y() - position().y();
+        super.moveTo(position);
+        for (int index = 0; index < points.size(); index++) {
+            Position point = points.get(index);
+            points.set(index, new Position(point.x() + deltaX, point.y() + deltaY));
+        }
+    }
+
+    public String colorHex() {
+        return colorHex;
+    }
+
+    public void setColorHex(String colorHex) {
+        this.colorHex = colorHex == null || colorHex.isBlank() ? "#0f766e" : colorHex;
+    }
+
+    public double widthPixels() {
+        return widthPixels;
+    }
+
+    public void setWidthPixels(double widthPixels) {
+        if (widthPixels <= 0) {
+            throw new IllegalArgumentException("Joone laius peab olema positiivne.");
+        }
+        this.widthPixels = widthPixels;
+    }
+
+    @Override
+    public Position powerConnectionOffset() {
+        return powerConnectionOffset;
+    }
+
+    @Override
+    public void setPowerConnectionOffset(Position offset) {
+        powerConnectionOffset = offset == null ? new Position(0, 0) : offset;
+    }
+
+    @Override
+    public List<Equipment> equipment() {
+        return Collections.unmodifiableList(equipment);
+    }
+
+    @Override
+    public void addEquipment(Equipment item) {
+        equipment.add(item);
+    }
+
+    @Override
+    public void removeEquipment(int index) {
+        equipment.remove(index);
+    }
+}
