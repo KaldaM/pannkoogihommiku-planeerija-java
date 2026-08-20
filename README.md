@@ -41,7 +41,7 @@ GitHub Actions käivitab iga push'i ja pull request'i korral Java 25-ga automaat
 
 ## Plaanifailid
 
-Uued `.pplan` failid salvestatakse versioon 3 ZIP-paketina. Pakett sisaldab plaani andmeid ja kasutaja valitud PNG- või JPEG-kaarti, mistõttu piisab plaani teise arvutisse viimiseks ühest `.pplan` failist. Versioon 3 säilitab ka objektide mitu vooluühendust ja seadmete ühendusevalikud. Projektiga kaasas olevatele vaikekaartidele säilitatakse paketis viide ning neid ei dubleerita.
+Uued `.pplan` failid salvestatakse versioon 3 ZIP-paketina. Pakett sisaldab plaani andmeid ja kasutaja valitud PNG- või JPEG-kaarti, mistõttu piisab plaani teise arvutisse viimiseks ühest `.pplan` failist. Versioon 3 säilitab ka alajaotuskilbid, objektide mitu vooluühendust ja seadmete ühendusevalikud. Projektiga kaasas olevatele vaikekaartidele säilitatakse paketis viide ning neid ei dubleerita.
 
 Rakendus avab edasi vanad versioonita ja versioon 1 properties-vormingus ning versioon 2 ZIP-paketina salvestatud `.pplan` failid. Vana fail teisendatakse versioon 3 paketiks alles siis, kui kasutaja selle järgmine kord salvestab.
 

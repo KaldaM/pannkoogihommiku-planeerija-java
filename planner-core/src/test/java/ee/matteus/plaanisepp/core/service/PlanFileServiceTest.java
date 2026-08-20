@@ -3,6 +3,7 @@ package ee.matteus.plaanisepp.core.service;
 import ee.matteus.plaanisepp.core.model.AreaObject;
 import ee.matteus.plaanisepp.core.model.ConnectorType;
 import ee.matteus.plaanisepp.core.model.CustomObject;
+import ee.matteus.plaanisepp.core.model.DistributionPanel;
 import ee.matteus.plaanisepp.core.model.Equipment;
 import ee.matteus.plaanisepp.core.model.EventPlan;
 import ee.matteus.plaanisepp.core.model.LineObject;
@@ -607,6 +608,41 @@ class PlanFileServiceTest {
         assertEquals("connection-1", connection.id());
         Tent loadedTent = (Tent) loadedPlan.findObject("tent-1").orElseThrow();
         assertTrue(loadedTent.equipment().getFirst().usesDefaultPower());
+    }
+
+    @Test
+    void savesAndLoadsDistributionPanelPowerChain() throws IOException {
+        EventPlan plan = new EventPlan("Test");
+        PowerSource mainSource = new PowerSource("source", "Põhikilp", new Position(0, 0));
+        mainSource.addOutlet(new PowerOutlet("source-outlet", ConnectorType.SCHUKO_230V, 11000));
+        DistributionPanel panel = new DistributionPanel("panel", "Alajaotuskilp", new Position(30, 40));
+        panel.setPowerConnectionOffset(new Position(4, 5));
+        panel.addOutlet(new PowerOutlet("panel-outlet", "Väljund 1", ConnectorType.SCHUKO_230V, 3500));
+        Tent tent = new Tent("tent", "Telk", new Position(60, 70));
+        tent.addEquipment(new Equipment("equipment", "Pliit", 1200));
+        plan.addObject(mainSource);
+        plan.addObject(panel);
+        plan.addObject(tent);
+        plan.connectToPower(mainSource.id(), panel.id(), ConnectorType.SCHUKO_230V, "source-outlet");
+        plan.connectToPower(panel.id(), tent.id(), ConnectorType.SCHUKO_230V, "panel-outlet");
+        Path file = tempDirectory.resolve("distribution-panel.pplan");
+
+        service.save(plan, file);
+        EventPlan loadedPlan = service.load(file);
+
+        DistributionPanel loadedPanel = (DistributionPanel) loadedPlan.findObject(panel.id()).orElseThrow();
+        assertEquals("Alajaotuskilp", loadedPanel.name());
+        assertEquals(new Position(30, 40), loadedPanel.position());
+        assertEquals(new Position(4, 5), loadedPanel.powerConnectionOffset());
+        assertEquals(1, loadedPanel.outlets().size());
+        assertEquals("Väljund 1", loadedPanel.outlets().getFirst().name());
+        assertEquals(3500, loadedPanel.outlets().getFirst().capacityWatts());
+        assertEquals(2, loadedPlan.powerConnections().size());
+        assertEquals(1200, new PowerSummaryService().summaries(loadedPlan).stream()
+                .filter(summary -> summary.sourceId().equals(mainSource.id()))
+                .findFirst()
+                .orElseThrow()
+                .usedWatts());
     }
 
     @Test

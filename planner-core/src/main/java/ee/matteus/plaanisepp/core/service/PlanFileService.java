@@ -4,6 +4,7 @@ import ee.matteus.plaanisepp.core.model.ConnectorType;
 import ee.matteus.plaanisepp.core.model.AreaObject;
 import ee.matteus.plaanisepp.core.model.CustomObject;
 import ee.matteus.plaanisepp.core.model.CustomObjectShape;
+import ee.matteus.plaanisepp.core.model.DistributionPanel;
 import ee.matteus.plaanisepp.core.model.Equipment;
 import ee.matteus.plaanisepp.core.model.EquipmentContainer;
 import ee.matteus.plaanisepp.core.model.EventPlan;
@@ -577,6 +578,8 @@ public class PlanFileService {
 
         if (object instanceof Tent tent) {
             writeTent(properties, prefix, tent);
+        } else if (object instanceof DistributionPanel panel) {
+            writeDistributionPanel(properties, prefix, panel);
         } else if (object instanceof PowerSource source) {
             writePowerSource(properties, prefix, source);
         } else if (object instanceof MarkerObject markerObject) {
@@ -604,6 +607,15 @@ public class PlanFileService {
 
     private void writePowerSource(Properties properties, String prefix, PowerSource source) {
         properties.setProperty(prefix + "type", "POWER_SOURCE");
+        writePowerOutlets(properties, prefix, source);
+    }
+
+    private void writeDistributionPanel(Properties properties, String prefix, DistributionPanel panel) {
+        properties.setProperty(prefix + "type", "DISTRIBUTION_PANEL");
+        writePowerOutlets(properties, prefix, panel);
+    }
+
+    private void writePowerOutlets(Properties properties, String prefix, PowerSource source) {
         properties.setProperty(prefix + "outlets.count", Integer.toString(source.outlets().size()));
         for (int index = 0; index < source.outlets().size(); index++) {
             PowerOutlet outlet = source.outlets().get(index);
@@ -656,7 +668,9 @@ public class PlanFileService {
     private PlannerObject readObject(Properties properties, String prefix) {
         String type = properties.getProperty(prefix + "type", "TENT");
         PlannerObject object;
-        if ("POWER_SOURCE".equals(type)) {
+        if ("DISTRIBUTION_PANEL".equals(type)) {
+            object = readDistributionPanel(properties, prefix);
+        } else if ("POWER_SOURCE".equals(type)) {
             object = readPowerSource(properties, prefix);
         } else if ("MARKER_OBJECT".equals(type)) {
             object = readMarkerObject(properties, prefix);
@@ -715,7 +729,21 @@ public class PlanFileService {
                 properties.getProperty(prefix + "name", "Kapp"),
                 readPosition(properties, prefix)
         );
+        readPowerOutlets(properties, prefix, source);
+        return source;
+    }
 
+    private DistributionPanel readDistributionPanel(Properties properties, String prefix) {
+        DistributionPanel panel = new DistributionPanel(
+                properties.getProperty(prefix + "id", ""),
+                properties.getProperty(prefix + "name", "Alajaotuskilp"),
+                readPosition(properties, prefix)
+        );
+        readPowerOutlets(properties, prefix, panel);
+        return panel;
+    }
+
+    private void readPowerOutlets(Properties properties, String prefix, PowerSource source) {
         int outletCount = intValue(properties, prefix + "outlets.count", 0);
         for (int index = 0; index < outletCount; index++) {
             String outletPrefix = prefix + "outlet." + index + ".";
@@ -726,7 +754,6 @@ public class PlanFileService {
                     intValue(properties, outletPrefix + "capacityWatts", 0)
             ));
         }
-        return source;
     }
 
     private PlannerObject readCustomObject(Properties properties, String prefix) {
