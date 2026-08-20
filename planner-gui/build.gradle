@@ -14,13 +14,13 @@ javafx {
 }
 
 application {
-    mainClass = 'ee.matteus.pannukas.gui.PancakePlannerApp'
+    mainClass = 'ee.matteus.pannukas.gui.PlaaniseppApp'
     applicationDefaultJvmArgs = ['--enable-native-access=javafx.graphics']
 }
 
 def linuxAppName = 'plaanisepp'
 def windowsAppName = 'Plaanisepp'
-def packagedMainClass = 'ee.matteus.pannukas.gui.PancakePlannerLauncher'
+def packagedMainClass = 'ee.matteus.pannukas.gui.PlaaniseppLauncher'
 def packagedJavaModules = 'javafx.controls,javafx.fxml,javafx.swing,java.logging,java.prefs,java.scripting,jdk.jfr,jdk.unsupported.desktop'
 def packageInputDirectory = layout.buildDirectory.dir('jpackage-input')
 def windowsPackageInputDirectory = layout.buildDirectory.dir('jpackage-input-windows')

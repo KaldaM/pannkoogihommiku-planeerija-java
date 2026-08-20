@@ -133,11 +133,11 @@ Java 25 valiti praeguse pika toe versioonina. JavaFX 26 kasutamine võimaldab s�
 - mõõdulint ja trajektooride redaktorid;
 - TXT-, PNG- ja PDF-eksport.
 
-Sama mooduli Gradle'i pakendamisülesanded loovad Java 25 `jpackage` abil platvormipõhised iseseisvad rakendusepildid ning Windowsi EXE- ja Fedora RPM-paigaldajad. `PancakePlannerLauncher` on pakendatud rakenduste käivitusklass ja edastab avamisel saadud `.pplan` failitee olemasolevale rakenduse laadimisvoole.
+Sama mooduli Gradle'i pakendamisülesanded loovad Java 25 `jpackage` abil platvormipõhised iseseisvad rakendusepildid ning Windowsi EXE- ja Fedora RPM-paigaldajad. `PlaaniseppLauncher` on pakendatud rakenduste käivitusklass ja edastab avamisel saadud `.pplan` failitee olemasolevale rakenduse laadimisvoole.
 
 `planner-gui` sõltub Gradle'is tavapäraselt `planner-core` moodulist. Core kompileeritakse eraldi teegiks ning selle lähtekoode ei kaasata GUI moodulisse teist korda.
 
-Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi abiklassidesse tõstetud. Plaanifaili lugemise ja kirjutamise käivitamine ning aktiivse faili ja viimati kasutatud kausta seisund on koondatud `PlanFileSession` klassi. Salvestamata muudatuste seisund ning sellest tuletatud akna pealkiri ja salvestusoleku tekst asuvad `PlanDocumentState` klassis. Plaanifaili valimise ja salvestamata muudatuste kinnitamise JavaFX-i dialoogid asuvad `PlanFileDialogs` klassis, plaani üldandmete sisestusdialoog `PlanSettingsDialog` klassis ning uue objekti omaduste sisestamine `PlacementDetailsDialog` klassis. Markerite ikoonide JavaFX-kujundid loob `MarkerIconFactory`. Sellest hoolimata on `PancakePlannerApp` endiselt väga suur ning vajab edasise kasvu eel vaadeteks, kontrolleriteks ja tööriistadeks jagamist.
+Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi abiklassidesse tõstetud. Plaanifaili lugemise ja kirjutamise käivitamine ning aktiivse faili ja viimati kasutatud kausta seisund on koondatud `PlanFileSession` klassi. Salvestamata muudatuste seisund ning sellest tuletatud akna pealkiri ja salvestusoleku tekst asuvad `PlanDocumentState` klassis. Plaanifaili valimise ja salvestamata muudatuste kinnitamise JavaFX-i dialoogid asuvad `PlanFileDialogs` klassis, plaani üldandmete sisestusdialoog `PlanSettingsDialog` klassis ning uue objekti omaduste sisestamine `PlacementDetailsDialog` klassis. Markerite ikoonide JavaFX-kujundid loob `MarkerIconFactory`. Sellest hoolimata on `PlaaniseppApp` endiselt väga suur ning vajab edasise kasvu eel vaadeteks, kontrolleriteks ja tööriistadeks jagamist.
 
 ### 5.3 Olulisemad domeeniklassid
 
@@ -210,8 +210,8 @@ Versioonita ja versioon 1 `.pplan` failid on tavalised Java properties-failid ni
 | `PlanSettingsDialog` | Plaani nime, mõõtkava, sildisuuruste ja kaardipildi valikute sisestusdialoog |
 | `PlacementDetailsDialog` | Uue objekti tüübiomaduste sisestamine ja sisendi valideerimine enne kaardile paigutamist |
 | `MarkerIconFactory` | Markeriliikidele vastavate JavaFX-ikoonide loomine |
-| `PancakePlannerApp` | Rakenduse põhivaade, tööriistad, dialoogid ja kasutaja tegevuste sidumine mudeliga |
-| `PancakePlannerLauncher` | Pakendatud rakenduse käivitamine ja käsurealt või failiseosest saadud plaanitee edastamine |
+| `PlaaniseppApp` | Rakenduse põhivaade, tööriistad, dialoogid ja kasutaja tegevuste sidumine mudeliga |
+| `PlaaniseppLauncher` | Pakendatud rakenduse käivitamine ja käsurealt või failiseosest saadud plaanitee edastamine |
 | Gradle'i `package*` ülesanded | Platvormipõhiste rakendusepiltide ja paigaldajate loomine koos runtime'i, JavaFX-i, ikoonide ning failiseostega |
 | `CablePathHelper`, `CableRouteEditor`, `CableRouteGeometry` | Voolukaabli tee moodustamine ning vahepunktide muutmise loogika |
 | `CableDisplayHelper`, `CablePolylineHelper` | Kaablite visuaalne esitus ja reaalajas uuendamine |
@@ -404,7 +404,7 @@ Allolev ajajoon koondab 186 commitist tähenduslikud etapid. Täpne muudatuste l
 - Lisati nimesiltide üldine kiht ja tekstiobjekti kirjasuurus.
 - Plaani seadistustesse lisati objekti- ja kaablisiltide kirjasuurused.
 - Valmis PNG-, täiustatud TXT- ja PDF-eksport.
-- Ekspordi ning kaablite kuvamise loogikat hakati `PancakePlannerApp` klassist eraldi klassidesse tõstma.
+- Ekspordi ning kaablite kuvamise loogikat hakati `PlaaniseppApp` klassist eraldi klassidesse tõstma.
 
 ### 24. juuli 2026: vabakujulised jooned ja alad
 
@@ -446,7 +446,7 @@ Allolev ajajoon koondab 186 commitist tähenduslikud etapid. Täpne muudatuste l
 
 - Lisati `packageWindowsAppImage`, mis loob Windowsis rakendusepildi koos Java 25 runtime'i, JavaFX-i, core'i ja muude käitusaegsete sõltuvustega.
 - Lisati `packageWindowsInstaller`, mis loob Java 25 `jpackage` ja ametliku WiX Toolset 4 abil EXE-paigaldaja.
-- Paigaldaja lisab rakenduse Start-menüüsse ja registreerib `.pplan` failitüübi koos eraldi plaaniikooniga; failiseose avamiskäsk kasutab olemasolevat `PancakePlannerLauncher` klassi.
+- Paigaldaja lisab rakenduse Start-menüüsse ja registreerib `.pplan` failitüübi koos eraldi plaaniikooniga; failiseose avamiskäsk kasutab olemasolevat `PlaaniseppLauncher` klassi.
 - Windowsi jaoks lisati mitut mõõtu sisaldavad ICO-failid rakendusele, paigaldajale ja plaanifailile. Linuxi PNG-ikoonid ning pakendamisülesanded jäid eraldi ja muutmata.
 - Kontrolliti rakendusepildi käivitumist, EXE-paigaldaja loomist ja paigaldamist, Start-menüü otseteed, ikoone, versioon 1 ning versioon 2 `.pplan` failide avamist Windowsi failiseose kaudu ja rakenduse puhast eemaldamist.
 
@@ -471,12 +471,12 @@ Need tähelepanekud sobivad bakalaureusetöös kasutajakeskse iteratiivse arendu
 
 ### 9.1 Vahetu jätkamiskoht
 
-`.pplan` versioon 2 paketivorming, Windowsi ja Fedora paigaldajad ning esimene `PancakePlannerApp` klassi refaktoreerimisseeria on teostatud. Rakenduse uueks nimeks valiti **Plaanisepp** ning kasutajale nähtav nimi ja pakendid nimetati ümber, säilitades tagasiühilduvad tehnilised identifikaatorid. Sügis-eelse väljalaske kriitiline funktsioon on alajaotuskilpide ning objekti vaiketoitest erineva seadmepõhise vooluallika lisamine. Elektri külgpaneeli visuaalne ümberkujundamine tehakse pärast uue elektrimudeli valmimist. Täpsem tööjärjekord ja vastuvõtukriteeriumid on failis `docs/ARENDUSPLAAN.md`.
+`.pplan` versioon 2 paketivorming, Windowsi ja Fedora paigaldajad ning esimene `PlaaniseppApp` klassi refaktoreerimisseeria on teostatud. Rakenduse uueks nimeks valiti **Plaanisepp** ning kasutajale nähtav nimi ja pakendid nimetati ümber, säilitades tagasiühilduvad tehnilised identifikaatorid. Sügis-eelse väljalaske kriitiline funktsioon on alajaotuskilpide ning objekti vaiketoitest erineva seadmepõhise vooluallika lisamine. Elektri külgpaneeli visuaalne ümberkujundamine tehakse pärast uue elektrimudeli valmimist. Täpsem tööjärjekord ja vastuvõtukriteeriumid on failis `docs/ARENDUSPLAAN.md`.
 
 ### 9.2 Kvaliteet ja arhitektuur
 
 - Hoida `.pplan` paketi lugemine ja kirjutamine `planner-core` teenuses; JavaFX-i pildikuvamine jääb `planner-gui` vastutuseks.
-- Jagada väga suur `PancakePlannerApp` järk-järgult väiksemateks vaate-, kontrolleri- ja tööriistaklassideks.
+- Jagada väga suur `PlaaniseppApp` järk-järgult väiksemateks vaate-, kontrolleri- ja tööriistaklassideks.
 - Laiendada automaatteste eelkõige vigaste failide, kasutajaliidese sündmuste ja ekspordi regressioonide suunas.
 - Kontrollida käsitsi ühenduspunkti muutmist telgil, alal ja joonel, objekti või geomeetria liigutamist ning salvestamise järel taastumist.
 - Lisada ootamatute failivigade jaoks logimine, säilitades kasutajale lühikesed ja arusaadavad veateated.
@@ -531,7 +531,7 @@ Veebivaade ja organisatsioonid tähendavad tõenäoliselt eraldi serverit, andme
 3. Muuda elektri kokkuvõte uue mudeli põhjal interaktiivseks ning lisa väljundite koormusribad.
 4. Lisa kahekordse Shift-klahviga objekti kiirotsing ja kaardil esiletõstmine.
 5. Lisa suumiliugur ning `Alt + hiirerull` suumimine.
-6. Jätka `PancakePlannerApp` tükeldamist funktsioonidega seotud väikeste sammudena.
+6. Jätka `PlaaniseppApp` tükeldamist funktsioonidega seotud väikeste sammudena.
 7. Laienda CI hiljem Windowsi testide ning versioonisildi põhise release-buildiga ja lahenda avaliku väljalaske koodisigneerimine.
 
 ## 12. Uue arendusvestluse alustamise juhis

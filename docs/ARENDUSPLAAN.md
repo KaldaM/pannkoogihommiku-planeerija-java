@@ -13,7 +13,7 @@ Rakendus ei ole enam ainult pannkoogihommiku töövahend. Edasine arendus peab t
 2. kujundada elektri kokkuvõte uue mudeli põhjal interaktiivseks ning lisada väljundite koormusribad;
 3. lisada objektide kiirotsing kahekordse Shift-klahviga;
 4. asendada suumi `+` ja `-` nupud liuguriga ning lisada `Alt + hiirerull`;
-5. jätkata `PancakePlannerApp` refaktoreerimist väikeste, funktsioonidega seotud sammudena.
+5. jätkata `PlaaniseppApp` refaktoreerimist väikeste, funktsioonidega seotud sammudena.
 
 Rakenduse nimeks valiti 20. augustil 2026 **Plaanisepp**. Nimi kirjeldab plaanide meistrit ja seostub ka 1927. aastal talletatud Lõuna-Eesti nimekujuga „Plaani sepp”.
 

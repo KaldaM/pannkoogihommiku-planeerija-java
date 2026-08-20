@@ -99,7 +99,7 @@ import java.util.prefs.Preferences;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class PancakePlannerApp extends Application {
+public class PlaaniseppApp extends Application {
     private static final String DEFAULT_MAP_PATH = "classpath:/maps/tavakaart.png";
     private static final String ORTHOPHOTO_MAP_PATH = "classpath:/maps/ortofoto.png";
     private static final String APPLICATION_ICON_PATH = "/icons/pannukas.png";
@@ -130,7 +130,7 @@ public class PancakePlannerApp extends Application {
     private final ReportTextExporter reportTextExporter = new ReportTextExporter(powerSummaryService);
     private final PlanFileSession planFileSession = new PlanFileSession();
     private final PlanDocumentState planDocumentState = new PlanDocumentState();
-    private final Preferences preferences = Preferences.userNodeForPackage(PancakePlannerApp.class);
+    private final Preferences preferences = Preferences.userNodeForPackage(PlaaniseppApp.class);
 
     private EventPlan plan;
     private Pane mapPane;
@@ -335,7 +335,7 @@ public class PancakePlannerApp extends Application {
     }
 
     private void applyApplicationIcon(Stage targetStage) {
-        try (InputStream input = PancakePlannerApp.class.getResourceAsStream(APPLICATION_ICON_PATH)) {
+        try (InputStream input = PlaaniseppApp.class.getResourceAsStream(APPLICATION_ICON_PATH)) {
             if (input == null) {
                 return;
             }
