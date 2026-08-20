@@ -362,6 +362,9 @@ public class EventPlan {
         if (consumer == null) {
             return Optional.empty();
         }
+        if (wouldCreatePowerCycle(sourceId, consumerId)) {
+            return Optional.empty();
+        }
 
         ConnectorType selectedType = connectorType == null ? ConnectorType.SCHUKO_230V : connectorType;
         Optional<PowerOutlet> selectedOutlet = selectOutlet(source, consumerId, selectedType, outletId);
@@ -773,8 +776,23 @@ public class EventPlan {
     }
 
     public int powerDemandWatts(PowerConnection connection) {
+        return powerDemandWatts(connection, new HashSet<>());
+    }
+
+    private int powerDemandWatts(PowerConnection connection, Set<String> visitedSourceIds) {
         return findObject(connection.consumerId())
                 .map(object -> {
+                    if (object instanceof DistributionPanel panel) {
+                        if (!connection.defaultForConsumer() || !visitedSourceIds.add(panel.id())) {
+                            return 0;
+                        }
+                        int downstreamWatts = powerConnections.stream()
+                                .filter(candidate -> candidate.sourceId().equals(panel.id()))
+                                .mapToInt(candidate -> powerDemandWatts(candidate, visitedSourceIds))
+                                .sum();
+                        visitedSourceIds.remove(panel.id());
+                        return downstreamWatts;
+                    }
                     if (object instanceof EquipmentContainer container) {
                         return container.equipment().stream()
                                 .filter(equipment -> equipment.usesDefaultPower()
@@ -788,6 +806,31 @@ public class EventPlan {
                             : 0;
                 })
                 .orElse(0);
+    }
+
+    private boolean wouldCreatePowerCycle(String sourceId, String consumerId) {
+        if (sourceId.equals(consumerId)) {
+            return true;
+        }
+        Set<String> visited = new HashSet<>();
+        List<String> pending = new ArrayList<>();
+        pending.add(consumerId);
+        while (!pending.isEmpty()) {
+            String currentSourceId = pending.removeLast();
+            if (!visited.add(currentSourceId)) {
+                continue;
+            }
+            for (PowerConnection connection : powerConnections) {
+                if (!connection.sourceId().equals(currentSourceId)) {
+                    continue;
+                }
+                if (connection.consumerId().equals(sourceId)) {
+                    return true;
+                }
+                pending.add(connection.consumerId());
+            }
+        }
+        return false;
     }
 
     public int clearInvalidEquipmentPowerAssignments() {

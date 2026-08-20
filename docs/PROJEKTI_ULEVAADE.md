@@ -147,6 +147,7 @@ Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi ab
 | `PlannerObject` | Kõigi objektide ID, nimi, asukoht, grupp, märkmed, lukustus ja nimesilt |
 | `Tent` | Mõõtmed, pööre, värv, seadmed ja summaarne vooluvajadus |
 | `PowerSource` | Elektrikapp ja selle väljundite loetelu |
+| `DistributionPanel` | Korraga tarbija ja vooluallikas, mille koormus tuleneb allavoolu ühendustest |
 | `PowerOutlet` | Nimi, ühenduse tüüp ja lubatud võimsus |
 | `PowerConnection` | Püsiv ID, allikas, tarbija, väljund, vaiketoite roll, kaabli tüüp, märkmed, jupid ja trajektoor |
 | `Equipment` | Püsiv ID, nimi, vooluvajadus ja valikuline viide vaiketoidet asendavale vooluühendusele |
