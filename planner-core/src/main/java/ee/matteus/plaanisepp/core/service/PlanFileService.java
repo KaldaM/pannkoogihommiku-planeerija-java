@@ -35,6 +35,7 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.zip.ZipEntry;
@@ -42,11 +43,12 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 public class PlanFileService {
-    public static final int CURRENT_FORMAT_VERSION = 2;
+    public static final int CURRENT_FORMAT_VERSION = 3;
     private static final int LEGACY_FORMAT_VERSION = 1;
     private static final String FORMAT_VERSION_PROPERTY = "formatVersion";
     private static final String PACKAGE_FORMAT = "pannukas-plan-package";
     private static final String PLAN_FORMAT_V2 = "pannukas-plan-v2";
+    private static final String PLAN_FORMAT_V3 = "pannukas-plan-v3";
     private static final String MANIFEST_ENTRY = "manifest.properties";
     private static final String PLAN_ENTRY = "plan.properties";
     private static final String MAP_ENTRY_PROPERTY = "mapEntry";
@@ -96,7 +98,7 @@ public class PlanFileService {
 
     private Properties createPlanProperties(EventPlan plan, String mapImagePath) {
         Properties properties = new Properties();
-        properties.setProperty("format", PLAN_FORMAT_V2);
+        properties.setProperty("format", PLAN_FORMAT_V3);
         properties.setProperty(FORMAT_VERSION_PROPERTY, Integer.toString(CURRENT_FORMAT_VERSION));
         properties.setProperty("plan.name", plan.name());
         properties.setProperty("plan.mapImagePath", mapImagePath);
@@ -137,6 +139,7 @@ public class PlanFileService {
             PowerConnection connection = plan.powerConnections().get(index);
             String prefix = "connection." + index + ".";
             properties.setProperty(prefix + "id", connection.id());
+            properties.setProperty(prefix + "defaultForConsumer", Boolean.toString(connection.defaultForConsumer()));
             properties.setProperty(prefix + "sourceId", connection.sourceId());
             properties.setProperty(prefix + "consumerId", connection.consumerId());
             properties.setProperty(prefix + "connectorType", connection.connectorType().name());
@@ -198,30 +201,17 @@ public class PlanFileService {
         }
 
         int connectionCount = intValue(properties, "connections.count", 0);
-        for (int index = 0; index < connectionCount; index++) {
-            String prefix = "connection." + index + ".";
-            plan.connectToPower(
-                    properties.getProperty(prefix + "sourceId", ""),
-                    properties.getProperty(prefix + "consumerId", ""),
-                    ConnectorType.valueOf(properties.getProperty(prefix + "connectorType", ConnectorType.SCHUKO_230V.name())),
-                    properties.getProperty(prefix + "outletId", ""),
-                    properties.getProperty(prefix + "cableNotes", ""),
-                    properties.getProperty(prefix + "cableLengthNotes", properties.getProperty(prefix + "cableNotes", "")),
-                    properties.getProperty(prefix + "id", "")
-            ).ifPresent(connection -> plan.updateCableRoutePoints(
-                    connection.consumerId(),
-                    readRoutePoints(properties, prefix)
-            ));
-            if (Boolean.parseBoolean(properties.getProperty(prefix + "customCableLabelPosition", "false"))) {
-                plan.updateCableLabelOffset(
-                        properties.getProperty(prefix + "consumerId", ""),
-                        new Position(
-                                doubleValue(properties, prefix + "cableLabelOffsetX", 0),
-                                doubleValue(properties, prefix + "cableLabelOffsetY", 0)
-                        )
-                );
+        for (boolean loadDefaults : List.of(true, false)) {
+            for (int index = 0; index < connectionCount; index++) {
+                String prefix = "connection." + index + ".";
+                boolean defaultForConsumer = booleanValue(properties, prefix + "defaultForConsumer", true);
+                if (defaultForConsumer != loadDefaults) {
+                    continue;
+                }
+                readPowerConnection(properties, prefix, plan, defaultForConsumer);
             }
         }
+        plan.clearInvalidEquipmentPowerAssignments();
 
         int hiddenGroupCount = intValue(properties, "hiddenGroups.count", 0);
         for (int index = 0; index < hiddenGroupCount; index++) {
@@ -229,6 +219,40 @@ public class PlanFileService {
         }
 
         return plan;
+    }
+
+    private void readPowerConnection(
+            Properties properties,
+            String prefix,
+            EventPlan plan,
+            boolean defaultForConsumer
+    ) {
+        String sourceId = properties.getProperty(prefix + "sourceId", "");
+        String consumerId = properties.getProperty(prefix + "consumerId", "");
+        ConnectorType connectorType = ConnectorType.valueOf(properties.getProperty(
+                prefix + "connectorType", ConnectorType.SCHUKO_230V.name()));
+        String outletId = properties.getProperty(prefix + "outletId", "");
+        String cableNotes = properties.getProperty(prefix + "cableNotes", "");
+        String cableLengthNotes = properties.getProperty(
+                prefix + "cableLengthNotes", properties.getProperty(prefix + "cableNotes", ""));
+        String connectionId = properties.getProperty(prefix + "id", "");
+        Optional<PowerConnection> loadedConnection = defaultForConsumer
+                ? plan.connectToPower(
+                        sourceId, consumerId, connectorType, outletId, cableNotes, cableLengthNotes, connectionId)
+                : plan.addAlternativePowerConnection(
+                        sourceId, consumerId, connectorType, outletId, cableNotes, cableLengthNotes, connectionId);
+        loadedConnection.ifPresent(connection -> plan.updateCableRoutePointsForConnection(
+                connection.id(), readRoutePoints(properties, prefix)));
+        if (loadedConnection.isPresent()
+                && Boolean.parseBoolean(properties.getProperty(prefix + "customCableLabelPosition", "false"))) {
+            plan.updateCableLabelOffsetForConnection(
+                    loadedConnection.orElseThrow().id(),
+                    new Position(
+                            doubleValue(properties, prefix + "cableLabelOffsetX", 0),
+                            doubleValue(properties, prefix + "cableLabelOffsetY", 0)
+                    )
+            );
+        }
     }
 
     private void validateLegacyFormatVersion(Properties properties) throws IOException {
@@ -243,7 +267,7 @@ public class PlanFileService {
             throw newerVersionException(formatVersion);
         }
         if (formatVersion > LEGACY_FORMAT_VERSION) {
-            throw new IOException("Versioon 2 plaanifail ei ole korrektne ZIP-pakett.");
+            throw new IOException("Versioon 2 või uuem plaanifail peab olema korrektne ZIP-pakett.");
         }
         if (formatVersion < 1) {
             throw new IOException("Plaanifaili vormingu versiooni " + formatVersion + " ei toetata.");
@@ -262,7 +286,7 @@ public class PlanFileService {
             if (formatVersion > CURRENT_FORMAT_VERSION) {
                 throw newerVersionException(formatVersion);
             }
-            if (formatVersion != CURRENT_FORMAT_VERSION) {
+            if (formatVersion < 2) {
                 throw new IOException("Plaanipaketi vormingu versiooni " + formatVersion + " ei toetata.");
             }
             if (!PLAN_ENTRY.equals(manifest.getProperty("planEntry"))) {
@@ -270,7 +294,8 @@ public class PlanFileService {
             }
 
             Properties planProperties = readProperties(zipFile, PLAN_ENTRY, MAX_PLAN_BYTES);
-            if (!PLAN_FORMAT_V2.equals(planProperties.getProperty("format"))) {
+            String expectedPlanFormat = formatVersion == 2 ? PLAN_FORMAT_V2 : PLAN_FORMAT_V3;
+            if (!expectedPlanFormat.equals(planProperties.getProperty("format"))) {
                 throw new IOException("Plaanipaketi plaaniandmete vorming ei ole korrektne.");
             }
             int planVersion = parseFormatVersion(planProperties.getProperty(FORMAT_VERSION_PROPERTY, ""));
@@ -291,7 +316,7 @@ public class PlanFileService {
             } else if (plan.mapImagePath().startsWith("package:/")) {
                 throw new IOException("Plaanipaketis viidatud kaardipilt puudub.");
             } else if (!plan.mapImagePath().isBlank() && !plan.mapImagePath().startsWith("classpath:")) {
-                throw new IOException("Versioon 2 plaanipakett sisaldab välist kaardipildi viidet.");
+                throw new IOException("Plaanipakett sisaldab välist kaardipildi viidet.");
             }
             return plan;
         } catch (java.util.zip.ZipException exception) {
@@ -782,6 +807,7 @@ public class PlanFileService {
             properties.setProperty(equipmentPrefix + "id", item.id());
             properties.setProperty(equipmentPrefix + "name", item.name());
             properties.setProperty(equipmentPrefix + "requiredWatts", Integer.toString(item.requiredWatts()));
+            properties.setProperty(equipmentPrefix + "powerConnectionId", item.powerConnectionId());
         }
     }
 
@@ -792,7 +818,8 @@ public class PlanFileService {
             container.addEquipment(new Equipment(
                     properties.getProperty(equipmentPrefix + "id", ""),
                     properties.getProperty(equipmentPrefix + "name", "Seade"),
-                    intValue(properties, equipmentPrefix + "requiredWatts", 0)
+                    intValue(properties, equipmentPrefix + "requiredWatts", 0),
+                    properties.getProperty(equipmentPrefix + "powerConnectionId", "")
             ));
         }
     }

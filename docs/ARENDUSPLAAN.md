@@ -98,7 +98,7 @@ Praegune `PowerConnection` seob ühe allika terve tarbiva objektiga, sisaldab sa
 5. Lisada kasutajaliideses objekti vaiketoide ning seadmereal valitav erand.
 6. Uuendada kaablite joonistamine, kokkuvõtted, TXT/PDF-eksport ja külgpaneel.
 
-Teise etapi eeldustest on teostatud seadme ja vooluühenduse püsivad ID-d. `Equipment` saab domeenimudelis kasutada objekti vaiketoidet või viidata erandina kindlale `PowerConnection` ID-le. Ühel tarbival objektil võib olla üks vaiketoide ja mitu alternatiivset füüsilist ühendust. `EventPlan` lubab määrata ainult samale tarbivale objektile kuuluva ühenduse, jagab seadmete koormuse tegelike ühenduste vahel ning lähtestab eemaldatud ühenduse viited vaiketoitele. Seadme püsiv ID salvestub valikulise väljana ka versioon 2 faili ning vanema ID-ta seadme laadimisel luuakse ID automaatselt. Mitme ühenduse ja seadmepõhise toiteviite salvestamine lisatakse koos versioon 3 vorminguga.
+Teise etapi eeldustest on teostatud seadme ja vooluühenduse püsivad ID-d. `Equipment` saab domeenimudelis kasutada objekti vaiketoidet või viidata erandina kindlale `PowerConnection` ID-le. Ühel tarbival objektil võib olla üks vaiketoide ja mitu alternatiivset füüsilist ühendust. `EventPlan` lubab määrata ainult samale tarbivale objektile kuuluva ühenduse, jagab seadmete koormuse tegelike ühenduste vahel ning lähtestab eemaldatud või vigased ühenduseviited vaiketoitele. `.pplan` versioon 3 salvestab mitme ühenduse rollid ja seadmepõhised valikud; versioon 1 ja 2 plaanid migreeritakse laadimisel senise nähtava jaotusega vaiketoitele.
 
 ### Vastuvõtukriteeriumid
 

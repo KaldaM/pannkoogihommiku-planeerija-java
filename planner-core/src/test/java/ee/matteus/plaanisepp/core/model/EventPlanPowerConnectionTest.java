@@ -53,6 +53,20 @@ class EventPlanPowerConnectionTest {
     }
 
     @Test
+    void refusesAlternativeConnectionWithoutDefaultPower() {
+        EventPlan plan = new EventPlan("Test");
+        PowerSource source = powerSource();
+        Tent tent = new Tent("tent", "Telk", new Position(0, 0));
+        tent.addEquipment(new Equipment("Pliit", 1200));
+        plan.addObject(source);
+        plan.addObject(tent);
+
+        assertTrue(plan.addAlternativePowerConnection(
+                source.id(), tent.id(), ConnectorType.SCHUKO_230V, "outlet"
+        ).isEmpty());
+    }
+
+    @Test
     void keepsConnectionIdentifierWhenReconnectingConsumer() {
         EventPlan plan = new EventPlan("Test");
         PowerSource source = powerSource();
@@ -205,6 +219,18 @@ class EventPlanPowerConnectionTest {
                 "Vaiketoite kaabel",
                 plan.findPowerConnectionForConsumer(tent.id()).orElseThrow().cableNotes()
         );
+    }
+
+    @Test
+    void clearsInvalidLoadedEquipmentAssignment() {
+        EventPlan plan = new EventPlan("Test");
+        Tent tent = new Tent("tent", "Telk", new Position(0, 0));
+        Equipment equipment = new Equipment("equipment", "Pliit", 1200, "missing-connection");
+        tent.addEquipment(equipment);
+        plan.addObject(tent);
+
+        assertEquals(1, plan.clearInvalidEquipmentPowerAssignments());
+        assertTrue(equipment.usesDefaultPower());
     }
 
     private PowerSource powerSource() {

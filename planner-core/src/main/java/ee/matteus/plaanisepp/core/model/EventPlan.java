@@ -317,7 +317,24 @@ public class EventPlan {
             ConnectorType connectorType,
             String outletId
     ) {
-        return connectToPower(sourceId, consumerId, connectorType, outletId, "", "", "", false);
+        return addAlternativePowerConnection(sourceId, consumerId, connectorType, outletId, "", "", "");
+    }
+
+    public Optional<PowerConnection> addAlternativePowerConnection(
+            String sourceId,
+            String consumerId,
+            ConnectorType connectorType,
+            String outletId,
+            String cableNotes,
+            String cableLengthNotes,
+            String connectionId
+    ) {
+        if (findPowerConnectionForConsumer(consumerId).isEmpty()) {
+            return Optional.empty();
+        }
+        return connectToPower(
+                sourceId, consumerId, connectorType, outletId, cableNotes, cableLengthNotes, connectionId, false
+        );
     }
 
     private Optional<PowerConnection> connectToPower(
@@ -650,10 +667,54 @@ public class EventPlan {
         }
     }
 
+    public void updateCableRoutePointsForConnection(String connectionId, List<Position> routePoints) {
+        for (int index = 0; index < powerConnections.size(); index++) {
+            PowerConnection connection = powerConnections.get(index);
+            if (connection.id().equals(connectionId)) {
+                powerConnections.set(index, new PowerConnection(
+                        connection.id(),
+                        connection.sourceId(),
+                        connection.consumerId(),
+                        connection.connectorType(),
+                        connection.outletId(),
+                        connection.cableNotes(),
+                        connection.cableLengthNotes(),
+                        routePoints,
+                        connection.customCableLabelPosition(),
+                        connection.cableLabelOffset(),
+                        connection.defaultForConsumer()
+                ));
+                return;
+            }
+        }
+    }
+
     public void updateCableLabelOffset(String consumerId, Position offset) {
         for (int index = 0; index < powerConnections.size(); index++) {
             PowerConnection connection = powerConnections.get(index);
             if (connection.consumerId().equals(consumerId) && connection.defaultForConsumer()) {
+                powerConnections.set(index, new PowerConnection(
+                        connection.id(),
+                        connection.sourceId(),
+                        connection.consumerId(),
+                        connection.connectorType(),
+                        connection.outletId(),
+                        connection.cableNotes(),
+                        connection.cableLengthNotes(),
+                        connection.routePoints(),
+                        true,
+                        offset,
+                        connection.defaultForConsumer()
+                ));
+                return;
+            }
+        }
+    }
+
+    public void updateCableLabelOffsetForConnection(String connectionId, Position offset) {
+        for (int index = 0; index < powerConnections.size(); index++) {
+            PowerConnection connection = powerConnections.get(index);
+            if (connection.id().equals(connectionId)) {
                 powerConnections.set(index, new PowerConnection(
                         connection.id(),
                         connection.sourceId(),
@@ -727,6 +788,28 @@ public class EventPlan {
                             : 0;
                 })
                 .orElse(0);
+    }
+
+    public int clearInvalidEquipmentPowerAssignments() {
+        int clearedAssignments = 0;
+        for (PlannerObject object : objects) {
+            if (!(object instanceof EquipmentContainer container)) {
+                continue;
+            }
+            for (Equipment equipment : container.equipment()) {
+                if (equipment.usesDefaultPower()) {
+                    continue;
+                }
+                boolean validAssignment = powerConnections.stream()
+                        .anyMatch(connection -> connection.id().equals(equipment.powerConnectionId())
+                                && connection.consumerId().equals(object.id()));
+                if (!validAssignment) {
+                    equipment.useDefaultPower();
+                    clearedAssignments++;
+                }
+            }
+        }
+        return clearedAssignments;
     }
 
     public List<PowerConnection> powerConnections() {

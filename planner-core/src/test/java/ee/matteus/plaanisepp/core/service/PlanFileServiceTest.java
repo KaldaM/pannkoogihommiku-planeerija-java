@@ -7,6 +7,7 @@ import ee.matteus.plaanisepp.core.model.Equipment;
 import ee.matteus.plaanisepp.core.model.EventPlan;
 import ee.matteus.plaanisepp.core.model.LineObject;
 import ee.matteus.plaanisepp.core.model.Position;
+import ee.matteus.plaanisepp.core.model.PowerConnection;
 import ee.matteus.plaanisepp.core.model.PowerOutlet;
 import ee.matteus.plaanisepp.core.model.PowerSource;
 import ee.matteus.plaanisepp.core.model.Tent;
@@ -21,6 +22,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.List;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -128,7 +130,7 @@ class PlanFileServiceTest {
     @Test
     void rejectsPlanFromNewerFormatVersion() throws IOException {
         Path file = tempDirectory.resolve("future-plan.pplan");
-        writePackage(file, 3, null, null);
+        writePackage(file, 4, null, null);
 
         IOException exception = assertThrows(IOException.class, () -> service.load(file));
 
@@ -152,7 +154,7 @@ class PlanFileServiceTest {
     }
 
     @Test
-    void savesAndLoadsVersionTwoPackageWithoutMapImage() throws IOException {
+    void savesAndLoadsCurrentPackageWithoutMapImage() throws IOException {
         EventPlan plan = new EventPlan("Kaardita plaan");
         Path file = tempDirectory.resolve("without-map.pplan");
 
@@ -517,6 +519,94 @@ class PlanFileServiceTest {
         assertEquals(areaConnectionId, loadedPlan.powerConnections().get(0).id());
         assertEquals(lineConnectionId, loadedPlan.powerConnections().get(1).id());
         assertEquals(800, new PowerSummaryService().summaries(loadedPlan).getFirst().usedWatts());
+    }
+
+    @Test
+    void savesAndLoadsMultiplePowerConnectionsAndEquipmentAssignment() throws IOException {
+        EventPlan plan = new EventPlan("Test");
+        PowerSource firstSource = new PowerSource("source-1", "Esimene kapp", new Position(0, 0));
+        firstSource.addOutlet(new PowerOutlet("outlet-1", ConnectorType.SCHUKO_230V, 11000));
+        PowerSource secondSource = new PowerSource("source-2", "Teine kapp", new Position(100, 100));
+        secondSource.addOutlet(new PowerOutlet("outlet-2", ConnectorType.SCHUKO_230V, 11000));
+        Tent tent = new Tent("tent-1", "Telk", new Position(20, 20));
+        Equipment cooker = new Equipment("equipment-1", "Pliit", 1200);
+        Equipment fridge = new Equipment("equipment-2", "Külmik", 500);
+        tent.addEquipment(cooker);
+        tent.addEquipment(fridge);
+        plan.addObject(firstSource);
+        plan.addObject(secondSource);
+        plan.addObject(tent);
+        PowerConnection defaultConnection = plan.connectToPower(
+                firstSource.id(), tent.id(), ConnectorType.SCHUKO_230V, "outlet-1"
+        ).orElseThrow();
+        PowerConnection alternativeConnection = plan.addAlternativePowerConnection(
+                secondSource.id(), tent.id(), ConnectorType.SCHUKO_230V, "outlet-2"
+        ).orElseThrow();
+        defaultConnection = plan.connectToPower(
+                firstSource.id(), tent.id(), ConnectorType.SCHUKO_230V, "outlet-1"
+        ).orElseThrow();
+        plan.updateCableRoutePointsForConnection(
+                alternativeConnection.id(), List.of(new Position(30, 40), new Position(50, 60)));
+        plan.updateCableLabelOffsetForConnection(alternativeConnection.id(), new Position(7, 8));
+        plan.assignEquipmentToPowerConnection(tent.id(), fridge.id(), alternativeConnection.id());
+        Path file = tempDirectory.resolve("multiple-power-connections.pplan");
+
+        service.save(plan, file);
+        EventPlan loadedPlan = service.load(file);
+
+        assertEquals(3, PlanFileService.CURRENT_FORMAT_VERSION);
+        assertEquals(2, loadedPlan.findPowerConnectionsForConsumer(tent.id()).size());
+        PowerConnection loadedDefault = loadedPlan.findPowerConnectionForConsumer(tent.id()).orElseThrow();
+        PowerConnection loadedAlternative = loadedPlan.powerConnections().stream()
+                .filter(connection -> connection.id().equals(alternativeConnection.id()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(defaultConnection.id(), loadedDefault.id());
+        assertFalse(loadedAlternative.defaultForConsumer());
+        assertEquals(List.of(new Position(30, 40), new Position(50, 60)), loadedAlternative.routePoints());
+        assertEquals(new Position(7, 8), loadedAlternative.cableLabelOffset());
+        Tent loadedTent = (Tent) loadedPlan.findObject(tent.id()).orElseThrow();
+        assertEquals(alternativeConnection.id(), loadedTent.equipment().get(1).powerConnectionId());
+        assertEquals(1200, new PowerSummaryService().summaries(loadedPlan).get(0).usedWatts());
+        assertEquals(500, new PowerSummaryService().summaries(loadedPlan).get(1).usedWatts());
+    }
+
+    @Test
+    void loadsVersionTwoConnectionAsDefaultPower() throws IOException {
+        Path file = tempDirectory.resolve("version-two-power.pplan");
+        writePackage(file, 2, """
+                format=pannukas-plan-v2
+                formatVersion=2
+                plan.name=Versioon 2 vool
+                objects.count=2
+                object.0.type=POWER_SOURCE
+                object.0.id=source-1
+                object.0.name=Kapp
+                object.0.outlets.count=1
+                object.0.outlet.0.id=outlet-1
+                object.0.outlet.0.type=SCHUKO_230V
+                object.0.outlet.0.capacityWatts=11000
+                object.1.type=TENT
+                object.1.id=tent-1
+                object.1.name=Telk
+                object.1.equipment.count=1
+                object.1.equipment.0.name=Pliit
+                object.1.equipment.0.requiredWatts=1200
+                connections.count=1
+                connection.0.id=connection-1
+                connection.0.sourceId=source-1
+                connection.0.consumerId=tent-1
+                connection.0.connectorType=SCHUKO_230V
+                connection.0.outletId=outlet-1
+                """, null);
+
+        EventPlan loadedPlan = service.load(file);
+
+        PowerConnection connection = loadedPlan.findPowerConnectionForConsumer("tent-1").orElseThrow();
+        assertTrue(connection.defaultForConsumer());
+        assertEquals("connection-1", connection.id());
+        Tent loadedTent = (Tent) loadedPlan.findObject("tent-1").orElseThrow();
+        assertTrue(loadedTent.equipment().getFirst().usesDefaultPower());
     }
 
     @Test
