@@ -5,6 +5,7 @@ import ee.matteus.plaanisepp.core.service.PowerSummaryService;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EventPlanPowerConnectionTest {
@@ -49,6 +50,47 @@ class EventPlanPowerConnectionTest {
                 "outlet"
         ).isEmpty());
         assertTrue(plan.powerConnections().isEmpty());
+    }
+
+    @Test
+    void keepsConnectionIdentifierWhenReconnectingConsumer() {
+        EventPlan plan = new EventPlan("Test");
+        PowerSource source = powerSource();
+        Tent tent = new Tent("tent", "Telk", new Position(0, 0));
+        tent.addEquipment(new Equipment("Pliit", 1200));
+        plan.addObject(source);
+        plan.addObject(tent);
+
+        PowerConnection initialConnection = plan.connectToPower(
+                source.id(), tent.id(), ConnectorType.SCHUKO_230V, "outlet"
+        ).orElseThrow();
+        PowerConnection reconnected = plan.connectToPower(
+                source.id(), tent.id(), ConnectorType.SCHUKO_230V, "outlet"
+        ).orElseThrow();
+
+        assertFalse(initialConnection.id().isBlank());
+        assertEquals(initialConnection.id(), reconnected.id());
+    }
+
+    @Test
+    void keepsConnectionIdentifierWhenEditingCable() {
+        EventPlan plan = new EventPlan("Test");
+        PowerSource source = powerSource();
+        Tent tent = new Tent("tent", "Telk", new Position(0, 0));
+        tent.addEquipment(new Equipment("Pliit", 1200));
+        plan.addObject(source);
+        plan.addObject(tent);
+        String connectionId = plan.connectToPower(
+                source.id(), tent.id(), ConnectorType.SCHUKO_230V, "outlet"
+        ).orElseThrow().id();
+
+        plan.updateCableNotes(tent.id(), "Kaabel A");
+        plan.updateCableLengthNotes(tent.id(), "25 m");
+        plan.addCableRoutePoint(tent.id(), new Position(10, 20));
+        plan.updateCableLabelOffset(tent.id(), new Position(5, 6));
+        plan.resetCableLabelOffset(tent.id());
+
+        assertEquals(connectionId, plan.findPowerConnectionForConsumer(tent.id()).orElseThrow().id());
     }
 
     private PowerSource powerSource() {

@@ -292,6 +292,18 @@ public class EventPlan {
             String cableNotes,
             String cableLengthNotes
     ) {
+        return connectToPower(sourceId, consumerId, connectorType, outletId, cableNotes, cableLengthNotes, "");
+    }
+
+    public Optional<PowerConnection> connectToPower(
+            String sourceId,
+            String consumerId,
+            ConnectorType connectorType,
+            String outletId,
+            String cableNotes,
+            String cableLengthNotes,
+            String connectionId
+    ) {
         PowerSource source = findObject(sourceId)
                 .filter(PowerSource.class::isInstance)
                 .map(PowerSource.class::cast)
@@ -316,8 +328,12 @@ public class EventPlan {
 
         List<Position> existingRoutePoints = existingCableRoutePoints(consumerId);
         PowerConnection existingConnection = findPowerConnectionForConsumer(consumerId).orElse(null);
+        String selectedConnectionId = connectionId == null || connectionId.isBlank()
+                ? existingConnection == null ? "" : existingConnection.id()
+                : connectionId;
         powerConnections.removeIf(connection -> connection.consumerId().equals(consumerId));
         PowerConnection connection = new PowerConnection(
+                selectedConnectionId,
                 sourceId,
                 consumerId,
                 selectedType,
@@ -337,6 +353,7 @@ public class EventPlan {
             PowerConnection connection = powerConnections.get(index);
             if (connection.consumerId().equals(consumerId)) {
                 powerConnections.set(index, new PowerConnection(
+                        connection.id(),
                         connection.sourceId(),
                         connection.consumerId(),
                         connection.connectorType(),
@@ -357,6 +374,7 @@ public class EventPlan {
             PowerConnection connection = powerConnections.get(index);
             if (connection.consumerId().equals(consumerId)) {
                 powerConnections.set(index, new PowerConnection(
+                        connection.id(),
                         connection.sourceId(),
                         connection.consumerId(),
                         connection.connectorType(),
@@ -446,6 +464,7 @@ public class EventPlan {
             PowerConnection connection = powerConnections.get(index);
             if (connection.outletId().equals(outletId)) {
                 powerConnections.set(index, new PowerConnection(
+                        connection.id(),
                         connection.sourceId(),
                         connection.consumerId(),
                         selectedType,
@@ -478,6 +497,7 @@ public class EventPlan {
                     routePoints.add(routePointIndex, point);
                 }
                 powerConnections.set(index, new PowerConnection(
+                        connection.id(),
                         connection.sourceId(),
                         connection.consumerId(),
                         connection.connectorType(),
@@ -498,6 +518,7 @@ public class EventPlan {
             PowerConnection connection = powerConnections.get(index);
             if (connection.consumerId().equals(consumerId)) {
                 powerConnections.set(index, new PowerConnection(
+                        connection.id(),
                         connection.sourceId(),
                         connection.consumerId(),
                         connection.connectorType(),
@@ -518,6 +539,7 @@ public class EventPlan {
             PowerConnection connection = powerConnections.get(index);
             if (connection.consumerId().equals(consumerId)) {
                 powerConnections.set(index, new PowerConnection(
+                        connection.id(),
                         connection.sourceId(),
                         connection.consumerId(),
                         connection.connectorType(),
@@ -538,6 +560,7 @@ public class EventPlan {
             PowerConnection connection = powerConnections.get(index);
             if (connection.consumerId().equals(consumerId)) {
                 powerConnections.set(index, new PowerConnection(
+                        connection.id(),
                         connection.sourceId(),
                         connection.consumerId(),
                         connection.connectorType(),

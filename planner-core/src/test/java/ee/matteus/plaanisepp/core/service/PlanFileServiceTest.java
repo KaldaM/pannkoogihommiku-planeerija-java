@@ -420,6 +420,42 @@ class PlanFileServiceTest {
     }
 
     @Test
+    void assignsIdWhenOlderPowerConnectionHasNone() throws IOException {
+        Path file = tempDirectory.resolve("old-power-connection-plan.pplan");
+        Files.writeString(file, """
+                plan.name=Vana plaan
+                objects.count=2
+                object.0.type=POWER_SOURCE
+                object.0.id=source-1
+                object.0.name=Kapp
+                object.0.x=0
+                object.0.y=0
+                object.0.outlets.count=1
+                object.0.outlet.0.id=outlet-1
+                object.0.outlet.0.type=SCHUKO_230V
+                object.0.outlet.0.capacityWatts=11000
+                object.1.type=TENT
+                object.1.id=tent-1
+                object.1.name=Telk
+                object.1.x=10
+                object.1.y=20
+                object.1.equipment.count=1
+                object.1.equipment.0.name=Pliit
+                object.1.equipment.0.requiredWatts=1200
+                connections.count=1
+                connection.0.sourceId=source-1
+                connection.0.consumerId=tent-1
+                connection.0.connectorType=SCHUKO_230V
+                connection.0.outletId=outlet-1
+                """);
+
+        EventPlan loadedPlan = service.load(file);
+
+        assertEquals(1, loadedPlan.powerConnections().size());
+        assertFalse(loadedPlan.powerConnections().getFirst().id().isBlank());
+    }
+
+    @Test
     void olderAreaAndLineWithoutEquipmentLoadWithEmptyLists() throws IOException {
         Path file = tempDirectory.resolve("old-area-line-plan.pplan");
         Files.writeString(file, """
@@ -464,8 +500,12 @@ class PlanFileServiceTest {
         plan.addObject(source);
         plan.addObject(area);
         plan.addObject(line);
-        plan.connectToPower(source.id(), area.id(), ConnectorType.SCHUKO_230V, "outlet");
-        plan.connectToPower(source.id(), line.id(), ConnectorType.SCHUKO_230V, "outlet");
+        String areaConnectionId = plan.connectToPower(source.id(), area.id(), ConnectorType.SCHUKO_230V, "outlet")
+                .orElseThrow()
+                .id();
+        String lineConnectionId = plan.connectToPower(source.id(), line.id(), ConnectorType.SCHUKO_230V, "outlet")
+                .orElseThrow()
+                .id();
         Path file = tempDirectory.resolve("area-line-connections.pplan");
 
         service.save(plan, file);
@@ -474,6 +514,8 @@ class PlanFileServiceTest {
         assertEquals(2, loadedPlan.powerConnections().size());
         assertEquals("area", loadedPlan.powerConnections().get(0).consumerId());
         assertEquals("line", loadedPlan.powerConnections().get(1).consumerId());
+        assertEquals(areaConnectionId, loadedPlan.powerConnections().get(0).id());
+        assertEquals(lineConnectionId, loadedPlan.powerConnections().get(1).id());
         assertEquals(800, new PowerSummaryService().summaries(loadedPlan).getFirst().usedWatts());
     }
 

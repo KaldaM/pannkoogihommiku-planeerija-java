@@ -148,7 +148,7 @@ Ekspordi- ja kaabliloogikat on peamisest kasutajaliidese klassist juba eraldi ab
 | `Tent` | Mõõtmed, pööre, värv, seadmed ja summaarne vooluvajadus |
 | `PowerSource` | Elektrikapp ja selle väljundite loetelu |
 | `PowerOutlet` | Nimi, ühenduse tüüp ja lubatud võimsus |
-| `PowerConnection` | Allikas, tarbija, väljund, kaabli tüüp, märkmed, jupid ja trajektoor |
+| `PowerConnection` | Püsiv ID, allikas, tarbija, väljund, kaabli tüüp, märkmed, jupid ja trajektoor |
 | `Equipment` | Püsiv ID, nimi ja seadme vooluvajadus |
 | `EquipmentContainer` | Ühine leping seadmeid hoidvatele ja voolu tarbivatele objektidele |
 | `PowerConnectable` | Ühine leping tarbija vooluvajadusele ja muudetavale ühenduspunktile |

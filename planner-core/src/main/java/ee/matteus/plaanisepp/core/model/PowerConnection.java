@@ -1,8 +1,10 @@
 package ee.matteus.plaanisepp.core.model;
 
 import java.util.List;
+import java.util.UUID;
 
 public record PowerConnection(
+        String id,
         String sourceId,
         String consumerId,
         ConnectorType connectorType,
@@ -48,7 +50,23 @@ public record PowerConnection(
         this(sourceId, consumerId, connectorType, outletId, cableNotes, cableLengthNotes, routePoints, false, new Position(0, 0));
     }
 
+    public PowerConnection(
+            String sourceId,
+            String consumerId,
+            ConnectorType connectorType,
+            String outletId,
+            String cableNotes,
+            String cableLengthNotes,
+            List<Position> routePoints,
+            boolean customCableLabelPosition,
+            Position cableLabelOffset
+    ) {
+        this("", sourceId, consumerId, connectorType, outletId, cableNotes, cableLengthNotes, routePoints,
+                customCableLabelPosition, cableLabelOffset);
+    }
+
     public PowerConnection {
+        id = id == null || id.isBlank() ? UUID.randomUUID().toString() : id;
         cableNotes = cableNotes == null ? "" : cableNotes.trim();
         cableLengthNotes = cableLengthNotes == null ? "" : cableLengthNotes.trim();
         routePoints = routePoints == null ? List.of() : List.copyOf(routePoints);

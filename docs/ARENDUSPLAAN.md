@@ -71,7 +71,7 @@ Füüsiline toide ja seadme elektriline määrang tuleb käsitleda eraldi:
 - alajaotuskilbil on ülesvoolu toide ja oma väljundid;
 - koormusarvutus summeerib seadmed nende tegeliku toite järgi ning arvutab alajaotuskilbi sisendkoormuse rekursiivselt.
 
-Praegune `PowerConnection` seob ühe allika terve tarbiva objektiga ning sisaldab samal ajal ka kaabliandmeid. Enne muutmist tuleb otsustada, kas see areneb ID-ga füüsilise toite mudeliks või asendatakse selgemalt nimetatud mudeliga. Eelistatud on eraldi füüsilise toite mõiste, millele seadmed viitavad.
+Praegune `PowerConnection` seob ühe allika terve tarbiva objektiga, sisaldab samal ajal ka kaabliandmeid ning sellel on edasise mudeli eeltingimusena püsiv ID. Enne muutmist tuleb otsustada, kas see areneb füüsilise toite mudeliks või asendatakse selgemalt nimetatud mudeliga. Eelistatud on eraldi füüsilise toite mõiste, millele seadmed viitavad.
 
 ### Tagasiühilduvus
 

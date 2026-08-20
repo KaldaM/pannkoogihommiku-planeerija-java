@@ -136,6 +136,7 @@ public class PlanFileService {
         for (int index = 0; index < plan.powerConnections().size(); index++) {
             PowerConnection connection = plan.powerConnections().get(index);
             String prefix = "connection." + index + ".";
+            properties.setProperty(prefix + "id", connection.id());
             properties.setProperty(prefix + "sourceId", connection.sourceId());
             properties.setProperty(prefix + "consumerId", connection.consumerId());
             properties.setProperty(prefix + "connectorType", connection.connectorType().name());
@@ -205,7 +206,8 @@ public class PlanFileService {
                     ConnectorType.valueOf(properties.getProperty(prefix + "connectorType", ConnectorType.SCHUKO_230V.name())),
                     properties.getProperty(prefix + "outletId", ""),
                     properties.getProperty(prefix + "cableNotes", ""),
-                    properties.getProperty(prefix + "cableLengthNotes", properties.getProperty(prefix + "cableNotes", ""))
+                    properties.getProperty(prefix + "cableLengthNotes", properties.getProperty(prefix + "cableNotes", "")),
+                    properties.getProperty(prefix + "id", "")
             ).ifPresent(connection -> plan.updateCableRoutePoints(
                     connection.consumerId(),
                     readRoutePoints(properties, prefix)
