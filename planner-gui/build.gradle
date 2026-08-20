@@ -31,18 +31,18 @@ def windowsPackageDirectory = layout.buildDirectory.dir('jpackage-windows')
 def windowsAppImageDirectory = windowsPackageDirectory.map { it.dir(windowsAppName) }
 def windowsInstallerDirectory = layout.buildDirectory.dir('jpackage-windows-installer')
 def linuxPackageResources = layout.projectDirectory.dir('src/main/jpackage/linux')
-def applicationIcon = layout.projectDirectory.file('src/main/resources/icons/pannukas-app-256.png')
-def windowsApplicationIcon = layout.projectDirectory.file('src/main/resources/icons/pannukas-app.ico')
-def planFileIcon = layout.projectDirectory.file('src/main/resources/icons/pannukas-mime-128.png')
-def windowsPlanFileIcon = layout.projectDirectory.file('src/main/resources/icons/pannukas-plan.ico')
+def applicationIcon = layout.projectDirectory.file('src/main/resources/icons/plaanisepp-app-256.png')
+def windowsApplicationIcon = layout.projectDirectory.file('src/main/resources/icons/plaanisepp-app.ico')
+def planFileIcon = layout.projectDirectory.file('src/main/resources/icons/plaanisepp-plan-128.png')
+def windowsPlanFileIcon = layout.projectDirectory.file('src/main/resources/icons/plaanisepp-plan.ico')
 def planFileAssociation = layout.projectDirectory.file('src/main/jpackage/linux/pplan.properties')
 def windowsPlanFileAssociation = layout.projectDirectory.file('src/main/jpackage/windows/pplan.properties')
 def linuxThemeIcons = files(
-        'src/main/resources/icons/pannukas-16.png',
-        'src/main/resources/icons/pannukas-22.png',
-        'src/main/resources/icons/pannukas-32.png',
-        'src/main/resources/icons/pannukas-48.png',
-        'src/main/resources/icons/pannukas-64.png',
+        'src/main/resources/icons/plaanisepp-16.png',
+        'src/main/resources/icons/plaanisepp-22.png',
+        'src/main/resources/icons/plaanisepp-32.png',
+        'src/main/resources/icons/plaanisepp-48.png',
+        'src/main/resources/icons/plaanisepp-64.png',
         planFileIcon,
         applicationIcon
 )

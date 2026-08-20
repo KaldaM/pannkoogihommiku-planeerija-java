@@ -60,9 +60,9 @@ fi
 
 for size in 16 22 32 48 64 128 256; do
   case "$size" in
-    128) source_icon="%{_sourcedir}APPLICATION_DIRECTORY/lib/icons/pannukas-mime-128.png" ;;
-    256) source_icon="%{_sourcedir}APPLICATION_DIRECTORY/lib/icons/pannukas-app-256.png" ;;
-    *) source_icon="%{_sourcedir}APPLICATION_DIRECTORY/lib/icons/pannukas-${size}.png" ;;
+    128) source_icon="%{_sourcedir}APPLICATION_DIRECTORY/lib/icons/plaanisepp-plan-128.png" ;;
+    256) source_icon="%{_sourcedir}APPLICATION_DIRECTORY/lib/icons/plaanisepp-app-256.png" ;;
+    *) source_icon="%{_sourcedir}APPLICATION_DIRECTORY/lib/icons/plaanisepp-${size}.png" ;;
   esac
   install -d -m 755 "%{buildroot}/usr/share/icons/hicolor/${size}x${size}/apps"
   install -d -m 755 "%{buildroot}/usr/share/icons/hicolor/${size}x${size}/mimetypes"

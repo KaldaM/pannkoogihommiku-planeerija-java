@@ -102,7 +102,7 @@ import java.util.regex.Pattern;
 public class PlaaniseppApp extends Application {
     private static final String DEFAULT_MAP_PATH = "classpath:/maps/tavakaart.png";
     private static final String ORTHOPHOTO_MAP_PATH = "classpath:/maps/ortofoto.png";
-    private static final String APPLICATION_ICON_PATH = "/icons/pannukas.png";
+    private static final String APPLICATION_ICON_PATH = "/icons/plaanisepp.png";
     private static final String SELECTED_OBJECT_SECTION = "selectedObject";
     private static final String OBJECT_LIST_SECTION = "objectList";
     private static final String MAP_LAYERS_SECTION = "mapLayers";
